@@ -33,8 +33,8 @@ install: |
     opam repo list
     opam list
     sudo chown -R coq:coq /home/coq/${CONTRIB_NAME}
-    opam pin add -y -n mathcom-extra .
-    opam install -y -vvv --deps-only mathcom-extra
+    opam pin add -y -n mathcomExtra .
+    opam install -y -vvv --deps-only mathcomExtra
     "
 
 script:
@@ -43,7 +43,7 @@ script:
   docker exec COQ /bin/bash --login -c "
     export PS4='+ \e[33;1m(\$0 @ line \$LINENO) \$\e[0m '
     set -ex
-    opam install -y -vvv mathcom-extra
+    opam install -y -vvv mathcomExtra
     "
 - docker stop COQ  # optional
 - echo -en 'travis_fold:end:script\\r'
