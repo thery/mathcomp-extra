@@ -1,7 +1,7 @@
 opam-version: "1.2"
-name: "mathcomp-extra "
+name: "mathcomp_extra"
 maintainer: "Laurent.Thery@inria.fr"
-homepage: "https://github.com/thery/mathcomp-extra "
+homepage: "https://github.com/thery/mathcomp-extra"
 bug-reports: "https://github.com/thery/mathcomp-extra /issues"
 dev-repo: "git+https:https://github.com/thery/mathcomp-extra "
 license: "CeCILL-B"
@@ -12,7 +12,7 @@ build: [
 install: [
   [make "install"]
 ]
-remove: ["rm" "-R" "%{lib}%/coq/user-contrib/mathcomp-extra "]
+remove: ["rm" "-R" "%{lib}%/coq/user-contrib/mathcomp-extra"]
 depends: [
   "coq" {(>= "8.9")}
   "coq-mathcomp-ssreflect" { (>= "1.9") }
