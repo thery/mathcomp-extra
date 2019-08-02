@@ -6,3 +6,5 @@
 Some extra material for mathcomp
 
  [Fibonacci and Lucas numbers](./fib.v)
+
+ [Lower bound of lcm(1, 2, ..., n)](./lcm_lbound.v)
