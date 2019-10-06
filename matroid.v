@@ -6,12 +6,13 @@ Unset Printing Implicit Defensive.
 
 (******************************************************************************)
 (* Matroid                                                                    *)
-(*   Matroid  == the type of Matroid (x : M) x is an element of the matroid   *)
-(*   msets M  == the set of set associated to the matroid                     *)
-(*    rank s  == the rank of a set                                            *)
-(* is_rset s1 s2  ==  s1 is a set that realizes the rank of s2                *)
-(* closure s  == the closure of a set                                         *)
-(*   flats M  == the set of flats                                             *)
+(*   M : Matroid  == M is a matroid whose elements are x : M                  *)
+(*   msets M      == the set of set associated to the matroid                 *)
+(*    rank s      == the rank of a set                                        *)
+(* is_rset s1 s2  == s1 is a set that realizes the rank of s2                 *)
+(* closure s      == the closure of a set                                     *)
+(*   flats M      == the set of flats                                         *)
+(* mcover s1 s2   == s1 is smallest flats that is a proper superset of s2     *)
 (******************************************************************************)
 
 Record Matroid : Type := 
@@ -262,10 +263,138 @@ rewrite eqEsubset closure_sub andbT subsetI.
 by rewrite  -{2}(eqP s1F) -{3}(eqP s2F) !closure_subset ?subsetIr ?subsetIl.
 Qed.
 
+Lemma closure_flats s : closure s \in flats.
+Proof. by rewrite inE closure_invo. Qed.
+
+Lemma flats_closure s : s \in flats -> closure s = s.
+Proof. by rewrite inE => /eqP. Qed.
+
+Definition mcover (s1 s2 : {set M}) := 
+  [&& s1 \in flats, s2 \in flats, s2 \proper s1 &
+      [forall s, [&& s \in flats, s2 \subset s & s \subset s1]
+                                  ==> ((s == s1) || (s == s2))]].
+
+Lemma mcoverP s1 s2 :
+  reflect 
+    [/\ s1 \in flats, s2 \in flats, s2 \proper s1 &
+        forall s, s \in flats -> s2 \subset s -> s \subset s1 ->
+                                    (s = s1) \/ (s = s2)]
+      (mcover s1 s2).
+Proof.
+apply: (iffP and4P) => [] [H1 H2 H3 H4]; split => //.
+  move=> s V1 V2 V3.
+  have /forallP/(_ s)/implyP H5 := H4.
+  have [] := orP (H5 _) => [|/eqP->|/eqP->] //.
+  - by rewrite V1 V2.
+  - by left.
+  by right.
+apply/forallP=> s; apply/implyP => /and3P[V1 V2 V3].
+by case: (H4 _ V1 V2 V3) => ->; rewrite eqxx // orbT.
+Qed.
+
+Lemma mcoverE s1 s2 : 
+   mcover s1 s2 ->
+   exists2 a, a \notin s2 & s1 = closure (a |: s2).
+Proof.
+move=> /mcoverP[s1F s2F s2Ps1 HS].
+have /properP[s2Ss1 [a aIs1 aNIs2]] := s2Ps1.
+exists a => //.
+case (HS (closure (a |: s2))) => //.
+- by apply: closure_flats.
+- apply: subset_trans (subsetUr _ _) (closure_sub _).
+- rewrite -(flats_closure s1F).
+  apply: closure_subset.
+  by rewrite subUset sub1set aIs1.
+move=> /setP/(_ a).
+by rewrite (subsetP (closure_sub _)) ?(negPf aNIs2) // !inE eqxx.
+Qed.
+
+Lemma mcover_sub_ex s1 s2 : 
+  s1 \in flats -> s2 \in flats -> s1 \proper s2 -> 
+  exists2 s, mcover s s1 & s \subset s2.
+Proof.
+move=> s1F.
+elim: {s2}_.+1 {-2}s2 (ltnSn #|s2|) => // n IH s2 s2Ln s2F s1Ps2.
+have [s2Cs1|] := boolP (mcover s2 s1).
+  by exists s2 => //; case/andP: s1Ps2.
+rewrite {1}/mcover s1F s2F s1Ps2 negb_forall => /existsP[s3].
+rewrite negb_imply negb_or => /and3P[/and3P[s3F s1Ss3 s3Ss2] s3Ds2 s3Ds1].
+have [|||s sCs1 sSs3] := IH s3 => //.
+- have /proper_card/leq_trans->// : s3 \proper s2 by rewrite properEneq s3Ds2.
+- by rewrite properEneq eq_sym s3Ds1.
+by exists s => //; apply: subset_trans sSs3 _.
+Qed.
+
+(* Maybe not the shortest proof ... *)
+Lemma mcover_closure a s1 : 
+  s1 \in flats -> a \notin s1 -> mcover (closure (a |: s1)) s1.
+Proof.
+move=> s1F aNIs1.
+have [|s sCs1 s1Sas1] := mcover_sub_ex s1F (closure_flats (a |: s1)).
+  rewrite properE (subset_trans _ (closure_sub _)) ?subsetUr //=.
+  apply/negP=> /subsetP/(_ a).
+  rewrite (negPf aNIs1) (subsetP (closure_sub _)).
+    by move=> /(_ isT).
+  by rewrite !inE eqxx.
+have [b bNIs1 sE] := mcoverE sCs1.
+suff/eqP->: cl(a |: s1) == cl(b |: s1) by rewrite -sE.
+rewrite eqEsubset; apply/andP; split; last first.
+  by rewrite -sE (subset_trans _ s1Sas1).
+rewrite -(closure_invo (b |: _)) closure_subset //.
+rewrite subUset sub1set -{2}(flats_closure s1F) closure_subset ?andbT ?subsetUr //.
+suff : a \in (closure (b |: s1) :\: closure s1) by rewrite inE => /andP[].
+apply: closure_ex.
+rewrite inE flats_closure // bNIs1 (subsetP s1Sas1) // sE.
+by rewrite (subsetP (closure_sub _)) // !inE eqxx.
+Qed.
+
+Lemma mcoverPU s1 s2 : 
+   s2 \in flats ->
+   reflect 
+     (exists2 a, a \notin s2 & s1 = closure (a |: s2))
+     (mcover s1 s2).
+Proof.
+move=> s2F.
+apply: (iffP idP)=> [|[a aNIs2->]]; first by apply: mcoverE.
+by apply: mcover_closure.
+Qed.
+
+Lemma mcoverI s s1 s2 : 
+  mcover s1 s -> mcover s2 s -> s1 != s2 -> s1 :&: s2 = s.
+Proof.
+move=> /mcoverP[s1F sF sPs1 s1Min] /mcoverP[s2F _ sPs2 s2Min] s1Ds2.
+have s1s2F : s1 :&: s2 \in flats by apply: flats_setI.
+case: (s1Min _ s1s2F)=> // [||s1s2E1]; first by rewrite subsetI !proper_sub.
+  by apply: subsetIl.
+case: (s2Min _ s1s2F)=> // [||s1s2E2]; first by rewrite subsetI !proper_sub.
+  by apply: subsetIr.
+by case/eqP: s1Ds2; rewrite -s1s2E1.
+Qed.
+ 
 (* P3P *)
 Lemma flats_partition s : 
-  s \in flats -> partition [set (s1 :\: s) | s1 in flats & (s :&: s1 != set0)] (~: s).
+  s \in flats -> partition [set (s1 :\: s) | s1 in {set M} & mcover s1 s] (~: s).
 Proof.
-Admitted.
+move=> sF.
+apply/and3P; split.
+- apply/eqP/setP => x; rewrite inE.
+  have [xIs/= |xNIs/=] := boolP (x \in s); apply/idP.
+    move=> /bigcupP/= [s1] /imsetP/= [s2 _ ->].
+    by rewrite inE xIs.
+  apply/bigcupP; exists (closure (x |: s) :\:s).
+    apply/imsetP; exists (closure (x |: s)) => //.
+    by rewrite inE mcover_closure.
+  by rewrite inE xNIs (subsetP (closure_sub _)) // !inE eqxx.
+- apply/trivIsetP=> /= s1 s2 /imsetP/= [s3].
+  rewrite inE => s3Cs -> /imsetP/= [s4].
+  rewrite inE => s4Cs -> s3Ds4.
+  rewrite -setI_eq0 -setDIl (mcoverI s3Cs) ?setDv //.
+  by apply: contra s3Ds4 => /eqP->.
+apply/imsetP=> /= [] [s1].
+rewrite inE => /and4P[_ _ sPs1 _] /eqP.
+rewrite eq_sym setD_eq0 => s1Ss.
+case/negP : (proper_neq sPs1).
+by rewrite eqEsubset s1Ss proper_sub.
+Qed.
 
 End Matroid.
