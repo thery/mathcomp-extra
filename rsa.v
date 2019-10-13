@@ -61,7 +61,7 @@ Record rsa := {
 (** Encryption *)
 Definition encrypt r w : nat := w ^ e r %% (p r * q r).
 
-(** Decription *)
+(** Decryption *)
 Definition decrypt r w := w ^ d r %% (p r * q r).
 
 (** Correctness of Rsa *)   
