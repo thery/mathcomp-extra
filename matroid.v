@@ -12,7 +12,7 @@ Unset Printing Implicit Defensive.
 (* is_rset s1 s2  == s1 is a set that realizes the rank of s2                 *)
 (*   mclosure s   == the closure of a set                                     *)
 (*   mflats M     == the set of flats                                         *)
-(* mcover s1 s2   == s1 is smallest flats that is a proper superset of s2    *)
+(* mcover s1 s2   == s1 is the smallest flat that is a proper superset of s2    *)
 (******************************************************************************)
 
 Record Matroid : Type := 
