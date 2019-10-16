@@ -167,7 +167,7 @@ apply: rdvdp_comp_poly => //; first by rewrite qualifE lead_coefXn.
 by rewrite /rdvdp rmodp_sub // subr_eq0.
 Qed.
 
-(* 99 *)
+(* 100 *)
 Lemma introspecMr (R : comRingType) (k n : nat) (p q : {poly R}) :
   n ⋈[k] p -> n ⋈[k] q -> n ⋈[k] (p * q).
 Proof.
@@ -185,4 +185,3 @@ End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
-  
