@@ -327,7 +327,43 @@ move: nIkX.
 rewrite /introspective -!Pdiv.IdomainMonic.modpE ?monic_Xn_sub_1 //.
 by rewrite comp_polyD comp_polyC comp_polyX.
 Qed.
-  
+
+(* I've departed from Chan thesis as it is not easy 
+   to build non-constructive sets in Coq. So I turn 
+   them into properties. Trying to sort things out 
+   went doing the proof by contradiction 
+ *)
+
+Definition is_iexp (R : ringType) (k s m : nat) := 
+   coprime m k /\ forall c, (0 < c <= s)%N -> m ⋈[k] ('X + c%:R%:P : {poly R}).
+(* 103 *)
+Lemma is_iexp_fin_char (F : finFieldType) k s p :  
+  p \in [char F] -> coprime p k -> is_iexp F k s p.
+Proof. by move=> pC pCk; split => // c _; apply:  introspec_char. Qed.
+
+Lemma is_iexp_fin_div (F : finFieldType) k s n p :  
+  p \in [char F] -> coprime p k -> (p %| n)%N -> 
+  is_iexp F k s n -> is_iexp F k s (n %/ p).
+Proof. 
+move=> pC pCk pDn[nCk nI]; split => [|c cB].
+  by have := nCk; rewrite -{1}(divnK pDn) coprime_mull => /andP[].
+apply: introspec_fin_div => //; first by rewrite coprime_sym.
+by apply: nI.
+Qed.
+
+Definition is_ipoly (R : ringType) (k s m : nat) (p : {poly R}):= 
+  forall m, is_iexp R k s m -> m ⋈[k] p.
+
+Definition is_iexpm (R : ringType) (k s mk : nat) :=
+   exists2 m, mk = (m %% m)%N & is_iexp R k s m.
+   
+Definition is_ipoly (R : ringType) (k s m : nat) (p : {poly R}):= 
+  forall m, is_iexp R k s m -> m ⋈[k] p.
+
+
+                        
+Check (fun R k s x => x \in 𝒩 R k s).
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
