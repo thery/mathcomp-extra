@@ -361,7 +361,58 @@ Definition is_ipoly (R : ringType) (k s m : nat) (p : {poly R}):=
 Definition is_iexpm (R : ringType) (k s mk : nat) :=
    exists2 m, mk = (m %% k)%N & is_iexp R k s m.
 
+Inductive is_iexpm_spec (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Prop :=
+   is_iexpm_spec_true : 
+    forall (m : nat), (mk = m %% k :> nat)%N -> is_iexp R k s m -> @is_iexpm_spec R k k1 s mk true
+ | is_iexpm_spec_false :
+ (forall (m : nat), is_iexp R k s m -> (mk != m %% k :> nat)%N) -> @is_iexpm_spec R k k1 s mk false.
+
+Definition Mk_spec R s k (M : {set 'I_k}) :=
+  (forall x, @is_iexpm_spec R k k s x (x \in M)).
+
+(* There should a shorter proof *)
+Lemma Mk_Cexists R k s : classically (exists M : {set 'I_k}, Mk_spec R s M).
+Proof.
+rewrite /Mk_spec.
+elim:  {-6}k => [|k1 IH].
+by apply/classicP => [] []; exists set0 => [] [].
+apply: classic_bind IH => [] [M HM].
+pose M1 := [set (fintype.lift ord_max i) | i in M].
+have /classic_bind := @classic_pick nat
+ (fun m => ((ord_max : 'I_k1.+1) = m %% k :> nat)%N /\ is_iexp R k s m).
+apply => [] [[x [xE xI]]|oE].
+  apply/classicP => [] []; exists (ord_max |: M1) => y.
+  rewrite !inE; case: eqP=> [->/=|/eqP yDo/=].
+    by apply: is_iexpm_spec_true xI.
+  have [/imsetP [z]|yNIM1] := boolP (y \in _).
+    case: HM => // m zE mI _ yE.
+    apply: is_iexpm_spec_true mI.
+    by rewrite yE /= /bump /= leqNgt ltn_ord zE.
+  constructor => m mI; apply/eqP=> yE.
+  case/negP: yNIM1; apply/imsetP.
+  case: (unliftP ord_max y) => [z zE| zE1]; last by case/eqP: yDo.
+  exists z => //; case: HM => // /(_ m mI) /eqP[].
+  by rewrite -yE zE /= /bump leqNgt ltn_ord.
+apply/classicP => [] []; exists M1 => x.
+have [/eqP xEo| xDo] := boolP (x == ord_max).
+  rewrite (_ : _ \in _ = false).
+    constructor => m mI; apply/negP => /eqP xEm.
+    by case: (oE m); rewrite -xEo.
+  apply/idP=> /imsetP[y]; case: HM => // m yE  _ _ /val_eqP /=.
+  by rewrite xEo /= (negPf (neq_bump _ _)).
+have [/imsetP [y]|xNIM1] := boolP (x \in _).
+  case: HM => // m yE mI _ xE.
+  apply: is_iexpm_spec_true mI.
+  by rewrite xE /= /bump /= leqNgt ltn_ord yE.
+constructor => m mI; apply/eqP=> xE.
+case/negP: xNIM1; apply/imsetP.
+case: (unliftP ord_max x) => [y yE| xE1]; last by case/eqP: xDo.
+exists y => //; case: HM => // /(_ m mI) /eqP[].
+by rewrite -xE yE /= /bump leqNgt ltn_ord.
+Qed.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
+  
