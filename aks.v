@@ -370,7 +370,7 @@ Inductive is_iexpm_spec (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Pro
 Definition Mk_spec R s k (M : {set 'I_k}) :=
   (forall x, @is_iexpm_spec R k k s x (x \in M)).
 
-(* There should a shorter proof *)
+(* There should be a shorter proof *)
 Lemma Mk_Cexists R k s : classically (exists M : {set 'I_k}, Mk_spec R s M).
 Proof.
 rewrite /Mk_spec.
