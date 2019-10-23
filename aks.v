@@ -526,11 +526,78 @@ rewrite /ordern k_gt1 kCx.
 by apply/eqP/imset_injP=> y z H1 H2 U; apply/val_eqP/eqP.
 Qed.
 
+(* 105 *)
 Lemma rmodn_trans {R : ringType} (p q h z : {poly R}) :
-  h \is monic -> z \is monic -> rdvdp h z -> rmodp p z == rmodp q z -> rmodp p h  == rmodp q h.
+  h \is monic -> z \is monic -> rdvdp h z -> rmodp p z = rmodp q z -> rmodp p h  = rmodp q h.
 Proof.
 move=> hM zM /(rdvdp_trans hM zM) => /(_ (p - q)).
-by rewrite /rdvdp !rmodp_sub // !subr_eq0.
+rewrite /rdvdp !rmodp_sub // !subr_eq0 => H /eqP H1; apply/eqP.
+by apply: H.
+Qed.
+
+
+Definition poly_order {R : ringType} (h p :  {poly R}) (n : nat) : nat := 
+  if [pick i | rmodp (p^+ (i : 'I_n.+1).-1.+1) h == 1] is Some v then
+      [arg min_(i < v | (rmodp (p^+ i.-1.+1) h == 1)) i].-1.+1 else 0%N.
+
+Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
+  (0 < n -> poly_order h p n <= n)%N.
+Proof.
+by rewrite /poly_order; case: pickP => // x Hx; case: arg_minP => // [] [[|m]].
+Qed.
+
+Lemma poly_order_gt0_rmodp (R : ringType) (h p : {poly R}) n :
+  (0 < poly_order h p n)%N ->  rmodp (p^+ poly_order h p n) h == 1.
+Proof.
+by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minP.
+Qed.
+
+Lemma poly_order_eq0_rmodp (R : ringType) (h p : {poly R}) m n :
+  (poly_order h p n = 0)%N -> (0 < m <= n)%N -> rmodp (p^+ m) h != 1.
+Proof.
+rewrite -[(_ <= n)%N]ltnS /poly_order; case: pickP => // HM _ /andP[m_gt0 mLn].
+by have /= := HM (Ordinal mLn); case: (m) m_gt0 => //= k _ /idP/negP.
+Qed.
+
+Lemma poly_order_lt (R : ringType) (h p : {poly R}) m n :
+  (0 < m < poly_order h p n)%N -> rmodp (p^+ m) h != 1.
+Proof.
+rewrite /poly_order; case: pickP=> [x Hx|]; last by rewrite ltn0 andbF.
+case: arg_minP => // i Hi Hmin /andP[m_gt0 mLi].
+have mLn : (m < n.+1)%N.
+  by rewrite (leq_trans mLi) // (leq_trans _ (ltn_ord i)) //; case: (i : nat).
+apply/negP; rewrite -[m]prednK // => /(Hmin (Ordinal mLn)) /=.
+rewrite leqNgt; case: (i : nat) mLi  => [/=|j ->//].
+by case: (m) m_gt0.
+Qed.
+
+(* 106  we reformulate it because we can't have order for poly directly *)
+Lemma poly_order_rmod_inj (R : ringType) (h : {poly R}) k m n :
+  h \is monic -> (1 < size h)%N -> (0 < k)%N -> rdvdp h ('X^k - 1) -> 
+  (m < poly_order h 'X k)%N -> (n < poly_order h 'X k)%N ->
+  rmodp 'X^m h = rmodp 'X^n h-> m = n.
+Proof.
+move=> hM hS k_gt0 hDxk.
+wlog : m n / (m <= n)%N => [Hw |mLn] mLp nLp xmExn.
+  case: (leqP m n) => [/Hw|nLm]; first by apply.
+  by apply/sym_equal/Hw => //; apply: ltnW.
+move: mLn; rewrite leq_eqVlt => /orP[/eqP//|mLn].
+have xkE1 :  rmodp 'X^k h = 1.
+  move: hDxk; rewrite /rdvdp rmodp_sub // [rmodp 1 _]rmodp_small.
+    by rewrite subr_eq0 => /eqP.
+  by rewrite size_polyC oner_neq0.
+have [|o_gt0] := leqP (poly_order h 'X k) 0.
+  have kB : (0 < k <= k)%N by rewrite k_gt0 leqnn.
+  by rewrite leqn0 => /eqP/poly_order_eq0_rmodp /(_ kB) /eqP[].
+pose v := (poly_order h 'X k - n + m)%N.
+have /poly_order_lt/eqP[] : (0 < poly_order h 'X k - n + m < poly_order h 'X k )%nat.
+  rewrite (leq_trans _ (_ : 0 + m < _)%N) //; last first.
+    by rewrite ltn_add2r subn_gt0.
+  rewrite -{2}[poly_order _ _ _](@subnK m); last by apply: ltnW.
+  by rewrite ltn_add2r ltn_sub2l //.
+rewrite exprD -rmodp_mulmr // xmExn rmodp_mulmr // -exprD subnK //.
+  by apply/eqP/poly_order_gt0_rmodp.
+by apply/ltnW.
 Qed.
 
 End AKS.
