@@ -526,6 +526,13 @@ rewrite /ordern k_gt1 kCx.
 by apply/eqP/imset_injP=> y z H1 H2 U; apply/val_eqP/eqP.
 Qed.
 
+Lemma rmodn_trans {R : ringType} (p q h z : {poly R}) :
+  h \is monic -> z \is monic -> rdvdp h z -> rmodp p z == rmodp q z -> rmodp p h  == rmodp q h.
+Proof.
+move=> hM zM /(rdvdp_trans hM zM) => /(_ (p - q)).
+by rewrite /rdvdp !rmodp_sub // !subr_eq0.
+Qed.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
