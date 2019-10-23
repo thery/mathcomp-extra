@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra all_field.
+From mathcomp Require Import all_ssreflect all_fingroup all_algebra all_field.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -16,6 +16,10 @@ Definition introspective {R : ringType} n k (p : {poly R}) :=
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
+
+Lemma introspective1 (R : ringType) k (p : {poly R}) : 1 ⋈[k] p.
+Proof. by rewrite /introspective expr1 comp_polyXr. Qed.
+
 Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
   n \in [char F] -> c%:R ^+ n = c%:R :> F.
 Proof.
@@ -338,6 +342,26 @@ Qed.
 Definition is_iexp (R : ringType) (k s m : nat) := 
    coprime m k /\ forall c, (0 < c <= s)%N -> m ⋈[k] ('X + c%:R%:P : {poly R}).
 
+Lemma is_iexp1 (R : ringType) k s : is_iexp R k s 1%N.
+Proof.
+split=> [|c cR]; first by rewrite /coprime gcd1n.
+by apply: introspective1.
+Qed.
+
+Lemma is_iexp_mul (R : comRingType) k s m1 m2 : 
+  is_iexp R k s m1 -> is_iexp R k s m2 -> is_iexp R k s (m1 * m2)%N.
+Proof.
+move=> [m1Ck Hm1] [m2Ck Hm2]; split; first by rewrite coprime_mull m1Ck.
+by move=> c Hc; apply: introspecMl; [apply: Hm1 | apply: Hm2].
+Qed.
+
+Lemma is_iexp_X (R : comRingType) k s m n : 
+  is_iexp R k s m -> is_iexp R k s (m ^ n)%N.
+Proof.
+move=> mI; elim: n => [|n IH]; first by apply: is_iexp1.
+by rewrite expnS; apply: is_iexp_mul.
+Qed.
+
 (* 103 *)
 Lemma is_iexp_fin_char (F : finFieldType) k s p :  
   p \in [char F] -> coprime p k -> is_iexp F k s p.
@@ -367,15 +391,16 @@ Inductive is_iexpm_spec (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Pro
  | is_iexpm_spec_false :
  (forall (m : nat), is_iexp R k s m -> (mk != m %% k :> nat)%N) -> @is_iexpm_spec R k k1 s mk false.
 
-Definition Mk_spec R s k (M : {set 'I_k}) :=
-  (forall x, @is_iexpm_spec R k k s x (x \in M)).
+(* I've put Mk in {set 'Z_k} but its natural ambient is units_Zp! *)
+Definition Mk_spec R s k (M : {set 'Z_k}) :=
+  (forall x, @is_iexpm_spec R k ((Zp_trunc k).+2) s x (x \in M)).
 
 (* There should be a shorter proof *)
-Lemma Mk_Cexists R k s : classically (exists M : {set 'I_k}, Mk_spec R s M).
+Lemma Mk_Cexists R k s : (1 < k)%N -> classically (exists M : {set 'Z_k}, Mk_spec R s M).
 Proof.
-rewrite /Mk_spec.
-elim:  {-6}k => [|k1 IH].
-by apply/classicP => [] []; exists set0 => [] [].
+move=> k_gt1; rewrite /Mk_spec Zp_cast // => {k_gt1}[].
+rewrite /Mk_spec; elim:  {-6}k => [|k1 IH].
+  by apply/classicP => [] []; exists set0 => [] [].
 apply: classic_bind IH => [] [M HM].
 pose M1 := [set (fintype.lift ord_max i) | i in M].
 have /classic_bind := @classic_pick nat
@@ -409,6 +434,96 @@ case/negP: xNIM1; apply/imsetP.
 case: (unliftP ord_max x) => [y yE| xE1]; last by case/eqP: xDo.
 exists y => //; case: HM => // /(_ m mI) /eqP[].
 by rewrite -xE yE /= /bump leqNgt ltn_ord.
+Qed.
+
+Lemma is_iexpm1 (R : comRingType) k s (M : {set 'Z_k}) : 
+  (1 < k)%N -> Mk_spec R s M -> 1 \in M.
+Proof.
+move=> k_gt1 MS; case: MS => // /(_ 1%N (is_iexp1 _ _ _)).
+by rewrite modn_small ?eqxx.
+Qed.
+
+Lemma is_iexpm_mul (R : comRingType) k s (M : {set 'Z_k}) x y : 
+  (1 < k)%N -> Mk_spec R s M -> x \in M -> y \in M -> (x * y) \in M. 
+Proof.
+move=> k_gt1 MS.
+(do 3 case: (MS) => //) => Hm m1 yE m1I m xE mI _ _.
+have /eqP[] := Hm _ (is_iexp_mul mI m1I).
+by rewrite -modnMml -xE -modnMmr -yE /= {3}Zp_cast.
+Qed.
+
+Lemma is_iexpm_X (R : comRingType) k s (M : {set 'Z_k}) x n : 
+  (1 < k)%N -> Mk_spec R s M -> x \in M -> (x ^+ n) \in M. 
+Proof.
+move=> k_gt1 MS xM.
+elim: n => [|n IH]; first by apply: is_iexpm1.
+by rewrite exprS; apply: is_iexpm_mul.
+Qed.
+
+(* 104 *)
+Lemma is_iexpm_totient R k s (M : {set 'Z_k}) :
+  (1 < k)%N -> Mk_spec R s M -> (#|M| <= totient k)%N.
+Proof.
+move=> k_gt1; move: M; rewrite /Mk_spec Zp_cast // => {k_gt1}[].
+case: k => [M _|k M HM].
+  apply: leq_trans (_ : (#|(setT : {set 'I_0})| <= _)%N).
+    by apply/subset_leq_card/subsetT.
+  by rewrite cardsT card_ord.
+suff <-: #|[set i in 'I_k.+1 | coprime i k.+1]| = totient k.+1.
+  apply/subset_leq_card/subsetP=> x; rewrite !inE; case: HM => // m -> [].
+  by rewrite coprime_modl.
+rewrite -sum1_card big_mkcond /=.
+rewrite totient_count_coprime big_mkord.
+by apply: eq_bigr => i _; rewrite inE coprime_sym.
+Qed.
+
+Lemma mk_Zp_unit_proof k m : 
+  (if (1 < k)%N && (coprime k m) then (m%:R : 'Z_k) else 1) \is a GRing.unit.
+Proof.
+case: leqP =>  [_|k_gt1]; first by apply: unitr1.
+by case: coprime (unitZpE m k_gt1) => [//|_]; apply: unitr1.
+Qed.
+
+Definition mk_Zp_unit (k m : nat) :=
+  FinRing.unit 'Z_k (mk_Zp_unit_proof k m).
+
+Lemma val_mk_Zp_unit k m :
+  (1 < k)%N -> coprime k m -> val (mk_Zp_unit k m) = (m %% k)%N :> nat.
+Proof.
+by move=> k_gt1 kCm; rewrite /= k_gt1 kCm val_Zp_nat.
+Qed.
+
+Lemma val_mk_Zp_unit_Zp k (m : 'Z_k) :
+  (1 < k)%N -> coprime k m -> val (mk_Zp_unit k m) = m.
+Proof.
+move=> k_gt1 kCm; apply/val_eqP/eqP; rewrite /= k_gt1 kCm val_Zp_nat //=.
+by rewrite modn_small //; move: (m); rewrite Zp_cast.
+Qed.
+
+Definition ordern k m := 
+  if (1 < k)%N && (coprime k m) then #[mk_Zp_unit k m]%g else 0%N.
+
+(* k > 1 not necessary *)
+Lemma ordern_exp k m :
+  (1 < k)%N -> coprime k m -> m ^ ordern k m = 1 %[mod k].
+Proof.
+move=> k_gt1 kCm.
+have /(congr1 val) /(congr1 val) := expg_order (mk_Zp_unit k m).
+by rewrite FinRing.val_unitX /ordern /= k_gt1 kCm /= -natrX val_Zp_nat // Zp_cast.
+Qed.
+
+(* 104 *)
+Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) x :
+  (1 < k)%N -> Mk_spec R s M -> x \in M -> (ordern k x <= #|M|)%N.
+Proof.
+move=> k_gt1 HM xIM.
+have kCx : coprime k x.
+  by move: xIM; case: HM => // m -> []; rewrite coprime_modr coprime_sym.
+suff <-: #|[set val x | x in <[mk_Zp_unit k x]>%g]| = ordern k x.
+  apply/subset_leq_card/subsetP => y /imsetP[z /cycleP[i ->] ->].
+  by rewrite FinRing.val_unitX val_mk_Zp_unit_Zp //; apply: is_iexpm_X.
+rewrite /ordern k_gt1 kCx.
+by apply/eqP/imset_injP=> y z H1 H2 U; apply/val_eqP/eqP.
 Qed.
 
 End AKS.
