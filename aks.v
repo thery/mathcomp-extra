@@ -73,7 +73,7 @@ Lemma comp_polyXsub1 (R : ringType) n :
   ('X - 1) \Po 'X^n = 'X^n - 1 :> {poly R}.
 Proof. by rewrite comp_polyB comp_polyC comp_polyX. Qed.
 
-Lemma modp_exp (R : comRingType) n (p d : {poly R}) :
+Lemma rmodp_exp (R : comRingType) n (p d : {poly R}) :
   d \is monic -> rmodp ((rmodp p d) ^+ n) d = (rmodp (p ^+ n) d).
 Proof.
 move=> lCd; elim: n => [|n IH]; first by rewrite !expr0.
@@ -89,6 +89,18 @@ rewrite {1}(rdivp_eq dM p) {1}(rdivp_eq dM q).
 rewrite opprD addrCA 2!addrA -mulNr -mulrDl (addrC (- rdivp q d)) -addrA.
 rewrite rmodp_addl_mul_small //; apply: (leq_ltn_trans (size_add _ _)).
 by rewrite gtn_max size_opp !ltn_rmodp // monic_neq0.
+Qed.
+
+Lemma rmodp_compr (R : comRingType) (p q d : {poly R}) :
+  d \is monic -> rmodp (p \Po (rmodp q d)) d = (rmodp (p \Po q) d).
+Proof.
+move=> dM.
+elim/poly_ind: p => [|p c IH].
+  by rewrite !comp_polyC !rmod0p.
+rewrite !comp_polyD !comp_polyM addrC rmodp_add //.
+ rewrite mulrC -rmodp_mulmr // IH rmodp_mulmr //.
+ rewrite !comp_polyX !comp_polyC.
+by rewrite mulrC rmodp_mulmr // -rmodp_add // addrC.
 Qed.
 
 Lemma rdvdp_trans (R : ringType) (p q r : {poly R}) : 
@@ -163,7 +175,7 @@ case: k => [|k mIp nIp].
 have XM : ('X^k.+1 - 1 : {poly R}) \is monic.
   rewrite qualifE lead_coefDl ?lead_coefXn ?unitr1 //.
   by rewrite size_polyXn size_opp size_polyC oner_neq0.
-rewrite /introspective exprM -modp_exp // (eqP mIp) modp_exp //.
+rewrite /introspective exprM -rmodp_exp // (eqP mIp) rmodp_exp //.
 rewrite exprM -['X^m.+1 ^+_]comp_polyXn comp_poly_exp comp_polyA.
 rewrite -subr_eq0 -rmodp_sub // -comp_polyB.
 apply: rdvdp_trans (_ : rdvdp (('X^k.+1 -1) \Po 'X^m.+1) _) => //.
@@ -378,7 +390,7 @@ by apply: nI.
 Qed.
 
 (* This is 𝒫 *)
-Definition is_ipoly (R : ringType) (k s m : nat) (p : {poly R}):= 
+Definition is_ipoly (R : ringType) (k s : nat) (p : {poly R}):= 
   forall m, is_iexp R k s m -> m ⋈[k] p.
 
 (* This is 𝓜_k *)
@@ -600,8 +612,43 @@ rewrite exprD -rmodp_mulmr // xmExn rmodp_mulmr // -exprD subnK //.
 by apply/ltnW.
 Qed.
 
+(* 107 *)
+Lemma Mk_root_Mk (R : comRingType) (h : {poly R}) k s 
+         (M : {set 'Z_k})  (p q : {poly R}) n  :
+  Mk_spec R s M ->
+  h \is monic -> (1 < size h)%N -> (0 < k)%N -> rdvdp h ('X^k - 1) -> 
+  is_ipoly k s p -> is_ipoly k s q -> rmodp p h = rmodp q h ->
+  n \in M -> rmodp ((p - q) \Po 'X^n) h = 0.
+Proof.
+move=> HM hM hS k_gt0 hDxk pI qI phEqh nIM; apply/eqP.
+case: HM nIM => // m nE mI _.
+have xkM := monic_Xn_sub_1 R k_gt0.
+have F : rmodp 'X^n ('X^k - 1) = rmodp 'X^m ('X^k - 1) :> {poly R}.
+  have F1 : rmodp 'X^k ('X^k - 1) = 1 :> {poly R}.
+    rewrite -{1}['X^k](subrK (1 : {poly R})) addrC rmodp_add // rmodpp //.
+    by rewrite addr0 rmodp_small // size_polyC oner_eq0 /= size_Xn_sub_1.
+    rewrite (divn_eq m k) exprD mulnC exprM.
+    rewrite mulrC -rmodp_mulmr // -[in RHS]rmodp_exp // F1 expr1n.
+    by rewrite rmodp_mulmr // mulr1 nE.
+rewrite comp_polyB rmodp_sub // subr_eq0; apply/eqP.
+apply: etrans (_ : rmodp (p^+m) h = _).
+  apply: rmodn_trans hDxk _ => //.
+  rewrite -rmodp_compr // F rmodp_compr //.
+  by apply/esym/eqP/pI.
+apply: etrans (_ : rmodp (q^+m) h = _).
+  by rewrite -rmodp_exp // phEqh rmodp_exp.
+apply: esym.
+apply: rmodn_trans hDxk _ => //.
+rewrite -rmodp_compr // F rmodp_compr //.
+by apply/esym/eqP/qI.
+Qed.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
+
   
+
+Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) x :
+  (1 < k)%N -> Mk_spec R s M -> x \in M -> (ordern k x <= #|M|)%N.
