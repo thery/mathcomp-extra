@@ -647,8 +647,3 @@ End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
-
-  
-
-Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) x :
-  (1 < k)%N -> Mk_spec R s M -> x \in M -> (ordern k x <= #|M|)%N.
