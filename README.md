@@ -13,6 +13,6 @@ Some extra material for mathcomp
 
  [Rsa algorithm](./rsa.v)
 
- [More lemmas about polynomials] (./more_thm.v)
+ [More lemmas about polynomials](./more_thm.v)
 
- [Polynomials modulo] (./divpoly.v)
+ [Polynomials modulo](./divpoly.v)
