@@ -12,3 +12,7 @@ Some extra material for mathcomp
  [Definitions and some properties of matroids](./matroid.v)
 
  [Rsa algorithm](./rsa.v)
+
+ [More lemmas about polynomials] (./more_thm.v)
+
+ [Polynomials modulo] (./divpoly.v)
