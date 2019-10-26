@@ -32,9 +32,6 @@ Proof. by move=> Lnm; rewrite /leibnizn bin_sub. Qed.
 Lemma leibn_gt0 m n : n <= m -> 0 < 'L(m, n).
 Proof. by move=> Lnm; rewrite /leibnizn muln_gt0 bin_gt0. Qed.
 
-Lemma bin_up1 m n : m.+1 * 'C(m, n) = (m.+1 - n) * 'C(m.+1, n).
-Proof. by have := mul_bin_down m.+1 n. Qed. 
-
 Lemma leibn_up m n : m.+2 * 'L(m, n) = (m.+1 - n) * 'L(m.+1, n).
 Proof. by rewrite /leibnizn mul_bin_down mulnCA. Qed.
 
