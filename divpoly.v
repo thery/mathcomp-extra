@@ -1,4 +1,5 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_algebra all_field.
+Require Import more_thm.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -11,63 +12,6 @@ Import Pdiv.RingMonic.
 Local Open Scope ring_scope.
 Local Open Scope nat_scope.
 
-Section Rmodp.
-
-Variable A : ringType.
-
-Lemma rmodpK (d p : {poly A}) : 
-  d \is monic -> rmodp (rmodp p d) d = rmodp p d.
-Proof.
-by move=> dM; rewrite rmodp_small // ltn_rmodpN0 // monic_neq0.
-Qed.
-
-Lemma rmodp_addl (d p q : {poly A}) : 
-  d \is monic -> rmodp (rmodp p d + q) d = rmodp (p + q) d.
-Proof.
-by move=> dM; rewrite rmodp_add // rmodpK // -rmodp_add.
-Qed.
-
-Lemma rmodp_addr (d p q : {poly A}) : 
-  d \is monic -> rmodp (p + rmodp q d) d = rmodp (p + q) d.
-Proof.
-by move=> dM; rewrite rmodp_add // rmodpK // -rmodp_add.
-Qed.
-
-Lemma rmodp_sub (d p q : {poly A}) : 
-  d \is monic -> rmodp (p - q) d = (rmodp p d - rmodp q d)%R.
-Proof.
-move=> dM.
-rewrite {1}(rdivp_eq dM p) {1}(rdivp_eq dM q).
-rewrite opprD addrCA 2!addrA -mulNr -mulrDl (addrC (- rdivp q d)) -addrA.
-rewrite rmodp_addl_mul_small //; apply: (leq_ltn_trans (size_add _ _)).
-by rewrite gtn_max size_opp !ltn_rmodp // monic_neq0.
-Qed.
-
-Lemma rmodp_subl (d p q : {poly A}) : 
-  d \is monic -> rmodp (rmodp p d - q) d = rmodp (p - q) d.
-Proof.
-by move=> dM; rewrite rmodp_sub // rmodpK // -rmodp_sub.
-Qed.
-
-Lemma rmodp_subr (d p q : {poly A}) : 
-  d \is monic -> rmodp (p - rmodp q d) d = rmodp (p - q) d.
-Proof.
-by move=> dM; rewrite rmodp_sub // rmodpK // -rmodp_sub.
-Qed.
-
-End Rmodp.
-
-Section CRmodp.
-
-Variable A : comRingType.
-
-Lemma rmodp_mulml (p q d : {poly A}) :
-  d \is monic -> rmodp (rmodp p d * q) d = rmodp (p * q) d.
-Proof.
-by move=> dM; rewrite [in LHS]mulrC [in RHS]mulrC rmodp_mulmr.
-Qed.
-
-End CRmodp.
 
 Section PType.
 
@@ -164,13 +108,13 @@ Proof.
 have hQM := monic_divpoly_quotient.
 move=> p; apply/val_eqP.
 rewrite /DivPoly_add /DivPoly_opp /inDivPoly /=.
-by rewrite rmodp_addl // subrK rmodpp.
+by rewrite !(rmodp_sub, rmodp_add, rmodp_mod, rmodpp) // subrK.
 Qed.
 
 Lemma DivPoly_addA : associative DivPoly_add.
 Proof.
 have hQM := monic_divpoly_quotient.
-by move=> p q r; apply/val_eqP; rewrite /= !(rmodp_addl, rmodp_addr) // addrA.
+by move=> p q r; apply/val_eqP; rewrite /= !(rmodp_add, rmodp_mod) // addrA.
 Qed.
 
 Lemma DivPoly_addC : commutative DivPoly_add.
@@ -231,7 +175,7 @@ Lemma DivPoly_mul_addr : right_distributive (@DivPoly_mul A h) (@DivPoly_add _ h
 Proof.
 have rPM := monic_divpoly_quotient.
 move=> p q r; apply: val_inj.
-by rewrite /= rmodp_mulmr // rmodp_addl // rmodp_addr // mulrDr.
+by rewrite /= !(rmodp_mulmr, rmodp_add, rmodp_mod, mulrDr).
 Qed.
 
 Lemma DivPoly_mul_addl : left_distributive (@DivPoly_mul A h) (@DivPoly_add _ h).
@@ -259,14 +203,7 @@ Lemma poly_of_divpoly_sum I (r : seq I) (P1 : pred I) (F : I -> {divpoly h}) :
   (poly_of_divpoly (\sum_(i <- r | P1 i) F i) =
     \sum_(p <- r | P1 p) (poly_of_divpoly (F p)))%R.
 Proof.
-elim: r => /= [|a l IH]; first by rewrite !big_nil.
-rewrite !big_cons /=; case: (P1 a) => //.
-by rewrite poly_of_divpolyD IH.
-Qed.
-
-Lemma poly_natmul p : (p%:R) = p%:R%:P :> {poly A}.
-Proof.
-by elim: p => //= p IH; rewrite !mulrS IH polyC_add.
+by elim/big_rec2: _ => // i p q IH <-; rewrite poly_of_divpolyD.
 Qed.
 
 Lemma DivPoly_natmul p : poly_of_divpoly (p%:R)= p%:R :> {poly A}.
@@ -274,17 +211,13 @@ Proof.
 by elim: p => //= p IH; rewrite !mulrS poly_of_divpolyD IH.
 Qed.
 
-Lemma char_poly p : p \in [char A] -> p \in [char {poly A}].
+Lemma char_DivPoly : [char {divpoly h}] =i [char A].
 Proof.
-rewrite !inE => /andP[-> H /=].
-by rewrite poly_natmul (eqP H).
-Qed.
-
-Lemma char_DivPoly p : p \in [char A] -> p \in [char {divpoly h}].
-Proof.
-rewrite !inE => /andP[-> H /=].
-apply/eqP/val_eqP=>/=.
-by rewrite DivPoly_natmul poly_natmul (eqP H).
+move=> p; rewrite !inE; congr (_ && _).
+apply/eqP/eqP=> [/(congr1 val) /=|pE]; last first.
+  by apply: val_inj => /=; rewrite DivPoly_natmul -poly_natmul pE.
+rewrite !DivPoly_natmul -!poly_natmul=> /(congr1 val) /=.
+by rewrite polyseqC polyseq0; case: eqP.
 Qed.
 
 Lemma poly_of_divpolyM (p q : {divpoly h}) : 
@@ -365,6 +298,13 @@ Canonical DivPoly_lalgType :=
   Eval hnf in LalgType A ({divpoly h}) DivPoly_scaleAl.
 Canonical DivPoly_algType := AlgType A {divpoly h} DivPoly_scaleAr.
 
+Lemma poly_of_divpolyZ (p : {divpoly h}) a :
+       (a *: p = rmodp (a *: p) (divpoly_quotient h) :> {poly A})%R.
+Proof.
+have hQM := monic_divpoly_quotient.
+by apply/val_eqP; rewrite rmodp_mod.
+Qed.
+
 End Ring.
 
 
@@ -442,7 +382,6 @@ move=> pNDq d dDp dPq.
 rewrite -size_poly_eq1; case: eqP => // /eqP /(H2 _) => /(_ dDp) dEp.
 by case: pNDq; rewrite -(eqp_dvdl _ dEp).
 Qed.
-
 
 Lemma coprimep_unit (p : {divpoly h}) : p != 0%R -> coprimep hQ p.
 Proof.
@@ -550,3 +489,29 @@ End PType.
 
 Notation "{ 'divpoly'  h }" := (divpoly (divpoly_quotient h))
   (format "{ 'divpoly'  h }").
+
+Section inPoly.
+
+Variable A : comRingType.
+Variable h : {poly A}.
+
+Lemma inDivPoly_comp_horner (p q : {poly A}) :
+ inDivPoly h (p \Po q) =
+     (map_poly (DivPoly_const h) p).[inDivPoly h q].
+Proof.
+have hQM := monic_divpoly_quotient h.
+rewrite comp_polyE /map_poly poly_def horner_sum /=.
+apply: val_inj.
+rewrite /= rmodp_sum // poly_of_divpoly_sum.
+apply: eq_bigr => i  _.
+rewrite !hornerE hornerXn /inDivPoly /=.
+rewrite mul_polyC // !rmodp_scale //=.
+by rewrite poly_of_divpolyX /= rmodp_exp // rmodp_mod.
+Qed.
+
+Lemma map_poly_div_ink : injective (map_poly (DivPoly_const h)).
+Proof.
+by apply: map_inj_poly => // x y /val_eqP /eqP /polyC_inj.
+Qed.
+
+End inPoly.

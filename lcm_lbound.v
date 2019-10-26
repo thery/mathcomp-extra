@@ -32,29 +32,14 @@ Proof. by move=> Lnm; rewrite /leibnizn bin_sub. Qed.
 Lemma leibn_gt0 m n : n <= m -> 0 < 'L(m, n).
 Proof. by move=> Lnm; rewrite /leibnizn muln_gt0 bin_gt0. Qed.
 
-Lemma bin_up m n : m.+1 * 'C(m, n) = (m.+1 - n) * 'C(m.+1, n).
-Proof.
-elim: m n => [|m IHm] [|n] //.
-case: (leqP m.+1 n)=> [H|H].
-  by apply/eqP; rewrite bin_small // muln0 eq_sym muln_eq0 subn_eq0 ltnS H.
-rewrite subSS mulSn {2}binS mulnDr !IHm addnA subSS -mulSn -subSn //.
-by rewrite -mulnDr -binS.
-Qed.
+Lemma bin_up1 m n : m.+1 * 'C(m, n) = (m.+1 - n) * 'C(m.+1, n).
+Proof. by have := mul_bin_down m.+1 n. Qed. 
 
 Lemma leibn_up m n : m.+2 * 'L(m, n) = (m.+1 - n) * 'L(m.+1, n).
-Proof. by rewrite /leibnizn bin_up mulnCA. Qed.
-
-Lemma bin_right m n : n.+1 * 'C(m.+1, n.+1) = (m.+1 - n) * 'C(m.+1, n).
-Proof.
-elim: m n => [|m IHm] [|n] //; first by rewrite muln0.
-  by rewrite bin0 bin1 muln1 mul1n.
-rewrite [in RHS]binS subSS mulnDr -IHm -mulnDl -mul_bin_diag.
-case: (leqP n m.+1)=> [H|H]; first by rewrite addnS subnK.
-by rewrite bin_small ?muln0 // ltnW.
-Qed.
+Proof. by rewrite /leibnizn mul_bin_down mulnCA. Qed.
 
 Lemma leibn_right m n : n.+1 * 'L(m.+1, n.+1) = (m.+1 - n) * 'L(m.+1, n).
-Proof. by rewrite /leibnizn mulnCA bin_right mulnCA. Qed.
+Proof. by rewrite /leibnizn mulnCA mul_bin_left mulnCA. Qed.
 
 Lemma leibnS m n : 
   'L(m.+1, n.+1) * 'L(m.+1, n) = 'L(m, n) * ('L(m.+1, n.+1) + 'L(m.+1, n)).
@@ -147,5 +132,3 @@ apply: dvdn_leq; last by rewrite (bigD1 i) //= dvdn_lcml.
 apply big_ind => // [x y Hx Hy|x H]; first by rewrite lcmn_gt0 Hx.
 by rewrite bin_gt0 -ltnS.
 Qed.
- 
-
