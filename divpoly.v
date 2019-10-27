@@ -147,7 +147,8 @@ Variable h : {poly A}.
 Definition divpoly_countMixin : Countable.mixin_of (divpoly h) :=
    @sub_countMixin (CountType {poly A} (poly_countMixin [countRingType of A])) 
                    _ (divpoly_subType h).
-Canonical divpoly_countType := Eval hnf in CountType (divpoly h) divpoly_countMixin.
+Canonical divpoly_countType :=
+  Eval hnf in CountType (divpoly h) divpoly_countMixin.
 Canonical fpoly_subCountType := [subCountType of divpoly h].
 
 End Fmod.
@@ -171,14 +172,16 @@ have rPM := monic_divpoly_quotient.
 by move=> p q r; apply: val_inj; rewrite /= rmodp_mulmr // rmodp_mulml // mulrA.
 Qed.
 
-Lemma DivPoly_mul_addr : right_distributive (@DivPoly_mul A h) (@DivPoly_add _ h).
+Lemma DivPoly_mul_addr :
+  right_distributive (@DivPoly_mul A h) (@DivPoly_add _ h).
 Proof.
 have rPM := monic_divpoly_quotient.
 move=> p q r; apply: val_inj.
 by rewrite /= !(rmodp_mulmr, rmodp_add, rmodp_mod, mulrDr).
 Qed.
 
-Lemma DivPoly_mul_addl : left_distributive (@DivPoly_mul A h) (@DivPoly_add _ h).
+Lemma DivPoly_mul_addl :
+  left_distributive (@DivPoly_mul A h) (@DivPoly_add _ h).
 Proof. by move=> p q r; rewrite -!(DivPoly_mulC r) DivPoly_mul_addr. Qed.
 
 Definition DivPoly_ringMixin :=
@@ -189,7 +192,8 @@ Notation hQ := (divpoly_quotient h).
 
 Canonical DivPoly_ringType := 
   Eval hnf in RingType (divpoly hQ) DivPoly_ringMixin.
-Canonical DivPoly_comRingType := Eval hnf in ComRingType (divpoly hQ) DivPoly_mulC.
+Canonical DivPoly_comRingType :=
+  Eval hnf in ComRingType (divpoly hQ) DivPoly_mulC.
 
 Lemma poly_of_divpolyD (p q : {divpoly h}) : 
   (p + q = (poly_of_divpoly p) + q :> {poly A})%R.
@@ -221,7 +225,7 @@ by rewrite polyseqC polyseq0; case: eqP.
 Qed.
 
 Lemma poly_of_divpolyM (p q : {divpoly h}) : 
-  poly_of_divpoly (p * q)%R = (rmodp (poly_of_divpoly p * poly_of_divpoly q) hQ).
+  poly_of_divpoly (p * q)%R = rmodp (poly_of_divpoly p * poly_of_divpoly q) hQ.
 Proof. by []. Qed.
 
 Lemma poly_of_divpolyX (p : {divpoly h}) n : 
@@ -229,7 +233,7 @@ Lemma poly_of_divpolyX (p : {divpoly h}) n :
 Proof.
 have HhQ := monic_divpoly_quotient h.
 elim: n => //= [|n IH].
-  by rewrite expr0 rmodp_small // size_polyC oner_eq0 // size_divpoly_quotient_gt1.
+  by rewrite expr0 rmodp_small ?size_polyC ?oner_eq0 ?size_divpoly_quotient_gt1.
 by rewrite exprS /= IH // rmodp_mulmr // -exprS.
 Qed.
 
@@ -247,7 +251,8 @@ Qed.
 
 Definition DivPoly_scale k (p : divpoly hQ) := ((DivPoly_const h k) * p)%R.
 
-Fact DivPoly_scaleA a b p : DivPoly_scale a (DivPoly_scale b p) = DivPoly_scale (a * b) p.
+Fact DivPoly_scaleA a b p :
+  DivPoly_scale a (DivPoly_scale b p) = DivPoly_scale (a * b) p.
 Proof. 
 have hQM := monic_divpoly_quotient.
 by apply/val_eqP; rewrite /= rmodp_mulmr // mulrA polyC_mul.
@@ -263,7 +268,8 @@ Fact DivPoly_scaleDr a : {morph DivPoly_scale a : p q / (p + q)%R}.
 Proof.
 have hQM := monic_divpoly_quotient.
 move=> p q; apply/val_eqP; 
-rewrite /= -rmodp_add // rmodp_mulmr // -mulrDr [rmodp (rmodp _ _) _]rmodp_small //.
+rewrite /= -rmodp_add // rmodp_mulmr // -mulrDr.
+rewrite [rmodp (rmodp _ _) _]rmodp_small //.
 by apply: inDivPoly_mod.
 Qed.
 
@@ -275,14 +281,16 @@ rewrite /= -rmodp_add // -mulrDl -polyC_add [rmodp (rmodp _ _) _]rmodp_small //.
 by apply: inDivPoly_mod.
 Qed.
 
-Fact DivPoly_scaleAl a p q : DivPoly_scale a (p * q)%R = (DivPoly_scale a p * q)%R.
+Fact DivPoly_scaleAl a p q :
+  DivPoly_scale a (p * q)%R = (DivPoly_scale a p * q)%R.
 Proof.
 have hQM := monic_divpoly_quotient.
 apply/val_eqP.
 by rewrite /= rmodp_mulmr // rmodp_mulml // mulrA.
 Qed.
 
-Fact DivPoly_scaleAr a p q : DivPoly_scale a (p * q)%R = (p * (DivPoly_scale a q))%R.
+Fact DivPoly_scaleAr a p q :
+  DivPoly_scale a (p * q)%R = (p * (DivPoly_scale a q))%R.
 Proof.
 have hQM := monic_divpoly_quotient.
 apply/val_eqP.
@@ -320,7 +328,8 @@ Definition DivPoly_inv (p : {divpoly h}) :=
                         ((lead_coef (v * p)) ^-1 *: v) else p.
 
 (* Ugly *)
-Lemma DivPoly_mulVz (p : {divpoly h}) :  coprimep hQ p -> (DivPoly_inv p * p = 1)%R.
+Lemma DivPoly_mulVz (p : {divpoly h}) :
+  coprimep hQ p -> (DivPoly_inv p * p = 1)%R.
 Proof.
 have hQM := monic_divpoly_quotient h.
 move=> hCp; apply: val_inj; rewrite /DivPoly_inv /inDivPoly hCp /=.
@@ -337,7 +346,8 @@ rewrite rmodp_mulml // -mulrA -rmodp_mulmr // rmodp_mulml //.
 rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
 have := eqp_modpl hQ F.
 rewrite modp_add // modp_mull add0r // .
-rewrite [(1 %% _)%R]modp_small // ?size_polyC ?oner_eq0 ?size_divpoly_quotient_gt1 // => egcdE.
+rewrite [(1 %% _)%R]modp_small => // [egcdE|]; last first.
+  by rewrite size_polyC oner_eq0 size_divpoly_quotient_gt1.
 rewrite {2}(eqpfP egcdE) lead_coefC divr1 alg_polyC -polyC_mul mulVf //.
   by rewrite modp_small // size_polyC  oner_eq0 size_divpoly_quotient_gt1.
 rewrite lead_coef_eq0.
@@ -345,7 +355,8 @@ apply/eqP => egcdZ.
 by move: egcdE; rewrite -size_poly_eq1 egcdZ size_polyC eq_sym  eqxx.
 Qed.
 
-Lemma DivPoly_mulzV (p : {divpoly h}) : coprimep hQ p -> (p * (DivPoly_inv p) = 1)%R.
+Lemma DivPoly_mulzV (p : {divpoly h}) :
+  coprimep hQ p -> (p * (DivPoly_inv p) = 1)%R.
 Proof. by move=> hCp; rewrite /= mulrC DivPoly_mulVz. Qed.
 
 Lemma DivPoly_intro_unit (p q : {divpoly h}) : (q * p = 1)%R -> coprimep hQ p.
@@ -361,8 +372,10 @@ Proof. by rewrite /DivPoly_inv => /negPf->. Qed.
 
 Definition DivPoly_unitRingMixin :=
   ComUnitRingMixin DivPoly_mulVz DivPoly_intro_unit DivPoly_inv_out.
-Canonical DivPoly_unitRingType := Eval hnf in UnitRingType {divpoly h} DivPoly_unitRingMixin.
-Canonical DivPoly_comUnitRingType := Eval hnf in [comUnitRingType of {divpoly h}].
+Canonical DivPoly_unitRingType :=
+  Eval hnf in UnitRingType {divpoly h} DivPoly_unitRingMixin.
+Canonical DivPoly_comUnitRingType :=
+  Eval hnf in [comUnitRingType of {divpoly h}].
 
 Definition monic_irreducible_poly (A : idomainType) (p : {poly A}) := 
   ((irreducible_poly p) * (p \is monic))%type.
@@ -386,7 +399,8 @@ Qed.
 Lemma coprimep_unit (p : {divpoly h}) : p != 0%R -> coprimep hQ p.
 Proof.
 move=> pNZ.
-rewrite irreducible_poly_coprime //; last by case: hI; rewrite irr_divpoly_quotientE.
+rewrite irreducible_poly_coprime //; last first.
+  by case: hI; rewrite irr_divpoly_quotientE.
 apply: contra pNZ => H; case: eqP => // /eqP /dvdp_leq /(_ H).
 by rewrite leqNgt size_divpoly.
 Qed.
@@ -407,8 +421,10 @@ Proof. by apply: coprimep_unit. Qed.
 
 Definition DivPoly_fieldIdomainMixin := FieldIdomainMixin DivPoly_fieldMixin.
 
-Canonical DivPoly_idomainType := Eval hnf in IdomainType {divpoly h} DivPoly_fieldIdomainMixin.
-Canonical DivPoly_fieldType := Eval hnf in FieldType {divpoly h} DivPoly_fieldMixin.
+Canonical DivPoly_idomainType :=
+  Eval hnf in IdomainType {divpoly h} DivPoly_fieldIdomainMixin.
+Canonical DivPoly_fieldType :=
+  Eval hnf in FieldType {divpoly h} DivPoly_fieldMixin.
 
 End Field.
 

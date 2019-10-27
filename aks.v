@@ -40,7 +40,8 @@ rewrite (eq_bigr (fun i : 'I_n => p * p ^+ i)) ?subrK // => i _.
 by rewrite exprS.
 Qed.
 
-Lemma dvdp_geom (R : comRingType) n (p : {poly R}) : p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
+Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
+  p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
 Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
 
 (* 98 *)
@@ -182,11 +183,14 @@ Definition is_ipoly (R : ringType) (k s : nat) (p : {poly R}):=
 Definition is_iexpm (R : ringType) (k s mk : nat) :=
    exists2 m, mk = (m %% k)%N & is_iexp R k s m.
 
-Inductive is_iexpm_spec (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Prop :=
+Inductive is_iexpm_spec 
+     (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Prop :=
    is_iexpm_spec_true : 
-    forall (m : nat), (mk = m %% k :> nat)%N -> is_iexp R k s m -> @is_iexpm_spec R k k1 s mk true
+    forall (m : nat),  (mk = m %% k :> nat)%N -> is_iexp R k s m -> 
+      @is_iexpm_spec R k k1 s mk true
  | is_iexpm_spec_false :
- (forall (m : nat), is_iexp R k s m -> (mk != m %% k :> nat)%N) -> @is_iexpm_spec R k k1 s mk false.
+    (forall (m : nat), is_iexp R k s m -> (mk != m %% k :> nat)%N) -> 
+      @is_iexpm_spec R k k1 s mk false.
 
 (* I've put Mk in {set 'Z_k} but its natural ambient is units_Zp! *)
 Definition Mk_spec R s k (M : {set 'Z_k}) :=

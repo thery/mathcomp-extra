@@ -50,7 +50,8 @@ Variable R : ringType.
 Lemma size_exp_monic (p: {poly R}) n :
   p \is monic -> size (p ^+ n) = ((size p).-1 * n).+1.
 Proof.
-move=> pM; elim: n => // [|n IH]; first by rewrite !expr0 muln0 size_polyC oner_eq0.
+move=> pM; elim: n => // [|n IH].
+  by rewrite !expr0 muln0 size_polyC oner_eq0.
 rewrite exprS size_proper_mul ?IH; last first.
   by rewrite (eqP pM) (eqP (monic_exp n pM)) mul1r oner_neq0.
 have : (0 < size p)%nat.
@@ -69,7 +70,8 @@ have cp0q : (p \Po q)`_((size p).-1 * (size q).-1) == 1.
     by have := monic_neq0 pM; rewrite -size_poly_eq0; case: size.
   case: size => //= k _ pkE.
   rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r.
-  by have := monic_exp k qM; rewrite qualifE /lead_coef size_exp_monic //= mulnC.
+    have := monic_exp k qM.
+    by rewrite qualifE /lead_coef size_exp_monic //= mulnC.
   move=> i _; rewrite coefZ [_`_(k * _)]nth_default ?mulr0 //.
   rewrite size_exp_monic // mulnC.
   suff : (1 < size q)%nat.
@@ -180,9 +182,9 @@ elim: n => // [] [|n] // /(_ isT) IH _.
 apply/idP/idP; rewrite exprS; last first.
   by move=> /dvdp_trans; apply; apply: dvdp_mulr.
 have [pCq|pNCq] := boolP (coprimep p q); first by rewrite Gauss_dvdpr // IH.
-have /(irredp_XsubCP pI)[pCq|/andP[_ pDg] _] : gcdp p q %| p by rewrite dvdp_gcdl.
-  case/negP: pNCq.
-  by rewrite /coprimep size_poly_eq1.
+have /(irredp_XsubCP pI)[pCq|/andP[_ pDg] _] : gcdp p q %| p.
+- by rewrite dvdp_gcdl.
+- by case/negP: pNCq; rewrite /coprimep size_poly_eq1.
 by apply: dvdp_trans pDg (dvdp_gcdr _ _).
 Qed. 
 
@@ -245,7 +247,8 @@ Section Rmodp.
 
 Variable R : ringType.
 
-Lemma rmodp_mod (d p : {poly R}) : d \is monic -> rmodp (rmodp p d) d = rmodp p d.
+Lemma rmodp_mod (d p : {poly R}) :
+  d \is monic -> rmodp (rmodp p d) d = rmodp p d.
 Proof.
 by move=> dM; rewrite rmodp_small // ltn_rmodpN0 // monic_neq0.
 Qed.
@@ -261,7 +264,8 @@ Lemma rmodp_sub (d p q : {poly R}) :
   d \is monic -> rmodp (p - q) d = (rmodp p d - rmodp q d)%R.
 Proof. by move=> dM; rewrite rmodp_add // rmodp_opp. Qed.
 
-Lemma rmodp_scale (d : {poly R}) a p : d \is monic -> rmodp (a *: p) d = a *: (rmodp p d).
+Lemma rmodp_scale (d : {poly R}) a p :
+  d \is monic -> rmodp (a *: p) d = a *: (rmodp p d).
 move=> dM. 
 case: (altP (a =P 0%R)) => [-> | cn0]; first by rewrite !scale0r rmod0p.
 have -> : ((a *: p) = (a *: (rdivp p d)) * d + a *: (rmodp p d))%R.
@@ -272,10 +276,9 @@ rewrite -mul_polyC; apply: leq_ltn_trans (size_mul_leq _ _) _.
 by apply: monic_neq0.
 Qed.
 
-Lemma rmodp_sum (I : Type) (r : seq I) (P : pred I)
-	 (F : I -> {poly R}) (d : {poly R}) :
+Lemma rmodp_sum (I : Type) (r : seq I) (P : pred I) (F : I -> {poly R}) d :
    d \is monic ->
-   (rmodp (\sum_(i <- r | P i) F i) d = (\sum_(i <- r | P i) (rmodp (F i) d)))%R.
+   rmodp (\sum_(i <- r | P i) F i) d = (\sum_(i <- r | P i) (rmodp (F i) d)).
 Proof.
 move=> dM.
 by elim/big_rec2: _ => [|i p q _ <-]; rewrite ?(rmod0p, rmodp_add).
