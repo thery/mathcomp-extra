@@ -12,7 +12,7 @@ Unset Printing Implicit Defensive.
 (* is_rset s1 s2  == s1 is a set that realizes the rank of s2                 *)
 (*   mclosure s   == the closure of a set                                     *)
 (*   mflats M     == the set of flats                                         *)
-(* mcover s1 s2   == s1 is the smallest flat that is a proper superset of s2    *)
+(* mcover s1 s2   == s1 is the smallest flat that is a proper superset of s2  *)
 (******************************************************************************)
 
 Record Matroid : Type := 
@@ -129,7 +129,8 @@ by apply: subset_trans (subsetUr _ _) s4IM.
 Qed.
 
 (* P3R *)
-Lemma mrank_mod s1 s2 : mrank (s1 :|: s2) + mrank (s1 :&: s2) <= mrank s1 + mrank s2.
+Lemma mrank_mod s1 s2 :
+  mrank (s1 :|: s2) + mrank (s1 :&: s2) <= mrank s1 + mrank s2.
 Proof.
 have [s3 [rS3 s3IM s3Ss1Is2]] := mrankE (s1 :&: s2).
 have s3Ss1Us2 : s3 \subset s1 :|: s2.
@@ -197,7 +198,8 @@ Qed.
 Lemma mclosure_subset s1 s2 : s1 \subset s2 -> mclosure s1 \subset mclosure s2.
 Proof.
 move=> s1Ss2; apply/subsetP=> x; rewrite !inE => /eqP rxs1E.
-rewrite eqn_leq [_ <= mrank (_ |: _)]mrank_subset ?andbT; last by apply: subsetUr.
+rewrite eqn_leq [_ <= mrank (_ |: _)]mrank_subset ?andbT; last first.
+  by apply: subsetUr.
 have->: x |: s2 = (x |: s1) :|: s2.
   rewrite -setUA; congr (_ |: _).
   by apply/sym_equal/setUidPr.
@@ -214,7 +216,8 @@ Qed.
 
 Lemma mclosureU1 a s : a \in mclosure s -> mclosure (a |: s) = mclosure s.
 Proof.
-rewrite inE => /eqP aIs; apply/eqP; rewrite eqEsubset andbC mclosure_subset ?subsetUr //=.
+rewrite inE => /eqP aIs; apply/eqP.
+rewrite eqEsubset andbC mclosure_subset ?subsetUr //=.
 apply/subsetP=> b; rewrite !inE => /eqP bIas.
 rewrite eqn_leq andbC mrank_subset ?subsetUr //=.
 by rewrite -aIs -bIas mrank_subset // setUCA subsetUr.
@@ -256,7 +259,8 @@ Lemma mflats_setT : [set: M] \in mflats.
 Proof. by rewrite inE mclosure_setT eqxx. Qed.
 
 (* P2P *)
-Lemma mflats_setI s1 s2 : s1 \in mflats -> s2 \in mflats -> s1 :&: s2 \in mflats.
+Lemma mflats_setI s1 s2 :
+  s1 \in mflats -> s2 \in mflats -> s1 :&: s2 \in mflats.
 Proof.
 rewrite !inE => s1F s2F.
 rewrite eqEsubset mclosure_sub andbT subsetI.
@@ -341,7 +345,8 @@ suff/eqP->: cl(a |: s1) == cl(b |: s1) by rewrite -sE.
 rewrite eqEsubset; apply/andP; split; last first.
   by rewrite -sE (subset_trans _ s1Sas1).
 rewrite -(mclosure_invo (b |: _)) mclosure_subset //.
-rewrite subUset sub1set -{2}(mflats_mclosure s1F) mclosure_subset ?andbT ?subsetUr //.
+rewrite subUset sub1set -{2}(mflats_mclosure s1F).
+rewrite mclosure_subset ?andbT ?subsetUr //.
 suff : a \in (mclosure (b |: s1) :\: mclosure s1) by rewrite inE => /andP[].
 apply: mclosure_ex.
 rewrite inE mflats_mclosure // bNIs1 (subsetP s1Sas1) // sE.
@@ -372,8 +377,8 @@ by case/eqP: s1Ds2; rewrite -s1s2E1.
 Qed.
  
 (* P3P *)
-Lemma mflats_partition s : 
-  s \in mflats -> partition [set (s1 :\: s) | s1 in {set M} & mcover s1 s] (~: s).
+Lemma mflats_partition s : s \in mflats -> 
+  partition [set (s1 :\: s) | s1 in {set M} & mcover s1 s] (~: s).
 Proof.
 move=> sF.
 apply/and3P; split.

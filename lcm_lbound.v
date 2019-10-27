@@ -1,3 +1,4 @@
+From mathcomp Require Import all_ssreflect.
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
 (*       'L(n,m) <=>                                                          *)
@@ -9,8 +10,6 @@
 (* following [Chan and Norrish]                                               *)
 (*                                                                            *)
 (******************************************************************************)
-
-From mathcomp Require Import all_ssreflect.
 
 Definition leibnizn m n := m.+1 *  'C(m, n).
 
@@ -71,7 +70,8 @@ case: c => [|c H].
 apply/eqP.
 have /eqn_pmul2r<- : a.+1 * gcdn b.+1 c.+1 > 0 by rewrite muln_gt0 gcdn_gt0.
   rewrite {2}muln_gcdr H [b.+1 * _]mulnC mulnDl gcdnDl.
-  by rewrite mulnCA muln_lcm_gcd -muln_gcdl !mulnA muln_lcm_gcd [X in _ == X]mulnAC.
+  rewrite mulnCA muln_lcm_gcd -muln_gcdl !mulnA.
+  by rewrite muln_lcm_gcd [X in _ == X]mulnAC.
 Qed.
 
 Lemma leibn_lcm_swap m n :
@@ -117,7 +117,7 @@ case: n => [|n /=]; first by rewrite big_ord0.
 have <-: \lcm_(i < n.+1) 'L(i, 0) = \lcm_(i < n.+1) i.+1.
   by apply: eq_bigr => i _; rewrite leibn0.
 rewrite leib_corner.
-have -> : forall j,  \lcm_(i < j.+1) 'L(n, i) = n.+1 *  \lcm_(i < j.+1) 'C(n, i).
+have -> : forall j, \lcm_(i < j.+1) 'L(n, i) = n.+1 *  \lcm_(i < j.+1) 'C(n, i).
   elim=> [|j IH]; first by rewrite !big_ord_recr !big_ord0 /= !lcm1n.
   by rewrite big_ord_recr [in RHS]big_ord_recr /= IH muln_lcmr.
 rewrite (expnDn 1 1) /=  (eq_bigr (fun i : 'I_n.+1 => 'C(n, i))) => 

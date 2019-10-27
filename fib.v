@@ -1,15 +1,14 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype.
-From mathcomp Require Import bigop div prime finfun tuple ssralg zmodp matrix binomial.
+From mathcomp Require Import all_ssreflect all_algebra.
 
-(*****************************************************************************)
-(* This files contains the definitions of:                                   *)
-(*     fib n == n.+1 th fibonacci number                                     *)
-(*                                                                           *)
-(*   lucas n == n.+1 lucas number                                            *)
-(*                                                                           *)
-(*  and some of their standard properties                                    *)
-(*****************************************************************************)
+(******************************************************************************)
+(* This files contains the definitions of:                                    *)
+(*     fib n == n.+1 th fibonacci number                                      *)
+(*                                                                            *)
+(*   lucas n == n.+1 lucas number                                             *)
+(*                                                                            *)
+(*  and some of their standard properties                                     *)
+(******************************************************************************)
 
 Fixpoint  fib_rec (n : nat) {struct n} : nat :=
   if n is n1.+1 then
