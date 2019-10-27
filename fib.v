@@ -303,7 +303,7 @@ by apply eq_bigr=> i _ /=; rewrite -binS subSn //; case: i.
 Qed.
 
 
-(* The matrix                                                                *)
+(* The matrix                                                                 *)
 
 Section Matrix.
 
@@ -312,10 +312,10 @@ Import GRing.Theory.
 
 Variable R: ringType.
 
-(*  Equivalence                                  ^ n.+1                      *)
-(*                fib n.+2   fib n.+1      1   1                             *)
-(*                                     =                                     *)
-(*                fib n.+1   fib n         1   0                             *)
+(*  Equivalence                                  ^ n.+1                       *)
+(*                fib n.+2   fib n.+1      1   1                              *)
+(*                                     =                                      *)
+(*                fib n.+1   fib n         1   0                              *)
 
 Definition seq2matrix m n (l: seq (seq R)) :=
   \matrix_(i<m,j<n) nth 1 (nth [::] l i) j.
