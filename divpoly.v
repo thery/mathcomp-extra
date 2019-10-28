@@ -237,6 +237,16 @@ elim: n => //= [|n IH].
 by rewrite exprS /= IH // rmodp_mulmr // -exprS.
 Qed.
 
+Lemma DivPoly_constN (a : A) : 
+  DivPoly_const h (- a) = -(DivPoly_const h a).
+Proof.
+have HhQ := monic_divpoly_quotient h.
+apply: val_inj.
+rewrite /= rmodp_sub // rmodpp // sub0r rmodp_small //.
+  by rewrite raddfN.
+by apply: PolDiv_const_proof.
+Qed.
+
 Lemma DivPoly_constD : {morph (DivPoly_const h) : a b / a + b >-> a + b}%R.
 Proof.
 move=> a b; apply/val_eqP/eqP=> /=.
@@ -248,6 +258,15 @@ Proof.
 move=> a b; apply/val_eqP/eqP=> /=.
 by rewrite -polyC_mul rmodp_small // PolDiv_const_proof.
 Qed.
+
+Lemma DivPoly_const_is_rmorphism : rmorphism (DivPoly_const h).
+Proof.
+do ?split; move=> // x y /=.
+  by rewrite DivPoly_constD DivPoly_constN.
+by rewrite DivPoly_constM.
+Qed.
+
+Canonical DivPoly_const_rmorphism := RMorphism DivPoly_const_is_rmorphism.
 
 Definition DivPoly_scale k (p : divpoly hQ) := ((DivPoly_const h k) * p)%R.
 
@@ -525,7 +544,7 @@ rewrite mul_polyC // !rmodp_scale //=.
 by rewrite poly_of_divpolyX /= rmodp_exp // rmodp_mod.
 Qed.
 
-Lemma map_poly_div_ink : injective (map_poly (DivPoly_const h)).
+Lemma map_poly_div_inj : injective (map_poly (DivPoly_const h)).
 Proof.
 by apply: map_inj_poly => // x y /val_eqP /eqP /polyC_inj.
 Qed.

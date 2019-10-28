@@ -433,6 +433,49 @@ by apply/esym/eqP/qI.
 Qed.
 
 (*108*)
+Lemma Mk_rmodp_inj (R : fieldType) (h : {poly R}) k s 
+         (M : {set 'Z_k})  (p q : {poly R})  :
+  Mk_spec R s M ->
+  monic_irreducible_poly h -> (0 < k)%N -> rdvdp h ('X^k - 1) -> 
+  poly_order h 'X k = k -> (size p <= #|M|)%N -> (size q <= #|M|)%N ->
+  is_ipoly k s p -> is_ipoly k s q -> rmodp p h = rmodp q h -> p = q.
+Proof.
+have [|M_gt0] := leqP #|M| 0%N.
+  rewrite leqn0 => /eqP->; rewrite !leqn0 !size_poly_eq0.
+  by move=> ? ? ? ? ? /eqP-> /eqP->.
+move=> HMk hMI k_gt0 hDxk XoE pS qS pI qI /eqP.
+have hS : (1 < size h)%N by case: hMI; case.
+have hI : irreducible_poly h by case: hMI.
+have hM : h \is monic by case: hMI.
+have hQE : divpoly_quotient h = h by rewrite /divpoly_quotient hS hM.
+pose l := map (fun i : 'I_ _ => (inDivPoly h 'X^i)) (enum M).
+have Ul : uniq l.
+  apply/(uniqP 0) => i j; rewrite !inE size_map -cardE => Hi1 Hj1.
+  rewrite  !(nth_map ord0) -?cardE // => /val_eqP /eqP /= HH.
+  suff : nth ord0 (enum M) i = nth ord0 (enum M) j.
+    by have /(uniqP ord0) := enum_uniq (pred_of_set M); apply=> //; 
+       rewrite inE -cardE.
+  apply/val_inj => /=; move: HH.
+  apply: (poly_order_rmod_inj _ _ k_gt0); rewrite hQE ?XoE //.
+  - have: nth ord0 (enum M) i \in M by rewrite -mem_enum mem_nth // -cardE.
+    by case: HMk => // m -> _; rewrite ltn_mod //.
+  have: nth ord0 (enum M) j \in M by rewrite -mem_enum mem_nth // -cardE.
+  by case: HMk => // m -> _; rewrite ltn_mod.
+rewrite -subr_eq0 -rmodp_sub // => /eqP => u.
+apply/eqP; rewrite -subr_eq0; apply/eqP/(@map_poly_div_inj _ h).
+rewrite map_poly0.
+apply (@roots_geq_poly_eq0 (DivPoly_idomainType hMI) _ l) => //; last first.
+  rewrite (@size_map_poly _ _ (DivPoly_const_rmorphism h)) /=.
+  rewrite size_map (leq_trans (size_add _ _)) //=  size_opp.
+  by rewrite geq_max -cardE pS.
+apply/allP=> i /mapP[j jI ->]; apply/eqP.
+rewrite -inDivPoly_comp_horner //.
+apply/val_inj => /=.
+rewrite polyC0 hQE //.
+apply: Mk_root_Mk => //.
+  by apply/eqP; rewrite -subr_eq0 -rmodp_sub //; apply/eqP.
+by rewrite -mem_enum.
+Qed.
 
 End AKS.
 

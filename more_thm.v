@@ -358,3 +358,27 @@ by rewrite  -commr_polyX hornerMX IH -exprSr exprS.
 Qed.
 
 End horner.
+
+Section alreadyin.
+
+Variable R : idomainType.
+Implicit Type p : {poly R}.
+
+Theorem max_poly_roots p rs :
+  p != 0 -> all (root p) rs -> uniq rs -> (size rs < size p)%N.
+Proof.
+elim: rs p => [p pn0 _ _ | r rs ihrs p pn0] /=; first by rewrite size_poly_gt0.
+case/andP => rpr arrs /andP [rnrs urs]; case/factor_theorem: rpr => q epq.
+case: (altP (q =P 0)) => [q0 | ?]; first by move: pn0; rewrite epq q0 mul0r eqxx.
+have -> : size p = (size q).+1.
+   by rewrite epq size_Mmonic ?monicXsubC // size_XsubC addnC.
+suff /eq_in_all h : {in rs, root q =1 root p} by apply: ihrs => //; rewrite h.
+move=> x xrs; rewrite epq rootM root_XsubC orbC; case: (altP (x =P r)) => // exr.
+by move: rnrs; rewrite -exr xrs.
+Qed.
+
+Lemma roots_geq_poly_eq0 p (rs : seq R) : all (root p) rs -> uniq rs ->
+  (size rs >= size p)%N -> p = 0.
+Proof. by move=> ??; apply: contraTeq => ?; rewrite leqNgt max_poly_roots. Qed.
+
+End alreadyin.
