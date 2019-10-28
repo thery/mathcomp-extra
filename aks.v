@@ -184,57 +184,46 @@ Definition is_iexpm (R : ringType) (k s mk : nat) :=
    exists2 m, mk = (m %% k)%N & is_iexp R k s m.
 
 Inductive is_iexpm_spec 
-     (R : ringType) (k k1 s : nat) (mk : 'I_k1) : bool -> Prop :=
+     (R : ringType) (k s : nat) (mk : 'Z_k) : bool -> Prop :=
    is_iexpm_spec_true : 
     forall (m : nat),  (mk = m %% k :> nat)%N -> is_iexp R k s m -> 
-      @is_iexpm_spec R k k1 s mk true
+      @is_iexpm_spec R k s mk true
  | is_iexpm_spec_false :
     (forall (m : nat), is_iexp R k s m -> (mk != m %% k :> nat)%N) -> 
-      @is_iexpm_spec R k k1 s mk false.
+      @is_iexpm_spec R k s mk false.
 
 (* I've put Mk in {set 'Z_k} but its natural ambient is units_Zp! *)
 Definition Mk_spec R s k (M : {set 'Z_k}) :=
-  (forall x, @is_iexpm_spec R k ((Zp_trunc k).+2) s x (x \in M)).
+  (forall x, @is_iexpm_spec R k s x (x \in M)).
 
-(* There should be a shorter proof *)
-Lemma Mk_Cexists R k s : (1 < k)%N -> classically (exists M : {set 'Z_k}, Mk_spec R s M).
+Lemma Mk_Cexists R k s :
+  classically (exists M : {set 'Z_k}, Mk_spec R s M).
 Proof.
-move=> k_gt1; rewrite /Mk_spec Zp_cast // => {k_gt1}[].
-rewrite /Mk_spec; elim:  {-6}k => [|k1 IH].
-  by apply/classicP => [] []; exists set0 => [] [].
-apply: classic_bind IH => [] [M HM].
-pose M1 := [set (fintype.lift ord_max i) | i in M].
+rewrite /Mk_spec.
+suff : classically (exists M : {set 'Z_k}, 
+      forall x : 'Z_k, x \in (enum 'Z_k) -> uniq (enum 'Z_k) -> 
+            is_iexpm_spec R s x (x \in M)).
+  apply: classic_bind => [[M HM]].
+  apply/classicP=> [] []; exists M => x.
+  apply: HM => //; first by rewrite mem_enum inE.
+  by apply: enum_uniq.
+elim: (enum _) => [|a l] //.
+  by apply/classicP=> [] []; exists setT=> x; rewrite inE.
+apply: classic_bind => [[M HM]].
 have /classic_bind := @classic_pick nat
- (fun m => ((ord_max : 'I_k1.+1) = m %% k :> nat)%N /\ is_iexp R k s m).
-apply => [] [[x [xE xI]]|oE].
-  apply/classicP => [] []; exists (ord_max |: M1) => y.
-  rewrite !inE; case: eqP=> [->/=|/eqP yDo/=].
-    by apply: is_iexpm_spec_true xI.
-  have [/imsetP [z]|yNIM1] := boolP (y \in _).
-    case: HM => // m zE mI _ yE.
-    apply: is_iexpm_spec_true mI.
-    by rewrite yE /= /bump /= leqNgt ltn_ord zE.
-  constructor => m mI; apply/eqP=> yE.
-  case/negP: yNIM1; apply/imsetP.
-  case: (unliftP ord_max y) => [z zE| zE1]; last by case/eqP: yDo.
-  exists z => //; case: HM => // /(_ m mI) /eqP[].
-  by rewrite -yE zE /= /bump leqNgt ltn_ord.
-apply/classicP => [] []; exists M1 => x.
-have [/eqP xEo| xDo] := boolP (x == ord_max).
-  rewrite (_ : _ \in _ = false).
-    constructor => m mI; apply/negP => /eqP xEm.
-    by case: (oE m); rewrite -xEo.
-  apply/idP=> /imsetP[y]; case: HM => // m yE  _ _ /val_eqP /=.
-  by rewrite xEo /= (negPf (neq_bump _ _)).
-have [/imsetP [y]|xNIM1] := boolP (x \in _).
-  case: HM => // m yE mI _ xE.
-  apply: is_iexpm_spec_true mI.
-  by rewrite xE /= /bump /= leqNgt ltn_ord yE.
-constructor => m mI; apply/eqP=> xE.
-case/negP: xNIM1; apply/imsetP.
-case: (unliftP ord_max x) => [y yE| xE1]; last by case/eqP: xDo.
-exists y => //; case: HM => // /(_ m mI) /eqP[].
-by rewrite -xE yE /= /bump leqNgt ltn_ord.
+ (fun m => (a = m %% k :> nat)%N /\ is_iexp R k s m).
+apply => [] [[ma [maE maI]]|Ha].
+  apply/classicP => [] []; exists (a |: M) => x.
+  rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
+    by rewrite eqxx; apply: is_iexpm_spec_true maI.
+  case: eqP => [xE|_ /=]; first by case/negP: aNIl; rewrite -xE.
+  by apply: HM.
+apply/classicP => [] []; exists (M :\ a) => x.
+rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
+  rewrite eqxx; apply: is_iexpm_spec_false=> m Hm.
+  by apply/eqP=> eE; case: (Ha m).
+rewrite (_ : x != a); first by by apply: HM.
+by apply: contra aNIl => /eqP<-.
 Qed.
 
 Lemma is_iexpm1 (R : comRingType) k s (M : {set 'Z_k}) : 
@@ -265,12 +254,8 @@ Qed.
 Lemma is_iexpm_totient R k s (M : {set 'Z_k}) :
   (1 < k)%N -> Mk_spec R s M -> (#|M| <= totient k)%N.
 Proof.
-move=> k_gt1; move: M; rewrite /Mk_spec Zp_cast // => {k_gt1}[].
-case: k => [M _|k M HM].
-  apply: leq_trans (_ : (#|(setT : {set 'I_0})| <= _)%N).
-    by apply/subset_leq_card/subsetT.
-  by rewrite cardsT card_ord.
-suff <-: #|[set i in 'I_k.+1 | coprime i k.+1]| = totient k.+1.
+move:M; case: k => [|[|k /= M _ HM]] //.
+suff <-: #|[set i in 'I_k.+2 | coprime i k.+2]| = totient k.+2.
   apply/subset_leq_card/subsetP=> x; rewrite !inE; case: HM => // m -> [].
   by rewrite coprime_modl.
 rewrite -sum1_card big_mkcond /=.
@@ -310,7 +295,8 @@ Lemma ordern_exp k m :
 Proof.
 move=> k_gt1 kCm.
 have /(congr1 val) /(congr1 val) := expg_order (mk_Zp_unit k m).
-by rewrite FinRing.val_unitX /ordern /= k_gt1 kCm /= -natrX val_Zp_nat // Zp_cast.
+rewrite FinRing.val_unitX /ordern /= k_gt1 kCm /=.
+by rewrite -natrX val_Zp_nat // Zp_cast.
 Qed.
 
 (* 104 *)
@@ -329,7 +315,8 @@ Qed.
 
 (* 105 *)
 Lemma rmodn_trans {R : ringType} (p q h z : {poly R}) :
-  h \is monic -> z \is monic -> rdvdp h z -> rmodp p z = rmodp q z -> rmodp p h  = rmodp q h.
+  h \is monic -> z \is monic -> rdvdp h z -> 
+  rmodp p z = rmodp q z -> rmodp p h  = rmodp q h.
 Proof.
 move=> hM zM /(rdvdp_trans hM zM) => /(_ (p - q)).
 rewrite /rdvdp !rmodp_sub // !subr_eq0 => H /eqP H1; apply/eqP.
@@ -391,7 +378,8 @@ have [|o_gt0] := leqP (poly_order h 'X k) 0.
   have kB : (0 < k <= k)%N by rewrite k_gt0 leqnn.
   by rewrite leqn0 => /eqP/poly_order_eq0_rmodp /(_ kB) /eqP[].
 pose v := (poly_order h 'X k - n + m)%N.
-have /poly_order_lt/eqP[] : (0 < poly_order h 'X k - n + m < poly_order h 'X k )%nat.
+have /poly_order_lt/eqP[] :
+     (0 < poly_order h 'X k - n + m < poly_order h 'X k )%nat.
   rewrite (leq_trans _ (_ : 0 + m < _)%N) //; last first.
     by rewrite ltn_add2r subn_gt0.
   rewrite -{2}[poly_order _ _ _](@subnK m); last by apply: ltnW.
@@ -464,8 +452,8 @@ have Ul : uniq l.
 rewrite -subr_eq0 -rmodp_sub // => /eqP => u.
 apply/eqP; rewrite -subr_eq0; apply/eqP/(@map_poly_div_inj _ h).
 rewrite map_poly0.
-apply (@roots_geq_poly_eq0 (DivPoly_idomainType hMI) _ l) => //; last first.
-  rewrite (@size_map_poly _ _ (DivPoly_const_rmorphism h)) /=.
+apply (@roots_geq_poly_eq0 (divpoly_idomainType hMI) _ l) => //; last first.
+  rewrite (@size_map_poly _ _ (divpoly_const_rmorphism h)) /=.
   rewrite size_map (leq_trans (size_add _ _)) //=  size_opp.
   by rewrite geq_max -cardE pS.
 apply/allP=> i /mapP[j jI ->]; apply/eqP.
@@ -475,6 +463,54 @@ rewrite polyC0 hQE //.
 apply: Mk_root_Mk => //.
   by apply/eqP; rewrite -subr_eq0 -rmodp_sub //; apply/eqP.
 by rewrite -mem_enum.
+Qed.
+
+
+(* This is 𝒬_h *)
+Definition is_iexph (R : ringType) (k s: nat) h ph :=
+  exists2 p : {poly R}, ph = inDivPoly h p & is_ipoly k s p.
+
+Inductive is_iexph_spec 
+     (R : ringType) (k s : nat) (h : {poly R}) ph : bool -> Prop :=
+   is_iexph_spec_true : 
+    forall p, ph = inDivPoly h p -> is_ipoly k s p -> 
+      @is_iexph_spec R k s h ph true
+ | is_iexph_spec_false :
+    (forall p, is_ipoly k s p -> ph != inDivPoly h p) -> 
+      @is_iexph_spec R k s h ph false.
+
+Definition Qh_spec (R : finRingType) k s (h :{poly R}) (M : {set {divpoly h}}) :=
+  (forall x, @is_iexph_spec R k s h x (x \in M)).
+
+Lemma Qh_Cexists (R : finRingType) k s (h : {poly R}) :
+  classically (exists M : {set {divpoly h}}, Qh_spec k s M).
+Proof.
+rewrite /Qh_spec.
+suff : classically (exists M : {set {divpoly h}}, 
+      forall x : {divpoly h}, x \in (enum {divpoly h}) -> 
+            uniq (enum {divpoly h}) -> 
+            is_iexph_spec k s x (x \in M)).
+  apply: classic_bind => [[M HM]].
+  apply/classicP=> [] []; exists M => x.
+  apply: HM; first by rewrite mem_enum inE.
+  by apply: enum_uniq.
+elim: (enum _) => [|a l] //.
+  by apply/classicP=> [] []; exists setT=> x; rewrite inE.
+apply: classic_bind => [[M HM]].
+have /classic_bind := @classic_pick _
+ (fun p : {poly R} => a = inDivPoly h p /\ is_ipoly k s p).
+apply => [] [[ma [maE maI]]|Ha].
+  apply/classicP => [] []; exists (a |: M) => x.
+  rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
+    by rewrite eqxx; apply: is_iexph_spec_true maI.
+  case: eqP => [xE|_ /=]; first by case/negP: aNIl; rewrite -xE.
+  by apply: HM.
+apply/classicP => [] []; exists (M :\ a) => x.
+rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
+  rewrite eqxx; apply: is_iexph_spec_false=> m Hm.
+  by apply/eqP=> eE; case: (Ha m).
+rewrite (_ : x != a); first by by apply: HM.
+by apply: contra aNIl => /eqP<-.
 Qed.
 
 End AKS.
