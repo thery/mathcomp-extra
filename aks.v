@@ -544,12 +544,13 @@ Qed.
 (*109*)
 Lemma DDD (F : finFieldType) (h : {poly F}) k s p
          (M : {set 'Z_k}) (Q : {set {divpoly h}})   :
+  (forall c, (0 < c <= s)%N -> is_ipoly k s ('X + (c%:R)%:P : {poly F})) ->
   Mk_spec F s M -> Qh_spec k s Q -> p \in [char F] -> (1 < ordern k p)%N ->
   coprime k p -> monic_irreducible_poly h -> (1 < k)%N -> rdvdp h ('X^k - 1) -> 
   poly_order h 'X k = k -> (0 < s < p)%N ->
   (2 ^ minn s #|M| <= #|Q|)%N.
 Proof.
-move=> HMk HQh pC pO_gt1 kCp hMI k_gt1 hDxk XoE sB.
+move=> cI HMk HQh pC pO_gt1 kCp hMI k_gt1 hDxk XoE sB.
 have hQE : divpoly_quotient h = h.
   by rewrite /divpoly_quotient !hMI.
 rewrite -/(fdivpoly hMI) in Q HQh *.
@@ -651,65 +652,46 @@ have F3 b : b \in m -> (size (\prod_(i < t.+1) f b i)%R <= #|M|)%N.
   rewrite sum_nat_const [#|_|]vE1 muln2 -addnn ltn_add2l.
   by rewrite prednK ?geq_minr // ltnW.
 have F4 b : b \in m -> is_ipoly k s (\prod_(i < t.+1) f b i).
-  by admit.
+  move=> bIm m1 Hm1.
+  elim/big_rec: _ => [|i x _ xI]; first by apply: introspective1r.
+  apply: introspecMr => //.
+  rewrite /f; case: (b i); last by rewrite expr0; apply: introspective1r.
+  rewrite expr1; case: (i : nat) (ltn_ord i) => [_|i1].
+    by rewrite addr0; apply: introspectiveX.
+  rewrite ltnS => i1Lt; apply: cI => //=.
+  by move: i1Lt; rewrite leq_min => /andP[].
 suff /card_in_imset<- : {in m &, injective g}.
   rewrite subset_leqif_cards //; apply/subsetP => i /imsetP[/= b bIm ->].
   by case: HQh => // /(_ (\prod_(i < t.+1) f b i) (F4 _ bIm)) /eqP[].
 move=> m1 m2 m1I m2I /val_eqP/eqP/= H.
+have F5 b (x : 'I_ _) : b \in m -> 
+      (\prod_(i < t.+1) f b i).[-(x%:R)] == 0 = (b x).
+  move=> bIm; rewrite horner_prod. 
+  apply/GRing.prodf_eq0/idP=> /= [[j _]|bxE]; last first.
+    by exists x=> //; rewrite /f bxE expr1 !hornerE addrC subrr.
+  rewrite /f horner_exp !hornerE; case: (boolP (b j)) => bjE; last first.
+    by rewrite expr0 oner_eq0.
+  rewrite expr1 addrC.
+   rewrite {2}/is_true -{}bjE.
+  wlog: x j / (x <= j)%N => [Hw|].
+    case: (leqP x j)=> [xLj|jLx]; first by apply: Hw.
+    rewrite -oppr_eq0 opprB => xjE0.
+    by apply/esym/Hw => //; apply: ltnW.
+  rewrite leq_eqVlt => /orP[/val_eqP->//|xLhj].
+  rewrite -natrB 1?ltnW // -(dvdn_charf pC).
+  rewrite gtnNdvd //; first by rewrite subn_gt0.
+  apply: leq_ltn_trans (leq_subr _ _) _.
+  apply: leq_trans (ltn_ord _) _.
+  apply: leq_ltn_trans (geq_minl _ _) _.
+  by case/andP: sB.
 suff : \prod_(i < t.+1) f m1 i = \prod_(i < t.+1) f m2 i.
-  admit.
+  by move=> Hprod; apply/ffunP=> i; rewrite -F5 // Hprod F5.
 apply: Mk_rmodp_inj (F3 _ m1I) (F3 _ m2I) (F4 _ m1I) (F4 _ m2I) H => //.
 - by rewrite hQE.
 - by rewrite ltnW.
 - by rewrite hQE.
 by rewrite hQE.
-Qed,
-
-
-
-    Search _ is_ipoly
-    red.
-  rewrite /g.
-  apply/card_subsetP.
-     1?ltnW //.
-
-
-   leq_add2r.
-    Search _ (minn _ _ <= _)%N.
-     apply: leq_minr.
-     rewrite ltnS.
-     ltnS leq_sum // => i _.
-    apply: F2.
-   rewrite -ltnS (leq_trans (ltn_ord _)) // ltnS. geq_minl.
-  rewrite sum_nat_const card_ord.
-
-  Search _ minn (_ <= _)%N.
-  Search "leq" in bigop.
-  by rewrite expr0; apply: is_ipoly1.
-
-  apply.
-
-
- (0 <= c < s) -> is_ipoly k s  
-
-
-
-
-   (is_iexp_fin_char)).
-   case/eqP. 
-
-
-  rewrite inE. 
-  apply: 
-
-
-
-
-  monic_irreducible_poly h -> (0 < k)%N -> rdvdp h ('X^k - 1) -> 
-  poly_order h 'X k = k -> (size p <= #|M|)%N -> (size q <= #|M|)%N ->
-  is_ipoly k s p -> is_ipoly k s q -> rmodp p h = rmodp q h -> p = q.
-Proof.
-
+Qed.
 
 End AKS.
 
