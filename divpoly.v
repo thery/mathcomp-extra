@@ -409,6 +409,26 @@ Canonical divpoly_finComRingType := Eval hnf in [finComRingType of {divpoly h}].
 
 End FRing.
 
+Section iDomain.
+
+Variable R : idomainType.
+Variable h : {poly R}.
+
+Definition monic_irreducible_poly  (p : {poly R}) := 
+  ((irreducible_poly p) * (p \is monic))%type.
+Hypothesis hI : monic_irreducible_poly h.
+
+Definition fdivpoly : monic_irreducible_poly h -> Type :=
+  fun=> {divpoly h}.
+Notation divpoly := (fdivpoly hI).
+
+Canonical fdivpoly_eqType := [eqType of divpoly].
+Canonical fdivpoly_choiceType := [choiceType of divpoly].
+Canonical fdivpoly_zmodType := [zmodType of divpoly].
+Canonical fdivpoly_ringType := [ringType of divpoly].
+
+End iDomain.
+
 Section Field.
 
 Variable R : fieldType.
@@ -470,10 +490,15 @@ Canonical divpoly_unitRingType :=
 Canonical divpoly_comUnitRingType :=
   Eval hnf in [comUnitRingType of {divpoly h}].
 
-Definition monic_irreducible_poly (A : idomainType) (p : {poly A}) := 
-  ((irreducible_poly p) * (p \is monic))%type.
 
 Hypothesis hI : monic_irreducible_poly h.
+
+(* Trick to hide the fact that the polynomial is irreducible *)
+Notation divpoly := (fdivpoly hI).
+
+Canonical fdivpoly_unitRingType := [unitRingType of divpoly].
+Canonical fdivpoly_comRingType := [comRingType of divpoly].
+Canonical fdivpoly_comUnitRingType := [comUnitRingType of divpoly].
 
 Lemma irr_divpoly_quotientE : divpoly_quotient h = h.
 Proof. by rewrite /divpoly_quotient !hI. Qed.
@@ -515,9 +540,9 @@ Proof. by apply: coprimep_unit. Qed.
 Definition divpoly_fieldIdomainMixin := FieldIdomainMixin divpoly_fieldMixin.
 
 Canonical divpoly_idomainType :=
-  Eval hnf in IdomainType {divpoly h} divpoly_fieldIdomainMixin.
+  Eval hnf in IdomainType (fdivpoly hI) divpoly_fieldIdomainMixin.
 Definition divpoly_fieldType :=
-  Eval hnf in FieldType {divpoly h} divpoly_fieldMixin.
+  Eval hnf in FieldType (fdivpoly hI) divpoly_fieldMixin.
 
 End Field.
 
@@ -601,10 +626,10 @@ Notation "{ 'divpoly'  h }" := (divpoly (divpoly_quotient h))
 
 Section inPoly.
 
-Variable A : comRingType.
-Variable h : {poly A}.
+Variable R : comRingType.
+Variable h : {poly R}.
 
-Lemma inDivPoly_comp_horner (p q : {poly A}) :
+Lemma inDivPoly_comp_horner (p q : {poly R}) :
  inDivPoly h (p \Po q) =
      (map_poly (divpoly_const h) p).[inDivPoly h q].
 Proof.
@@ -624,3 +649,20 @@ by apply: map_inj_poly => // x y /val_eqP /eqP /polyC_inj.
 Qed.
 
 End inPoly.
+
+Section finPoly.
+
+(* Unfortunately we need some duplications so inference 
+   propagate fdivpoly :-( )*)
+Definition fdivpoly_const (R : idomainType) (h : {poly R})
+   (hMI : monic_irreducible_poly h) : R -> (fdivpoly hMI) := 
+   (divpoly_const h) .
+
+Lemma map_fpoly_div_inj
+	  (R : idomainType) (h : {poly R}) (hMI : monic_irreducible_poly h) : 
+       injective (map_poly (fdivpoly_const hMI)).
+Proof.
+by apply: (@map_poly_div_inj R h).
+Qed.
+
+End finPoly.

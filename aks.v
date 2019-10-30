@@ -18,8 +18,14 @@ Definition introspective {R : ringType} n k (p : {poly R}) :=
 Notation " n '⋈[' k ] p" := (introspective n k p) 
   (at level 40, format "n  '⋈[' k ]  p").
 
-Lemma introspective1 (R : ringType) k (p : {poly R}) : 1 ⋈[k] p.
+Lemma introspective1l (R : ringType) k (p : {poly R}) : 1 ⋈[k] p.
 Proof. by rewrite /introspective expr1 comp_polyXr. Qed.
+
+Lemma introspective1r (R : ringType) n k : n ⋈[k] (1 : {poly R}).
+Proof. by rewrite /introspective expr1n comp_polyC polyC1. Qed.
+
+Lemma introspectiveX (R : ringType) k n : n ⋈[k] ('X : {poly R}).
+Proof. by rewrite /introspective comp_polyX. Qed.
 
 Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
   n \in [char F] -> c%:R ^+ n = c%:R :> F.
@@ -45,12 +51,12 @@ Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
 Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
 
 (* 98 *)
-Lemma introspec_char (F : finFieldType) (k n c : nat) :
-  n \in [char F] -> n ⋈[k] ('X + c%:R%:P : {poly F}).
+Lemma introspec_char (F : finFieldType) (k p c : nat) :
+  p \in [char F] -> p ⋈[k] ('X + c%:R%:P : {poly F}).
 Proof.
-move=> nC; apply/eqP; congr (rmodp _  _).
-have Pp : prime n by apply: charf_prime nC.
-have Cn : [char F].-nat n by rewrite pnatE.
+move=> pC; apply/eqP; congr (rmodp _  _).
+have Pp : prime p by apply: charf_prime pC.
+have Cn : [char F].-nat p by rewrite pnatE.
 rewrite comp_polyD comp_polyC comp_polyX.
 rewrite exprDn_char; first by rewrite -polyC_exp fin_little_fermat.
 by rewrite pnatE // (rmorph_char (polyC_rmorphism _)).
@@ -143,7 +149,7 @@ Definition is_iexp (R : ringType) (k s m : nat) :=
 Lemma is_iexp1 (R : ringType) k s : is_iexp R k s 1%N.
 Proof.
 split=> [|c cR]; first by rewrite /coprime gcd1n.
-by apply: introspective1.
+by apply: introspective1l.
 Qed.
 
 Lemma is_iexp_mul (R : comRingType) k s m1 m2 : 
@@ -178,6 +184,17 @@ Qed.
 (* This is 𝒫 *)
 Definition is_ipoly (R : ringType) (k s : nat) (p : {poly R}):= 
   forall m, is_iexp R k s m -> m ⋈[k] p.
+
+Lemma is_ipoly1 (R : ringType) k s :  is_ipoly k s (1 : {poly R}).
+Proof. by move=> m _; apply: introspective1r. Qed.
+
+Lemma is_ipoly_Xaddc (R : ringType) k s c : 
+   (0 <= c <= s)%N -> is_ipoly k s ('X + c%:R%:P : {poly R}).
+Proof.
+rewrite leq_eqVlt; case: eqP => /= [<- _ m _|_ cB m [_]]; last by apply.
+by rewrite addr0; apply: introspectiveX.
+Qed.
+
 
 (* This is 𝓜_k *)
 Definition is_iexpm (R : ringType) (k s mk : nat) :=
@@ -288,6 +305,16 @@ Qed.
 
 Definition ordern k m := 
   if (1 < k)%N && (coprime k m) then #[mk_Zp_unit k m]%g else 0%N.
+
+Lemma ordern_mod k m : (1 < k)%N -> ordern k (m %% k) = ordern k m.
+Proof.
+move=> k_gt1.
+rewrite /ordern coprime_modr; case: andb => //.
+congr (#[_]%g).
+apply/val_inj; rewrite /= coprime_modr.
+congr (if _ then _ else _).
+by apply/val_inj; rewrite !Zp_nat /= Zp_cast // modn_mod.
+Qed.
 
 (* k > 1 not necessary *)
 Lemma ordern_exp k m :
@@ -436,7 +463,8 @@ have hS : (1 < size h)%N by case: hMI; case.
 have hI : irreducible_poly h by case: hMI.
 have hM : h \is monic by case: hMI.
 have hQE : divpoly_quotient h = h by rewrite /divpoly_quotient hS hM.
-pose l := map (fun i : 'I_ _ => (inDivPoly h 'X^i)) (enum M).
+pose l : seq (fdivpoly hMI) := 
+  map (fun i : 'I_ _ => (inDivPoly h 'X^i)) (enum M).
 have Ul : uniq l.
   apply/(uniqP 0) => i j; rewrite !inE size_map -cardE => Hi1 Hj1.
   rewrite  !(nth_map ord0) -?cardE // => /val_eqP /eqP /= HH.
@@ -450,9 +478,9 @@ have Ul : uniq l.
   have: nth ord0 (enum M) j \in M by rewrite -mem_enum mem_nth // -cardE.
   by case: HMk => // m -> _; rewrite ltn_mod.
 rewrite -subr_eq0 -rmodp_sub // => /eqP => u.
-apply/eqP; rewrite -subr_eq0; apply/eqP/(@map_poly_div_inj _ h).
+apply/eqP; rewrite -subr_eq0; apply/eqP/(@map_fpoly_div_inj _ h).
 rewrite map_poly0.
-apply (@roots_geq_poly_eq0 (divpoly_idomainType hMI) _ l) => //; last first.
+apply: roots_geq_poly_eq0 Ul _ => //; last first.
   rewrite (@size_map_poly _ _ (divpoly_const_rmorphism h)) /=.
   rewrite size_map (leq_trans (size_add _ _)) //=  size_opp.
   by rewrite geq_max -cardE pS.
@@ -464,7 +492,6 @@ apply: Mk_root_Mk => //.
   by apply/eqP; rewrite -subr_eq0 -rmodp_sub //; apply/eqP.
 by rewrite -mem_enum.
 Qed.
-
 
 (* This is 𝒬_h *)
 Definition is_iexph (R : ringType) (k s: nat) h ph :=
@@ -479,7 +506,8 @@ Inductive is_iexph_spec
     (forall p, is_ipoly k s p -> ph != inDivPoly h p) -> 
       @is_iexph_spec R k s h ph false.
 
-Definition Qh_spec (R : finRingType) k s (h :{poly R}) (M : {set {divpoly h}}) :=
+Definition Qh_spec (R : finRingType) k s (h :{poly R}) 
+                   (M : {set {divpoly h}}) :=
   (forall x, @is_iexph_spec R k s h x (x \in M)).
 
 Lemma Qh_Cexists (R : finRingType) k s (h : {poly R}) :
@@ -512,6 +540,176 @@ rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
 rewrite (_ : x != a); first by by apply: HM.
 by apply: contra aNIl => /eqP<-.
 Qed.
+
+(*109*)
+Lemma DDD (F : finFieldType) (h : {poly F}) k s p
+         (M : {set 'Z_k}) (Q : {set {divpoly h}})   :
+  Mk_spec F s M -> Qh_spec k s Q -> p \in [char F] -> (1 < ordern k p)%N ->
+  coprime k p -> monic_irreducible_poly h -> (1 < k)%N -> rdvdp h ('X^k - 1) -> 
+  poly_order h 'X k = k -> (0 < s < p)%N ->
+  (2 ^ minn s #|M| <= #|Q|)%N.
+Proof.
+move=> HMk HQh pC pO_gt1 kCp hMI k_gt1 hDxk XoE sB.
+have hQE : divpoly_quotient h = h.
+  by rewrite /divpoly_quotient !hMI.
+rewrite -/(fdivpoly hMI) in Q HQh *.
+set t := minn _ _.
+have Mk_gt1 : (1 < #|M|)%N.
+  apply: leq_trans pO_gt1 _.
+  rewrite -ordern_mod //.
+  have -> : (p %% k = (inZp p : 'Z_k))%N by rewrite /= Zp_cast.
+  apply: is_iexpm_order (HMk) _  => //.
+  have U : is_iexp F k s p by apply: is_iexp_fin_char; rewrite // coprime_sym.
+  by case: HMk => // /(_ p U); case/eqP; rewrite /= Zp_cast.
+have t_gt0 : (0 < t)%N.
+  by rewrite leq_min; case/andP: sB => -> _; rewrite ltnW.
+have F1 (b : bool) c : 
+   (c <= s)%N -> is_ipoly k s (('X + (c%:R)%:P :{poly F}) ^+ b).
+  case: b => cD; first by rewrite expr1; apply: is_ipoly_Xaddc.
+  by rewrite expr0; apply: is_ipoly1.
+have F2 (b : bool) c : 
+   (c <= s)%N -> (size (('X + (c%:R)%:P : {poly F})%R ^+ b) <= 2)%N.
+  case: b => cD; last by rewrite expr0 size_polyC oner_eq0.
+  rewrite (_ : 2 = maxn(size ('X : {poly F})) (size ((c%:R)%:P : {poly F}))).
+    by rewrite expr1 size_add.
+  by rewrite size_polyX size_polyC; case: eqP.
+pose m := ([ffun i : 'I_t.+1 => i == ord0] |:
+           [set i | (i : {ffun 'I_t.+1 -> bool}) ord0 == false]) :\
+           [ffun i : 'I_t.+1 => i != ord0].
+have mTrue1 x : x \in m -> exists (i : 'I_t.+1), x i == false.
+  rewrite !inE => /andP[H /orP[/eqP->|xE]].
+    case: (t) t_gt0 x H => // t1  _ x H.
+    by exists (inZp 1); rewrite !ffunE /=; case: eqP.
+  by exists ord0.
+have mTrue2 x : (1 < t)%N -> x \in m -> exists (i : 'I_t.+1), 
+     exists j, [/\ j != i, x i = false & x j = false].
+  rewrite /m; case: (t) t_gt0 x => // [] [|t1] // _ x _.
+  rewrite !inE => /andP[H /orP[/eqP->|/eqP xE]].
+    by exists (inZp 1); exists (inZp 2); rewrite !ffunE.
+  have [/existsP[i /andP[iE /eqP xiE]]|] :=
+      boolP [exists i, (i != ord0) && (x i == false)].
+    by exists ord0; exists i.
+  rewrite negb_exists => /forallP Hf.
+  case/eqP: H; apply/ffunP=> i; rewrite !ffunE.
+  case: eqP => [->|/eqP H] //.
+  case E : (x i) => //.
+  by case/negP: (Hf i); rewrite H // E.
+have <- : #|m| = (2 ^ t)%N.
+  rewrite cardsDS; last first.
+    by apply/subsetP=> j; rewrite !inE => /eqP->; rewrite ffunE eqxx orbT.
+  rewrite cardsU !cards1.
+  set u := #|_ :&: _|.
+  have /eqP->: u  == 0%N.
+    rewrite cards_eq0; apply/eqP/setP=> i; rewrite !inE.
+    by apply/idP => /andP[/eqP->]; rewrite ffunE eqxx.
+  rewrite subn0 addnC addnK.
+  have <- : [set [ffun i => if unlift ord0 i is Some v then f v else false]
+                | f : {ffun 'I_t -> bool}] = 
+            [set i | (i : {ffun 'I_t.+1 -> bool}) ord0 == false].
+    apply/setP=> f; rewrite !inE; apply/imsetP/idP=>[[g _ ->]|/eqP fE].
+      by rewrite ffunE unlift_none.
+    exists [ffun i => f (fintype.lift ord0 i)]; first by rewrite inE.
+    apply/ffunP=> j; rewrite ffunE; case: unliftP => [v ->|->] //.
+    by rewrite ffunE.
+  rewrite card_imset; first by rewrite card_ffun card_bool card_ord.
+  move=> f g H; apply/ffunP=> i.
+  have := (congr1 (fun f : {ffun _ -> _} => f (fintype.lift ord0 i)) H).
+  by rewrite !ffunE liftK.
+pose f := fun (b : {ffun 'I_t.+1 -> bool}) (i : 'I_t.+1) =>
+        ('X + (i%:R)%:P : {poly F}) ^+ b i.
+pose g b : {divpoly h}:= inDivPoly h (\prod_(i < t.+1) f b i).
+have F3 b : b \in m -> (size (\prod_(i < t.+1) f b i)%R <= #|M|)%N.
+  have vE i : #|((fun i0 : 'I_t.+1 => i0 != i) : pred _)| = t.
+    set v := #|_|; rewrite -[t]/(t.+1.-1) -[t.+1]card_ord.
+    rewrite -cardsT [in RHS](cardsD1 i) inE /=.
+    by apply: eq_card => j; rewrite !inE andbT.
+  move: t_gt0; rewrite leq_eqVlt => /orP[/eqP tE1 /mTrue1 [i /eqP iE]| t_gt].
+    rewrite (bigD1 i) //= {1}/f; rewrite iE expr0 mul1r.
+    apply: leq_trans (size_prod_leq _ _) _ => /=.
+    rewrite vE leq_subLR.
+  rewrite (leq_ltn_trans _ (_ : (\sum_(j < t.+1 | j != i) 2)  < _)%N) //.
+    apply: leq_sum => j _; apply: F2.
+      rewrite -ltnS; apply: leq_trans (ltn_ord j) _.
+      by rewrite ltnS geq_minl.
+    by rewrite sum_nat_const [#|_|]vE muln2 -addnn ltn_add2l -tE1.
+  move=> bM; have [i [j [jDi biE bjE]]] := mTrue2 _ t_gt bM.
+  rewrite (bigD1 i) //= {1}/f; rewrite biE expr0 mul1r.
+  rewrite (bigD1 j) //=  {1}/f; rewrite bjE expr0 mul1r.
+  apply: leq_trans (size_prod_leq _ _) _ => /=.
+  set v := #|_|.
+  have vE1 : v = t.-1.
+    rewrite -[t]/(t.+1.-1) -[t.+1]card_ord.
+    rewrite -cardsT [in RHS](cardsD1 i) inE /=.
+    rewrite [in RHS](cardsD1 j) !inE /= jDi /=.
+    by apply: eq_card => l; rewrite !inE /= andbT andbC.
+  rewrite vE1 leq_subLR.
+  rewrite (leq_ltn_trans _ (_ : (\sum_(l < t.+1 | (l != i) && (l != j)) 2) 
+                                    < _)%N) //.
+    apply: leq_sum => l _; apply: F2.
+    rewrite -ltnS; apply: leq_trans (ltn_ord l) _.
+    by rewrite ltnS geq_minl.
+  rewrite sum_nat_const [#|_|]vE1 muln2 -addnn ltn_add2l.
+  by rewrite prednK ?geq_minr // ltnW.
+have F4 b : b \in m -> is_ipoly k s (\prod_(i < t.+1) f b i).
+  by admit.
+suff /card_in_imset<- : {in m &, injective g}.
+  rewrite subset_leqif_cards //; apply/subsetP => i /imsetP[/= b bIm ->].
+  by case: HQh => // /(_ (\prod_(i < t.+1) f b i) (F4 _ bIm)) /eqP[].
+move=> m1 m2 m1I m2I /val_eqP/eqP/= H.
+suff : \prod_(i < t.+1) f m1 i = \prod_(i < t.+1) f m2 i.
+  admit.
+apply: Mk_rmodp_inj (F3 _ m1I) (F3 _ m2I) (F4 _ m1I) (F4 _ m2I) H => //.
+- by rewrite hQE.
+- by rewrite ltnW.
+- by rewrite hQE.
+by rewrite hQE.
+Qed,
+
+
+
+    Search _ is_ipoly
+    red.
+  rewrite /g.
+  apply/card_subsetP.
+     1?ltnW //.
+
+
+   leq_add2r.
+    Search _ (minn _ _ <= _)%N.
+     apply: leq_minr.
+     rewrite ltnS.
+     ltnS leq_sum // => i _.
+    apply: F2.
+   rewrite -ltnS (leq_trans (ltn_ord _)) // ltnS. geq_minl.
+  rewrite sum_nat_const card_ord.
+
+  Search _ minn (_ <= _)%N.
+  Search "leq" in bigop.
+  by rewrite expr0; apply: is_ipoly1.
+
+  apply.
+
+
+ (0 <= c < s) -> is_ipoly k s  
+
+
+
+
+   (is_iexp_fin_char)).
+   case/eqP. 
+
+
+  rewrite inE. 
+  apply: 
+
+
+
+
+  monic_irreducible_poly h -> (0 < k)%N -> rdvdp h ('X^k - 1) -> 
+  poly_order h 'X k = k -> (size p <= #|M|)%N -> (size q <= #|M|)%N ->
+  is_ipoly k s p -> is_ipoly k s q -> rmodp p h = rmodp q h -> p = q.
+Proof.
+
 
 End AKS.
 
