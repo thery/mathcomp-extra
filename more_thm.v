@@ -5,6 +5,165 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* in ssrnat *)
+
+Definition sqrtn n := 
+  let fix loop (m2 dm1 m k : nat) {struct k} : nat :=
+  if k is k1.+1 then
+    let m2' := m2 + dm1 in
+    if n < m2' then m else 
+    loop m2' dm1.+2 m.+1 k1
+  else m in loop 0 1 0 n.
+
+Fixpoint divloop (m2 dm1 m k : nat) {struct k} : nat :=
+   if k is k1.+1 then
+     if m + k < m2 + dm1 then m else divloop (m2 + dm1) dm1.+2 m.+1 k1
+   else m.
+
+Lemma divloopE n : sqrtn n = divloop 0 1 0 n.
+Proof.
+rewrite /sqrtn; move: {1 4}0 => m2; move: 1 => dm1.
+rewrite -{1}[n]add0n; move: 0 => m.
+elim: n m2 dm1 m => //= n IH m2 dm1 m.
+by case: leqP => // _; rewrite -IH addSnnS.
+Qed.
+
+Lemma divloop_leq m2 dm1 m k : m <= divloop m2 dm1 m k.
+Proof.
+elim: k m2 dm1 m => //= k IH m2 dm1 m.
+by case: leqP => // _; apply: leq_trans (IH _ _ _).
+Qed.
+
+Lemma sqrtSn m : m.+1 ^ 2 = m ^ 2 + m.*2.+1.
+Proof. by rewrite -[m.+1]addn1 sqrnD muln1 mul2n -addnA. Qed.
+
+Lemma sqrn_leq_eq1 m : (m ^ 2 <= m) = (m <= 1).
+Proof.
+case: m => [|[|m]] //=.
+by rewrite leqNgt expnS expn1 mulSn -addSnnS leq_addr.
+Qed.
+
+Lemma sqrtn_bound n : (sqrtn n) ^ 2 <= n < ((sqrtn n).+1) ^ 2.
+Proof.
+suff : 
+   forall k m, m ^ 2 <= m + k ->
+      (divloop (m ^ 2) (m.*2.+1) m k) ^ 2 <= m + k < 
+      (divloop (m ^ 2) (m.*2.+1) m k).+1 ^ 2.
+  by move/(_ n 0); rewrite divloopE; apply.
+elim=> [m -> /=|k IH m /= m2Lmk].
+  by rewrite addn0 expnS expn1 mulnS leq_addr.
+case: leqP => [m2m21Lmk1|mk1Lm2m21].
+  rewrite -[m + k.+1]addSnnS -sqrtSn.
+  by apply: IH; rewrite sqrtSn addSnnS.
+by rewrite m2Lmk sqrtSn.
+Qed.
+
+Lemma sqrtn_leq n x : x ^ 2 <= n -> x <= sqrtn n.
+Proof.
+suff : 
+   forall k m, m <= x -> m ^ 2 <= m + k -> x ^ 2 <= m + k ->
+      x <= divloop (m ^ 2) (m.*2.+1) m k.
+  by move/(_ n 0); rewrite divloopE; apply.
+elim=> [m /=|k IH m /= mLx m2Lmk1 x2Lmk1].
+  rewrite addn0 sqrn_leq_eq1.
+  by case: m => [|[|]] //; case: x => [|[|]].
+(case: leqP; rewrite -sqrtSn)=> [JJ|]; last first.
+  by move=> /(leq_ltn_trans x2Lmk1); rewrite ltn_sqr ltnS.
+move: mLx; rewrite leq_eqVlt => /orP[/eqP<-|mLx].
+  by apply: leq_trans (divloop_leq _ _ _ _).
+by apply: IH; rewrite ?addSnnS.
+Qed.
+
+Lemma sqrtn_lt n x : n < x.+1 ^ 2 -> sqrtn n <= x.
+Proof.
+suff : 
+   forall k m, m ^ 2 <= m + k ->
+      m + k < x.+1 ^ 2 ->
+      divloop (m ^ 2) (m.*2.+1) m k <= x.
+  by move/(_ n 0); rewrite divloopE; apply.
+elim=> /= [m m2Lmk1 mk2Lx12| k IH m m2Lmk1 mk2Lx12].
+  by rewrite -ltnS -ltn_sqr (leq_ltn_trans m2Lmk1).
+case: leqP; rewrite // -sqrtSn => H.
+  by apply: IH; rewrite ?addSnnS.
+by rewrite -ltnS -ltn_sqr (leq_ltn_trans m2Lmk1).
+Qed.
+
+Lemma sqrtnE n x : x ^ 2 <= n < x.+1^2 -> sqrtn n = x.
+Proof.
+move=> /andP[/sqrtn_leq xLsn /sqrtn_lt snLx].
+by apply/esym/eqP; rewrite eqn_leq xLsn.
+Qed.
+
+Lemma leq_sqrtn m n : m <= n -> sqrtn m <= sqrtn n.
+Proof.
+move=> mLn.
+apply: sqrtn_lt.
+by have /andP[_ /(leq_ltn_trans _)->//]:= sqrtn_bound n.
+Qed.
+
+Lemma sqrnK n : sqrtn (n ^ 2) = n.
+Proof. by apply: sqrtnE; rewrite leqnn ltn_sqr // leqnn. Qed.
+
+Definition log2n n := 
+  let v := trunc_log 2 n in if n <= 2 ^ v then v else v.+1.
+
+Lemma log2n9 : log2n 0 = 0.
+Proof. by []. Qed.
+
+Lemma log2n1 : log2n 1 = 0.
+Proof. by []. Qed.
+
+Lemma log2n_eq0 n : (log2n n == 0) = (n <= 1).
+Proof.
+case: n => [|[|n]]; rewrite /log2n //.
+have /= := trunc_log_bounds (isT : 1 < 2) (isT : 0 < n.+2).
+by case: (leqP (2 ^ trunc_log 2 n.+2) n.+1).
+Qed.
+
+Lemma log2n_gt0 n : (0 < log2n n) = (1 < n).
+Proof. by rewrite ltnNge leqn0 log2n_eq0 ltnNge. Qed.
+
+Lemma log2n_bounds n :
+   1 < n -> let k := log2n n in 2 ^ k.-1 < n <= 2 ^ k.
+Proof.
+move=> /= n_gt1.
+have n_gt0 : 0 < n by apply: leq_trans n_gt1.
+rewrite /log2n.
+have /= := trunc_log_bounds (isT : 1 < 2) n_gt0.
+case: (leqP n (2 ^ trunc_log 2 n)) => [] H1 /andP[H2 H3].
+  rewrite H1 (leq_trans _ H2) // ltn_exp2l // prednK ?leqnn //.
+  by case: trunc_log (leq_trans n_gt1 H1).
+by rewrite H1 ltnW.
+Qed.
+
+Lemma log2nP n : n <= 2 ^ log2n n.
+Proof.
+case: n => [|[|n]] //.
+by have /andP[] := log2n_bounds (isT: 1 < n.+2).
+Qed.
+
+Lemma log2n_ltn n : 1 < n ->  2 ^ (log2n n).-1 < n.
+Proof.
+case: n => [|[|n]] _ //.
+by have /andP[] := log2n_bounds (isT: 1 < n.+2).
+Qed.
+
+Lemma log2n_max k j : k <= 2 ^ j -> log2n k <= j.
+Proof.
+case: k => [|[|k]] // kLj.
+rewrite -[log2n _]prednK ?log2n_gt0 // -(@ltn_exp2l 2) //.
+by apply: leq_trans (log2n_ltn (isT : 1 < k.+2)) _.
+Qed.
+
+Lemma leq_log2n m n : m <= n -> log2n m <= log2n n.
+Proof. by move=> mLn; apply/log2n_max/(leq_trans _ (log2nP _)). Qed.
+
+Lemma exp2nK n : log2n (2 ^ n) = n.
+Proof.
+apply/eqP; rewrite eqn_leq.
+by rewrite log2n_max //= -(@leq_exp2l 2) log2nP.
+Qed.
+
 Import GRing.Theory.
 Import Pdiv.CommonRing.
 Import Pdiv.RingMonic.
