@@ -781,6 +781,35 @@ rewrite -(@Gauss_dvdr _ (p ^ i1)); last first.
 by rewrite HH dvdn_mull.
 Qed.
 
+(* 112 *)
+Lemma is_iexp_root (F : fieldType) (h : {poly F}) k s m n p :
+  (0 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) -> 
+  is_iexp F k s m -> is_iexp F k s n -> n = m %[mod k] ->
+  is_ipoly k s p -> rmodp (('X^n - 'X^m) \Po p) h = 0.  
+Proof.
+move=> k_gt0 hMI hDxk1 mI nI mMn pP.
+pose z : {poly F}:= 'X^k - 1.
+have zM : z \is monic by apply: monic_Xn_sub_1.
+rewrite -(rmod0p h).
+apply: rmodn_trans hDxk1 _; rewrite ?hMI -/z // rmod0p.
+rewrite comp_polyB !comp_polyXn rmodp_sub //.
+apply/eqP; rewrite subr_eq0; apply/eqP.
+have F0 : rmodp 'X^k z = 1.
+  rewrite -['X^k](subrK 1) rmodp_add // rmodpp // add0r rmodp_small //.
+  by rewrite size_polyC size_Xn_sub_1 ?oner_eq0.
+have F1 : rmodp 'X^n z = rmodp 'X^m z.
+  rewrite (divn_eq n k) (divn_eq m k) !exprD mMn.
+  rewrite ![(_ * k)%N]mulnC !exprM ![_ * 'X^(_ %% _)]mulrC.
+  rewrite -rmodp_mulmr // -rmodp_exp // F0 expr1n rmodp_mulmr // mulr1.
+  rewrite -rmodp_mulmr // -[in RHS] rmodp_exp //.
+  by rewrite F0 expr1n rmodp_mulmr // mulr1.
+have F2 : rmodp (p^n) z = rmodp (p \Po 'X^n) z by apply/eqP/pP.
+have F3 : rmodp (p^m) z = rmodp (p \Po 'X^m) z by apply/eqP/pP.
+have F4 : rmodp (p \Po 'X^m) z = rmodp (p \Po 'X^n) z.
+  by rewrite -rmodp_compr // -F1  rmodp_compr.
+by rewrite F2 -F4 -F3.
+Qed.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
