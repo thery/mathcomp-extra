@@ -781,20 +781,6 @@ rewrite -(@Gauss_dvdr _ (p ^ i1)); last first.
 by rewrite HH dvdn_mull.
 Qed.
 
-
-  
-  //=.
-  
-
-  rewrite -ltnS // .
-Search _ (_ ^ _ %| _ ^ _ )%N (_ ^ _)%N.
-rewrite /inZp.
-
-
-rewrite card_pair.
-have : Nbar p q m = [set inZp (p ^ ij.1 * p ^ ij.2) | ij: 'I_m * 'I_m].
-Check in_Nbar.
-
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
