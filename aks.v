@@ -734,6 +734,67 @@ rewrite (leq_trans _ (_ : sqrtn j <= _))%N //; first by rewrite -[m]sqrnK leq_sq
 by apply: leq_sqrtn.
 Qed.
 
+Definition Nbar (p q m : nat) :  {set 'I_((p * q) ^ m).+1} := 
+  [set inZp (p ^ ij.1 * q ^ ij.2) | ij: 'I_m.+1 * 'I_m.+1].
+
+(* 111 *)
+(** As Nbar is defined slightly differently, this is the dual version of     **)
+(** 111 for our version                                                      **)
+Lemma NbarP (p q m : nat) (x : 'I_ _) :
+  (1 < p)%N -> (1 < q)%N ->
+  reflect (exists (ij : 'I_m.+1 * 'I_m.+1) , x = p ^ ij.1 * q ^ ij.2 :> nat)%N 
+          (x \in Nbar p q m).
+Proof.
+move=> p_gt1 q_gt1.
+apply(iffP imsetP) => [[[i j _ -> /=]]|[[i j ijE]]].
+  by exists (i, j); 
+     rewrite modn_small // ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+exists (i, j) => //; apply/val_inj => /=. 
+by rewrite modn_small // ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+Qed.
+
+Lemma card_Nbard p q m : (1 < p)%N -> (1 < q)%N -> coprime p q -> 
+   #|Nbar p q m| = (m.+1 ^2)%N.
+Proof.
+move=> p_gt1 q_gt1 pCq.
+rewrite card_imset=> [|/= [i1 j1] [i2 j2] /(congr1 val)].
+  by rewrite card_prod card_ord expnS expn1.
+rewrite /= !modn_small //; last 2 first.
+- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+move=> HH; congr (_,_); apply/val_eqP; rewrite /= eqn_leq.
+  rewrite -(dvdn_Pexp2l _ _ p_gt1) //.
+  rewrite -(dvdn_Pexp2l _ _ p_gt1) //.
+  rewrite -(@Gauss_dvdl _ _ (q ^ j2)); last first.
+    by apply/coprime_expl/coprime_expr.
+  rewrite -HH dvdn_mulr //=.
+  rewrite -(@Gauss_dvdl _ _(q ^ j1)); last first.
+    by apply/coprime_expl/coprime_expr.
+  by rewrite HH dvdn_mulr.
+rewrite -(dvdn_Pexp2l _ _ q_gt1) //.
+rewrite -(dvdn_Pexp2l _ _ q_gt1) //.
+rewrite -(@Gauss_dvdr _ (p ^ i2)); last first.
+  by apply/coprime_expl/coprime_expr; rewrite coprime_sym.
+rewrite -HH dvdn_mull //=.
+rewrite -(@Gauss_dvdr _ (p ^ i1)); last first.
+  by apply/coprime_expl/coprime_expr; rewrite coprime_sym.
+by rewrite HH dvdn_mull.
+Qed.
+
+
+  
+  //=.
+  
+
+  rewrite -ltnS // .
+Search _ (_ ^ _ %| _ ^ _ )%N (_ ^ _)%N.
+rewrite /inZp.
+
+
+rewrite card_pair.
+have : Nbar p q m = [set inZp (p ^ ij.1 * p ^ ij.2) | ij: 'I_m * 'I_m].
+Check in_Nbar.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
