@@ -785,12 +785,12 @@ Qed.
 Lemma is_iexp_root (F : fieldType) (h : {poly F}) k s m n p :
   (0 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) -> 
   is_iexp F k s m -> is_iexp F k s n -> n = m %[mod k] ->
-  is_ipoly k s p -> rmodp (('X^n - 'X^m) \Po p) h = 0.  
+  is_ipoly k s p -> inDivPoly h (('X^n - 'X^m) \Po p) = 0.  
 Proof.
 move=> k_gt0 hMI hDxk1 mI nI mMn pP.
+apply/val_inj; rewrite /= irr_divpoly_quotientE // -[RHS](rmod0p h).
 pose z : {poly F}:= 'X^k - 1.
 have zM : z \is monic by apply: monic_Xn_sub_1.
-rewrite -(rmod0p h).
 apply: rmodn_trans hDxk1 _; rewrite ?hMI -/z // rmod0p.
 rewrite comp_polyB !comp_polyXn rmodp_sub //.
 apply/eqP; rewrite subr_eq0; apply/eqP.
@@ -808,6 +808,44 @@ have F3 : rmodp (p^m) z = rmodp (p \Po 'X^m) z by apply/eqP/pP.
 have F4 : rmodp (p \Po 'X^m) z = rmodp (p \Po 'X^n) z.
   by rewrite -rmodp_compr // -F1  rmodp_compr.
 by rewrite F2 -F4 -F3.
+Qed.
+
+(* 113 *)
+(* in order to be able to talk about Qh I need to limit this theorem to 
+   finField *)
+Lemma is_iexp_inj (F : finFieldType) (h : {poly F}) k s
+     (M : {set 'Z_k}) (Q : {set {divpoly h}}) p q :
+   Mk_spec F s M -> Qh_spec k s Q -> 
+  (0 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) ->
+  (1 < p)%N -> is_iexp F k s p -> (1 < q)%N -> is_iexp F k s q ->
+  ((p * q) ^ sqrtn #|M| < #|Q|)%N -> 
+  {in Nbar p q (sqrtn #|M|) &, injective (fun i : 'I_ _ => i %% k)%N}.
+Proof.
+move=> hMK hQh k_gt0 hMI hDxk1 p_gt1 pIN q_gt1 qIN pqLqh i j iIN jIN imEjm.
+pose r := map_poly (divpoly_const h) ('X^i - 'X^j).
+suff : r == 0.
+  rewrite /r rmorphB /= subr_eq0 => /eqP/map_poly_div_inj.
+  move=> /(congr1 (size : {poly F} -> nat)).
+  by rewrite !size_polyXn => [] [] /eqP /val_eqP.
+apply/eqP/(@roots_geq_poly_eq0 [idomainType of (fdivpoly hMI)] _ (enum Q)).
+- apply/allP => /= x.
+  rewrite mem_enum; case: hQh => // p1 -> p1I _.
+  apply/eqP; rewrite -inDivPoly_comp_horner.
+  apply: is_iexp_root p1I => //.
+    case/imsetP: jIN => [[i1 j1] _ -> /=].
+    rewrite modn_small.
+      by apply: is_iexp_mul; apply: is_iexp_X.
+    by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+  case/imsetP: iIN => [[i1 j1] _ -> /=].
+  rewrite modn_small.
+    by apply: is_iexp_mul; apply: is_iexp_X.
+  by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+- by apply: enum_uniq.
+rewrite -cardE.
+apply: leq_trans pqLqh.
+rewrite /r rmorphB /= !map_polyXn.
+apply: leq_trans (size_add _ _) _.
+by rewrite size_opp !size_polyXn geq_max !ltn_ord.
 Qed.
 
 End AKS.
