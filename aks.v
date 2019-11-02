@@ -704,6 +704,7 @@ Proof.
 by case: n => [|n]; rewrite // -[1%N]/(sqrtn 1) // leq_sqrtn.
 Qed.
 
+(* 110 *)
 Lemma exp_Mk_upper_bound (R : comRingType) k s n a (M : {set 'Z_k}) :
    Mk_spec R s M ->  (1 < #|M|)%N ->
   (1 < k -> 1 < n -> isnot_2power n ->
@@ -753,34 +754,6 @@ exists (i, j) => //; apply/val_inj => /=.
 by rewrite modn_small // ltnS expnMn leq_mul // leq_exp2l // -ltnS.
 Qed.
 
-Lemma card_Nbard p q m : (1 < p)%N -> (1 < q)%N -> coprime p q -> 
-   #|Nbar p q m| = (m.+1 ^2)%N.
-Proof.
-move=> p_gt1 q_gt1 pCq.
-rewrite card_imset=> [|/= [i1 j1] [i2 j2] /(congr1 val)].
-  by rewrite card_prod card_ord expnS expn1.
-rewrite /= !modn_small //; last 2 first.
-- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
-- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
-move=> HH; congr (_,_); apply/val_eqP; rewrite /= eqn_leq.
-  rewrite -(dvdn_Pexp2l _ _ p_gt1) //.
-  rewrite -(dvdn_Pexp2l _ _ p_gt1) //.
-  rewrite -(@Gauss_dvdl _ _ (q ^ j2)); last first.
-    by apply/coprime_expl/coprime_expr.
-  rewrite -HH dvdn_mulr //=.
-  rewrite -(@Gauss_dvdl _ _(q ^ j1)); last first.
-    by apply/coprime_expl/coprime_expr.
-  by rewrite HH dvdn_mulr.
-rewrite -(dvdn_Pexp2l _ _ q_gt1) //.
-rewrite -(dvdn_Pexp2l _ _ q_gt1) //.
-rewrite -(@Gauss_dvdr _ (p ^ i2)); last first.
-  by apply/coprime_expl/coprime_expr; rewrite coprime_sym.
-rewrite -HH dvdn_mull //=.
-rewrite -(@Gauss_dvdr _ (p ^ i1)); last first.
-  by apply/coprime_expl/coprime_expr; rewrite coprime_sym.
-by rewrite HH dvdn_mull.
-Qed.
-
 (* 112 *)
 Lemma is_iexp_root (F : fieldType) (h : {poly F}) k s m n p :
   (0 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) -> 
@@ -810,18 +783,21 @@ have F4 : rmodp (p \Po 'X^m) z = rmodp (p \Po 'X^n) z.
 by rewrite F2 -F4 -F3.
 Qed.
 
+
 (* 113 *)
 (* in order to be able to talk about Qh I need to limit this theorem to 
    finField *)
 Lemma is_iexp_inj (F : finFieldType) (h : {poly F}) k s
      (M : {set 'Z_k}) (Q : {set {divpoly h}}) p q :
    Mk_spec F s M -> Qh_spec k s Q -> 
-  (0 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) ->
+  (1 < k)%N -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) ->
   (1 < p)%N -> is_iexp F k s p -> (1 < q)%N -> is_iexp F k s q ->
   ((p * q) ^ sqrtn #|M| < #|Q|)%N -> 
-  {in Nbar p q (sqrtn #|M|) &, injective (fun i : 'I_ _ => i %% k)%N}.
+  {in Nbar p q (sqrtn #|M|) &, injective (fun i : 'I_ _ => inZp i : 'Z_k)%N}.
 Proof.
-move=> hMK hQh k_gt0 hMI hDxk1 p_gt1 pIN q_gt1 qIN pqLqh i j iIN jIN imEjm.
+move=> hMK hQh k_gt1 hMI hDxk1 p_gt1 pIN q_gt1 qIN pqLqh i j iIN jIN.
+move=> /(congr1 val); rewrite /= {5 10}Zp_cast // => imEjm.
+have k_gt0 : (0 < k)%N by rewrite -ltnS ltnW.
 pose r := map_poly (divpoly_const h) ('X^i - 'X^j).
 suff : r == 0.
   rewrite /r rmorphB /= subr_eq0 => /eqP/map_poly_div_inj.
@@ -846,6 +822,173 @@ apply: leq_trans pqLqh.
 rewrite /r rmorphB /= !map_polyXn.
 apply: leq_trans (size_add _ _) _.
 by rewrite size_opp !size_polyXn geq_max !ltn_ord.
+Qed.
+
+Definition poly_intro_range (R : ringType) k n s :=
+  forall c, (0 < c <= s)%N -> 
+  rmodp (('X + c%:R%:P)^+n) ('X^k - 1 : {poly R}) = 
+  rmodp ('X^n + c%:R%:P) ('X^k - 1).
+  
+Definition aks_criteria (R : ringType) n k :=
+ ([/\ 0 < n, 0 < k, 
+  (forall p, p \in [char R] -> [/\ 1 < ordern k p, p %| n & k < p]),
+   log2n n ^ 2 <= ordern k n &
+   poly_intro_range R k n (sqrtn (totient k) * log2n n)
+ ])%N.
+
+Definition is_power p q := (p == q ^ logn q p)%N.
+
+Lemma prime_is_power_exp p q n :
+  prime p -> (1 < q)%N -> (0 < n)%N -> 
+  is_power (q ^ n)%N p -> is_power q p.
+Proof.
+move=> pP q_gt1 n_gt0.
+have q_gt0 : (0 < q)%N by apply: ltnW.
+by rewrite  /is_power lognX mulnC expnM eqn_exp2r.
+Qed.
+
+Lemma is_power_exp p n : prime p -> is_power (p ^ n)%N p.
+Proof.
+by move=> pP; rewrite /is_power eqn_exp2l ?prime_gt1 // pfactorK.
+Qed.
+
+Lemma is_power_id p : prime p -> is_power p p.
+Proof. by move=> pP; rewrite -{1}(expn1 p) is_power_exp. Qed.
+
+Lemma card_Nbar p q m : prime p -> (1 < q)%N -> ~ is_power q p -> 
+   #|Nbar p q m| = (m.+1 ^2)%N.
+Proof.
+move=> pP q_gt1 pCq.
+have p_gt1 := prime_gt1 pP.
+rewrite card_imset=> [|/= [i1 j1] [i2 j2] /(congr1 val)].
+  by rewrite card_prod card_ord expnS expn1.
+rewrite /= !modn_small //; last 2 first.
+- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+- by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+wlog i1Li2 : i1 i2 j1 j2 / (i1 <= i2)%N => H.
+  case: (leqP i1 i2) =>  [i1Li2|i2Li1]; first by apply H.
+  by move=> Hi; apply/sym_equal/H; rewrite 1?ltnW.
+suff [H1 H2] : (i1 : nat, j1 : nat) = (i2 : nat, j2 : nat).
+  by congr (_, _); apply: val_inj.
+move: (i1Li2) H; rewrite leq_eqVlt => /orP[/eqP<-|i1LEi2 /eqP].
+  move/eqP; rewrite eqn_pmul2l; last by rewrite expn_gt0 ltnW.
+  by rewrite eqn_exp2l => // /eqP<-.
+rewrite -{1}(subnK i1Li2) addnC expnD -mulnA eqn_pmul2l; last first.
+  by rewrite expn_gt0 prime_gt0.
+case: (leqP j2 j1) => [j1Lj2|j2Lj1].
+  rewrite -{1}(subnK j1Lj2) expnD eqn_pmul2r; last by rewrite expn_gt0 ltnW.
+  move: j1Lj2; rewrite leq_eqVlt => /orP[/eqP<-|].
+    rewrite subnn expn0 eq_sym.
+    move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N=> // k _.
+    by rewrite expnS muln_eq1; case: (p) p_gt1 => // [] [].
+  rewrite -subn_gt0 => j1j2_gt0 /eqP qE.
+  case: pCq; apply: prime_is_power_exp j1j2_gt0 _ => //.
+  by rewrite qE is_power_exp.
+have j1LEj2 : (j1 <= j2)%N by rewrite ltnW.
+rewrite -[(_ ^ _)%N]mul1n -{1}(subnK j1LEj2) expnD mulnA.
+rewrite eqn_pmul2r; last by rewrite expn_gt0 ltnW.
+move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N=> // k _.
+by rewrite expnS -mulnA eq_sym muln_eq1; case: (p) p_gt1 => // [] [].
+Qed.
+
+(* 96 *)
+Lemma cyclotomic_special_order (F : finFieldType) k p :
+  (p \in [char F] -> 0 < k -> 1 < ordern k p -> 
+   exists h : {poly F}, [/\ monic_irreducible_poly h, (h %| 'X^k - 1)%R, 
+                            size h = (ordern k p).+1 & poly_order h 'X k = k] 
+  )%N.
+Admitted.
+
+Inductive aks_param_result := nice of nat | good of nat | bad.
+Parameters aks_param : nat -> aks_param_result.
+
+(* 68 *)
+Lemma aks_param_good_leq n k : 
+  (1 < n)%N -> aks_param n = good k -> (sqrtn (totient k) * log2n n <= k)%N.
+Admitted.
+
+(*115 *)
+Lemma main_aks (F : finFieldType) p n k :
+  p \in [char F] -> 
+  aks_param n = good k -> aks_criteria F n k -> is_power n p.
+Proof.
+pose a := (log2n n ^ 2)%N; pose s := (sqrtn (totient k) * log2n n)%N.
+move=> pC aH [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
+have pP : prime p := charf_prime pC.
+have p_gt1 := prime_gt1 pP.
+have k_gt1 : (1 < k)%N.
+  by move: pO_gt1; rewrite /ordern; case: (leqP 2%N k).
+have n_gt1 : (1 < n)%N.
+  apply: leq_trans (prime_gt1 pP) _.
+  by apply: dvdn_leq.
+have := dvdn_leq n_gt0 pDn.
+rewrite leq_eqVlt => /orP[/eqP<-|pLn]; first by rewrite is_power_id.
+have [/eqP nE|/negP nis2p] := boolP (is_2power n).
+  move: pDn; rewrite nE.
+  rewrite Euclid_dvdX // => /andP[/prime_nt_dvdP->] //.
+    by move=> _; apply: is_power_exp.
+  by case: (p) pP => // [] // [].
+have kCn : coprime k n.
+  have : (1 <= ordern k n)%N.
+    apply: leq_trans lnLnO.
+    rewrite (@leq_exp2r 1%N _ 2%N) //.
+    by apply: (@leq_log2n 2%N).
+  by rewrite /ordern andbC; case: coprime.
+have kCp : coprime k p by apply: coprime_dvdr kCn.
+have nI : is_iexp F k s n.
+  split => [|c cB]; first by rewrite coprime_sym.
+  apply/eqP.
+  rewrite comp_polyD comp_polyC comp_polyX.
+  by apply: Hr.
+have [h [hMI hDxk1 jS hO]]:=  cyclotomic_special_order pC k_gt0 pO_gt1.
+have [//|/negP nP] := boolP (is_power n p).
+have /classicP[] := @Mk_Cexists F k s.
+move=> [M hMk].
+have /classicP[] := @Qh_Cexists F k s h.
+move=> [Q hQh].
+pose t := #|M|.
+have t_gt1 : (1 < t)%N.
+  apply: leq_trans pO_gt1 _.
+  apply: is_iexpm_order (hMk) _  => //.
+  by apply: is_iexp_fin_char; rewrite // coprime_sym.
+have nLst : (n ^ sqrtn t < 2 ^ minn s t)%N.
+  apply: exp_Mk_upper_bound hMk _ _ _ _ _ _ _  _ => //.
+  by apply/negP.
+have stLQ : (2 ^ minn s t <= #|Q|)%N.
+  apply: (@lower_bound_card_Qh _ _ _ _ p) => //; first by rewrite -dvdpE.
+  rewrite muln_gt0 sqrtn_gt0 totient_gt0 k_gt0.
+  rewrite (@leq_log2n 2) //=.
+  apply: leq_trans kLp.
+  rewrite ltnS.
+  by apply: aks_param_good_leq.
+pose q := (n %/ p)%N.
+have nE : n = (q * p)%N.
+  by rewrite [n](divn_eq _ p) (eqP pDn) addn0.
+have q_gt1 : (1 < q)%N.
+  case: leqP => //.
+  move: n_gt1 nP; rewrite nE.
+  by case: (q) => [|[|]] // _ []; rewrite mul1n is_power_id.
+have pI : is_iexp F k s p by apply: is_iexp_fin_char; rewrite 1? coprime_sym.
+have qI : is_iexp F k s q by apply: is_iexp_fin_div; rewrite 1? coprime_sym.
+pose N1 := Nbar p q (sqrtn t).
+pose f := (fun i : 'I_((p * q) ^ sqrtn t).+1 => inZp i : 'Z_k)%N.
+have : (#|f @: N1| <= t)%N.
+  apply/subset_leq_card/subsetP => x /imsetP[y /imsetP[/= [i1 j1 _]-> -> /=]].
+  set m := (_ ^ _ * _)%N.
+  have mI : is_iexp F k s m.
+    by apply: is_iexp_mul; apply: is_iexp_X.
+  case: hMk => //= /(_ _ mI)/eqP[].
+  rewrite /= Zp_cast // [(m %% _)%N]modn_small //.
+  by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+rewrite leqNgt=> /negP[].
+rewrite card_in_imset; last first.
+  apply: is_iexp_inj => //; first by rewrite -dvdpE.
+  rewrite mulnC -nE.
+  by apply: leq_trans stLQ.
+rewrite card_Nbar //; last first.
+  move=> H; case: nP.
+  by rewrite nE (eqP H) -expnSr is_power_exp.
+by have /andP[] := sqrtn_bound t.
 Qed.
 
 End AKS.
