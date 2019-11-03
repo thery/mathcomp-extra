@@ -326,6 +326,13 @@ rewrite FinRing.val_unitX /ordern /= k_gt1 kCm /=.
 by rewrite -natrX val_Zp_nat // Zp_cast.
 Qed.
 
+Lemma leq_ordern_totient k m : (0 < k -> ordern k m <= totient k)%N.
+Proof.
+move=> k_gt0.
+rewrite -card_units_Zp // /ordern.
+case: (_ && _) => //.
+by apply/subset_leq_card/subsetP=> i; rewrite inE.
+Qed.
 
 (* 104 *)
 Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) n :
@@ -899,21 +906,19 @@ Lemma cyclotomic_special_order (F : finFieldType) k p :
   )%N.
 Admitted.
 
-Inductive aks_param_result := nice of nat | good of nat | bad.
-Parameters aks_param : nat -> aks_param_result.
-
-(* 68 *)
-Lemma aks_param_good_leq n k : 
-  (1 < n)%N -> aks_param n = good k -> (sqrtn (totient k) * log2n n <= k)%N.
-Admitted.
+Lemma totient_leq n : (totient n <= n)%N.
+Proof.
+rewrite totient_count_coprime.
+rewrite -{3}[n]muln1 -{3}[n]subn0 -sum_nat_const_nat.
+by apply: leq_sum => i _; case: coprime.
+Qed.
 
 (*115 *)
 Lemma main_aks (F : finFieldType) p n k :
-  p \in [char F] -> 
-  aks_param n = good k -> aks_criteria F n k -> is_power n p.
+  p \in [char F] -> aks_criteria F n k -> is_power n p.
 Proof.
 pose a := (log2n n ^ 2)%N; pose s := (sqrtn (totient k) * log2n n)%N.
-move=> pC aH [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
+move=> pC [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
 have pP : prime p := charf_prime pC.
 have p_gt1 := prime_gt1 pP.
 have k_gt1 : (1 < k)%N.
@@ -958,9 +963,13 @@ have stLQ : (2 ^ minn s t <= #|Q|)%N.
   apply: (@lower_bound_card_Qh _ _ _ _ p) => //; first by rewrite -dvdpE.
   rewrite muln_gt0 sqrtn_gt0 totient_gt0 k_gt0.
   rewrite (@leq_log2n 2) //=.
-  apply: leq_trans kLp.
+  apply: leq_trans (kLp).
   rewrite ltnS.
-  by apply: aks_param_good_leq.
+  apply: leq_trans (totient_leq _).
+  have /andP[/(leq_trans _)->//] := sqrtn_bound (totient k).
+  rewrite expnS expn1 leq_mul2l -(sqrnK (log2n n)).
+  rewrite leq_sqrtn ?orbT //.
+  by apply: leq_trans (leq_ordern_totient n _).
 pose q := (n %/ p)%N.
 have nE : n = (q * p)%N.
   by rewrite [n](divn_eq _ p) (eqP pDn) addn0.
