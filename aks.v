@@ -731,9 +731,9 @@ apply: leq_trans (_ : (2 ^ m) ^ sqrtn (#|M|) <= _)%N.
     by rewrite sqrtn_gt0 (leq_trans _ (_ : 2 <= _))%N.
   by have := log2nP n; rewrite leq_eqVlt (negPf nNP).
 case: (leqP s #|M|) => [sLM|MLs].
-  case/minn_idPl : sLM => ->.
+  have /minn_idPl-> := sLM.
   by rewrite -expnM leq_exp2l // sE mulnC leq_mul2r // orbC leq_sqrtn.
-case/ltnW/minn_idPr : MLs => ->.
+have /ltnW/minn_idPr-> := MLs.
 rewrite -expnM leq_exp2l //.
 apply: leq_trans (_ : (sqrtn #|M|) ^ 2 <= _)%N; last first.
   by have /andP[] := sqrtn_bound #|M|.
