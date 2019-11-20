@@ -1,6 +1,8 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
-From mathcomp Require Import ssralg finalg poly polydiv zmodp.
+From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
+From mathcomp Require cyclic.
 Require Import more_thm divpoly.
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -363,13 +365,26 @@ rewrite /rdvdp !rmodp_sub // !subr_eq0 => H /eqP H1; apply/eqP.
 by apply: H.
 Qed.
 
-Check (fun R : finRingType => fun h p : {poly R} =>
-         (#[inDivPoly h p]%g)).
-
-
 Definition poly_order {R : ringType} (h p :  {poly R}) (n : nat) : nat := 
   if [pick i | rmodp (p^+ (i : 'I_n.+1).-1.+1) h == 1] is Some v then
       [arg min_(i < v | (rmodp (p^+ i.-1.+1) h == 1)) i].-1.+1 else 0%N.
+
+Lemma poly_orderE (R : ringType) (h p : {poly R}) n m :
+  0 < m <= n ->
+  rmodp (p^+ m) h = 1 ->
+  (forall k, 0 < k -> rmodp (p^+ k) h = 1 -> m <= k) ->
+  poly_order h p n = m.
+Proof.
+move=> /andP[m_gt0 mLn] /eqP mM HmM.
+rewrite -ltnS in mLn.
+rewrite /poly_order; case: pickP => [z zM|/(_ (Ordinal mLn))]; last first.
+  by rewrite prednK //= (eqP mM) eqxx.
+case: arg_minP => //.
+move=> i /eqP /HmM /= Hj /(_ (Ordinal mLn)).
+rewrite prednK //= => /(_ mM) iLm.
+apply/eqP; rewrite eqn_leq Hj // andbT.
+by case: (i: nat) iLm.
+Qed.
 
 Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
   0 < n -> poly_order h p n <= n.
@@ -901,13 +916,116 @@ move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N => // k _.
 by rewrite expnS -mulnA eq_sym muln_eq1; case: (p) p_gt1 => // [] [].
 Qed.
 
+Axiom foo : forall P, P.
+
 (* 96 *)
-Lemma cyclotomic_special_order (F : finFieldType) k p :
+Lemma cyclotomic_special_order (F : finFieldType) k (p := #|F|):
   (p \in [char F] -> 0 < k -> 1 < ordern k p -> 
    exists h : {poly F}, [/\ monic_irreducible_poly h, (h %| 'X^k - 1)%R, 
                             size h = (ordern k p).+1 & poly_order h 'X k = k] 
   )%N.
-Admitted.
+Proof.
+set d := ordern _ _.
+move=> pC k_gt0 d_gt1.
+have k_gt1 : 1 < k by move: d_gt1; rewrite /d /ordern; case: (_ < k).
+have kCp : coprime k p by move: d_gt1; rewrite /d /ordern k_gt1; case: coprime.
+have d_gt0 : 0 < d by apply: leq_trans d_gt1.
+have Pp: prime p by apply: charf_prime pC.
+pose m := p ^ d.
+have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
+have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
+pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
+  by rewrite subr0 mulrBl mul1r -exprSr prednK.
+have /FinSplittingFieldFor[/= L splitLq]: q F != 0.
+  by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
+rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
+have charL: p \in [char L] by rewrite char_lalg.
+pose Fm := FinFieldExtType L.
+have pCm : p \in [char Fm] by [].
+have Cfm : #|Fm| = m.
+  have /finField_galois_generator[/= a _ Da]: (1 <= {:L})%VS by apply: sub1v.
+  pose Em := fixedSpace (a ^+ d)%g; rewrite //= dimv1 expn1 in Da.
+  have{splitLq} [zs DqL defL] := splitLq.
+  have Uzs: uniq zs.
+    rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
+    rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
+    rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
+    by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
+  suffices /eq_card->: Fm =i zs.
+    apply: succn_inj; rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
+    by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
+  have in_zs: zs =i Em.
+    move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
+    rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
+    elim: (d) => [|i IHi]; first by rewrite gal_id.
+    by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf.
+  suffices defEm: Em = {:L}%VS by move=> z; rewrite in_zs defEm memvf.
+  apply/eqP; rewrite eqEsubv subvf -defL -[Em]subfield_closed agenvS //.
+  by rewrite subv_add sub1v; apply/span_subvP=> z; rewrite in_zs.
+have /hasP[x _ xE] :
+    has (m.-1).-primitive_root [seq val i | i <- enum [finType of {unit Fm}]].
+  apply: cyclic.has_prim_root => //.
+  - apply/allP => i /mapP[/= x _ -> /=].
+    apply/unity_rootP => /=.
+    rewrite -FinRing.val_unitX -(_ : #|[set : {unit Fm}]%g| = m.-1).
+      by rewrite cyclic.expg_cardG ?inE.
+    by rewrite card_finField_unit Cfm.
+  - rewrite map_inj_uniq; first by apply: enum_uniq.
+    by apply: val_inj. 
+  by rewrite size_map -cardE -cardsT card_finField_unit Cfm.
+have kDm1 : (k %| m.-1)%N by rewrite -subn1 -eqn_mod_dvd // ordern_exp.
+have mkDm1 : (m.-1 %/ k %| m.-1)%N.
+  by apply/dvdnP; exists k; rewrite mulnC divnK.
+have kPr : k.-primitive_root (x ^+ (m.-1 %/ k)).
+  rewrite {1}(_ : k = m.-1 %/ gcdn (m.-1 %/ k) m.-1)%N //.
+    by apply: exp_prim_root.
+  by rewrite (gcdn_idPl mkDm1) divnA // mulnC mulnK.
+have /polyOver1P[h hE] := minPolyOver 1 (x ^+ (m.-1 %/ k)).
+have hS : size h = d.+1 by apply: foo.
+have minD : minPoly 1%AS (x ^+ (m.-1 %/ k)) %| 'X^k - 1.
+  apply: minPoly_dvdp.
+    by rewrite !(rpredB, rpredX, rpred1, polyOverX).
+  rewrite rootE !hornerE hornerXn -exprM divnK //.
+  by rewrite prim_expr_order // subrr.
+have hD : h %| 'X^k - 1.
+  move: minD.
+  have ->: 'X^k - 1 = map_poly (in_alg L) ('X^k - 1).
+    by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
+  by rewrite hE dvdp_map.
+have hM : h \is monic.
+  have := monic_minPoly 1 (x ^+ (m.-1 %/ k)).
+  by rewrite hE map_monic.
+exists h; split => //.
+- split => //.
+  split; first by rewrite hS.
+  move=> p1 Sp1 p1Dh.
+  pose fp1 := map_poly (in_alg L) p1.
+  have /(minPoly_irr (alg_polyOver _ _))/orP[] : 
+      fp1 %| minPoly 1%AS (x ^+ (m.-1 %/ k)) by rewrite hE dvdp_map.
+    by rewrite hE eqp_map.
+  rewrite  -(_ : map_poly (in_alg L) 1 = 1).
+    by rewrite eqp_map -size_poly_eq1 (negPf Sp1).
+  by rewrite map_polyC /= scale1r.
+apply: poly_orderE; first by rewrite k_gt0 leqnn.
+  apply/eqP; rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
+  rewrite -subr_eq0 -rmodp_sub //.
+  by rewrite -[_ == 0]/(rdvdp h ('X^k - 1)) -dvdpE.
+move=> k1 k1_gt0 /eqP.
+rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
+rewrite -subr_eq0 -rmodp_sub //.
+rewrite -[_ == 0]/(rdvdp h ('X^k1 - 1)) -dvdpE => hDk1.
+apply: dvdn_leq => //.
+suff: minPoly 1%AS (x ^+ (m.-1 %/ k)) %| 'X^k1 - 1.
+  move=> Hk1.
+  rewrite (prim_order_dvd kPr).
+  have : ('X^k1 - 1).[x ^+ (m.-1 %/ k)] == 0.
+    by case/dvdpP: Hk1 => r ->; rewrite hornerE minPolyxx mulr0.
+  by rewrite !hornerE !hornerXn subr_eq0.
+rewrite hE.
+have ->: 'X^k1 - 1 = map_poly (in_alg L) ('X^k1 - 1).
+  by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
+by rewrite dvdp_map.
+Qed.
 
 Lemma totient_leq n : totient n <= n.
 Proof.
@@ -917,11 +1035,11 @@ by apply: leq_sum => i _; case: coprime.
 Qed.
 
 (*115 *)
-Lemma main_aks (F : finFieldType) p n k :
+Lemma main_aks (F : finFieldType) n k (p := #|F|) :
   p \in [char F] -> aks_criteria F n k -> is_power n p.
 Proof.
 pose a := log2n n ^ 2; pose s := (sqrtn (totient k) * log2n n)%N.
-move=> pC [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
+move => pC [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
 have pP : prime p := charf_prime pC.
 have p_gt1 := prime_gt1 pP.
 have k_gt1 : 1 < k.
@@ -948,6 +1066,7 @@ have nI : is_iexp F k s n.
   apply/eqP.
   rewrite comp_polyD comp_polyC comp_polyX.
   by apply: Hr.
+  have := cyclotomic_special_order.
 have [h [hMI hDxk1 jS hO]]:=  cyclotomic_special_order pC k_gt0 pO_gt1.
 have [//|/negP nP] := boolP (is_power n p).
 have /classicP[] := @Mk_Cexists F k s.
