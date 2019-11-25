@@ -805,8 +805,6 @@ have dE : d = \dim {: L}.
   by rewrite eqn_exp2l ?prime_gt1 // => /eqP.
 have eDd : (e %| d)%N.
   by rewrite dE; apply/field_dimS/subvf.
-have gEL : galois E {: L}%AS.
-  by apply: finField_galois (subvf _).
 have kDpe : (k %| (p ^ e).-1)%N.
   rewrite (prim_order_dvd kPr) -subn1 expfB ?expr1; last first.
     by rewrite -(exp1n e) ltn_exp2r ?prime_gt1 // adim_gt0.

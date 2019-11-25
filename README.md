@@ -16,3 +16,7 @@ Some extra material for mathcomp
  [More lemmas about polynomials](./more_thm.v)
 
  [Polynomials modulo](./divpoly.v)
+
+ [Nth root for natural number](./rootn.v)
+
+ [The aks algorithm](./aks.v)
