@@ -327,8 +327,6 @@ exists r => //.
 by apply: dvdp_trans qDp.
 Qed.
 
-End Firreducible.
-
 Section irreducible.
 
 Variable R : idomainType.
@@ -348,6 +346,8 @@ by apply: dvdp_trans pDg (dvdp_gcdr _ _).
 Qed. 
 
 End irreducible.
+
+End Firreducible.
 
 (* Separable *)
 

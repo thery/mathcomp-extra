@@ -3,7 +3,6 @@ From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
 From mathcomp Require cyclic.
 Require Import more_thm divpoly.
 
-
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -289,6 +288,7 @@ case: leqP =>  [_|k_gt1]; first by apply: unitr1.
 by case: coprime (unitZpE m k_gt1) => [//|_]; apply: unitr1.
 Qed.
 
+(*
 Definition mk_Zp_unit (k m : nat) :=
   FinRing.unit 'Z_k (mk_Zp_unit_proof k m).
 
@@ -304,55 +304,80 @@ Proof.
 move=> k_gt1 kCm; apply/val_eqP/eqP; rewrite /= k_gt1 kCm val_Zp_nat //=.
 by rewrite modn_small //; move: (m); rewrite Zp_cast.
 Qed.
-
+*)
+(*
 Definition ordern k m := 
   if (1 < k) && coprime k m then #[mk_Zp_unit k m]%g else 0%N.
+*)
 
-Lemma ordern_mod k m : 1 < k -> ordern k (m %% k) = ordern k m.
+Definition order_modn n m :=
+  oapp (fingroup.order : {unit 'Z_n} -> nat) 0%N (insub m%:R).
+
+
+Lemma order_modn_gt1 k m : 1 < order_modn k m -> 1 < k.
+Proof.
+rewrite /order_modn; case: insubP => //= u mU uE oLu.
+suff : 1 < #|[set : {unit 'Z_k}]|.
+  by case: (k) => [|[|]]; rewrite ?(@card_units_Zp 2).
+apply: leq_trans oLu _.
+apply/subset_leq_card/subsetP => i.
+by rewrite !inE.
+Qed.
+
+Lemma order_modn_coprime k m : 1 < order_modn k m -> coprime k m.
+Proof.
+move=> o_gt1.
+have k_gt1 := order_modn_gt1 o_gt1.
+move: o_gt1.
+rewrite /order_modn; case: insubP => //= u mU uE oLu.
+by rewrite -unitZpE.
+Qed.
+
+Lemma order_modn_mod k m : 
+  1 < k -> order_modn k (m %% k) = order_modn k m.
 Proof.
 move=> k_gt1.
-rewrite /ordern coprime_modr; case: andb => //.
-congr (#[_]%g).
-apply/val_inj; rewrite /= coprime_modr.
-congr (if _ then _ else _).
-by apply/val_inj; rewrite !Zp_nat /= Zp_cast // modn_mod.
+rewrite /order_modn.
+do 2 case: insubP; rewrite !unitZpE //.
+- move=> u1 _ u1E u2 _ u2E; rewrite (_ : u2 = u1) //.
+  by apply/val_eqP; rewrite u1E u2E Zp_nat_mod.
+- by move=> /negP; rewrite coprime_modr.
+by move=> u kCm _ /negP[]; rewrite coprime_modr.
 Qed.
 
 (* k > 1 not necessary *)
-Lemma ordern_exp k m :
-  1 < k -> coprime k m -> m ^ ordern k m = 1 %[mod k].
+Lemma order_modn_exp k m :
+  1 < k -> coprime k m -> m ^ order_modn k m = 1 %[mod k].
 Proof.
 move=> k_gt1 kCm.
-have /(congr1 val) /(congr1 val) := expg_order (mk_Zp_unit k m).
-rewrite FinRing.val_unitX /ordern /= k_gt1 kCm /=.
-by rewrite -natrX val_Zp_nat // Zp_cast.
+rewrite /order_modn; case: insubP; rewrite !unitZpE //= => u _ uE.
+rewrite  -val_Zp_nat // natrX.
+have /val_eqP := expg_order u.
+rewrite  -val_Zp_nat // FinRing.val_unitX /= uE => /eqP->.
+by rewrite modn_small.
 Qed.
 
-Lemma leq_ordern_totient k m : 0 < k -> ordern k m <= totient k.
+Lemma leq_order_totient k m : 0 < k -> order_modn k m <= totient k.
 Proof.
 move=> k_gt0.
-rewrite -card_units_Zp // /ordern.
-case: (_ && _) => //.
+rewrite -card_units_Zp // /order_modn.
+case: insubP => //= u uU uE.
 by apply/subset_leq_card/subsetP=> i; rewrite inE.
 Qed.
 
 (* 104 *)
 Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) n :
-  1 < k -> Mk_spec R s M -> is_iexp R k s n -> ordern k n <= #|M|.
+  1 < k -> Mk_spec R s M -> is_iexp R k s n -> order_modn k n <= #|M|.
 Proof.
 move=> k_gt1 HMk nIN.
 have kCn : coprime k n by case: nIN; rewrite coprime_sym.
-pose x : 'Z_k := inZp n.
-have kCx : coprime k x by rewrite /=  Zp_cast // coprime_modr.
-suff <-: #|[set val x | x in <[mk_Zp_unit k x]>%g]| = ordern k n.
-  apply/subset_leq_card/subsetP => y /imsetP[z /cycleP[i ->] ->].
-  rewrite FinRing.val_unitX val_mk_Zp_unit_Zp //=.
-   apply: is_iexpm_X (HMk) _ => //.
-   by case: HMk => // /(_ _ nIN) /eqP[] /=; rewrite Zp_cast.
-have -> : ordern k n = ordern k x.
-  by rewrite -ordern_mod // -{2}[k]Zp_cast.
-rewrite /ordern k_gt1 kCx /mk_Zp_unit.
-by apply/eqP/imset_injP=> y z H1 H2 U; apply/val_eqP/eqP.
+rewrite /order_modn; case: insubP => //=  u nE uE.
+rewrite -[#[_]%g](card_imset _ val_inj).
+apply/subset_leq_card/subsetP => y /imsetP[z /cycleP[i ->] ->].
+rewrite FinRing.val_unitX /= uE.
+apply: is_iexpm_X (HMk) _ => //.
+case: HMk => // /(_ _ nIN) /eqP[] /=.
+by rewrite -val_Zp_nat.
 Qed.
 
 (* 105 *)
@@ -575,7 +600,7 @@ Qed.
 (*109*)
 Lemma lower_bound_card_Qh (F : finFieldType) (h : {poly F}) k s p
          (M : {set 'Z_k}) (Q : {set {divpoly h}})   :
-  Mk_spec F s M -> Qh_spec k s Q -> p \in [char F] -> 1 < ordern k p ->
+  Mk_spec F s M -> Qh_spec k s Q -> p \in [char F] -> 1 < order_modn k p ->
   coprime k p -> monic_irreducible_poly h -> 1 < k -> rdvdp h ('X^k - 1) -> 
   poly_order h 'X k = k -> 0 < s < p ->
   2 ^ minn s #|M| <= #|Q|.
@@ -733,13 +758,13 @@ Qed.
 Lemma exp_Mk_upper_bound (R : comRingType) k s n a (M : {set 'Z_k}) :
    Mk_spec R s M -> 1 < #|M| ->
   1 < k -> 1 < n -> isnot_2power n ->
-  a = (log2n n) ^ 2 -> a <= ordern k n ->
+  a = (log2n n) ^ 2 -> a <= order_modn k n ->
   s = (sqrtn (totient k) * log2n n)%N ->   
   is_iexp R k s n ->
    n ^ (sqrtn #|M|) < 2 ^ (minn s #|M|).
 Proof.
 move=> HMk Mk_gt1 k_gt1 m_g1 nNP aE aLo sE nIN.
-set j := ordern k n in aLo.
+set j := order_modn k n in aLo.
 set m := log2n n in aE sE.
 have F1 : j <= #|M| by apply: is_iexpm_order.
 have F2 : #|M| <= totient k by apply: is_iexpm_totient.
@@ -856,8 +881,8 @@ Definition poly_intro_range (R : ringType) k n s :=
   
 Definition aks_criteria (R : ringType) n k :=
  [/\ 0 < n, 0 < k, 
-  (forall p, p \in [char R] -> [/\ 1 < ordern k p, (p %| n)%N & k < p]),
-   log2n n ^ 2 <= ordern k n &
+  (forall p, p \in [char R] -> [/\ 1 < order_modn k p, (p %| n)%N & k < p]),
+   log2n n ^ 2 <= order_modn k n &
    poly_intro_range R k n (sqrtn (totient k) * log2n n)
  ].
 
@@ -916,52 +941,52 @@ move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N => // k _.
 by rewrite expnS -mulnA eq_sym muln_eq1; case: (p) p_gt1 => // [] [].
 Qed.
 
-Axiom foo : forall P, P.
-
 (* 96 *)
-Lemma cyclotomic_special_order (F : finFieldType) k (p := #|F|):
-  (p \in [char F] -> 0 < k -> 1 < ordern k p -> 
-   exists h : {poly F}, [/\ monic_irreducible_poly h, (h %| 'X^k - 1)%R, 
-                            size h = (ordern k p).+1 & poly_order h 'X k = k] 
+Lemma cyclotomic_special_order k p :
+ (prime p -> 0 < k -> 1 < order_modn k p -> 
+   exists h : {poly 'F_p}, [/\ monic_irreducible_poly h, (h %| 'X^k - 1)%R, 
+                            size h = (order_modn k p).+1 & poly_order h 'X k = k] 
   )%N.
 Proof.
-set d := ordern _ _.
-move=> pC k_gt0 d_gt1.
-have k_gt1 : 1 < k by move: d_gt1; rewrite /d /ordern; case: (_ < k).
-have kCp : coprime k p by move: d_gt1; rewrite /d /ordern k_gt1; case: coprime.
+set d := order_modn _ _.
+move=> pP k_gt0 d_gt1.
+have k_gt1 :=  order_modn_gt1 d_gt1.
+have kCp := order_modn_coprime d_gt1.
 have d_gt0 : 0 < d by apply: leq_trans d_gt1.
-have Pp: prime p by apply: charf_prime pC.
 pose m := p ^ d.
 have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
 pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
-have /FinSplittingFieldFor[/= L splitLq]: q F != 0.
+have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
 rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
-have charL: p \in [char L] by rewrite char_lalg.
+have charL: p \in [char L] by rewrite char_lalg char_Fp .
 pose Fm := FinFieldExtType L.
 have pCm : p \in [char Fm] by [].
-have Cfm : #|Fm| = m.
-  have /finField_galois_generator[/= a _ Da]: (1 <= {:L})%VS by apply: sub1v.
-  pose Em := fixedSpace (a ^+ d)%g; rewrite //= dimv1 expn1 in Da.
-  have{splitLq} [zs DqL defL] := splitLq.
-  have Uzs: uniq zs.
-    rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
-    rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
-    rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
-    by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
-  suffices /eq_card->: Fm =i zs.
-    apply: succn_inj; rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
-    by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
-  have in_zs: zs =i Em.
-    move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
-    rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
-    elim: (d) => [|i IHi]; first by rewrite gal_id.
-    by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf.
-  suffices defEm: Em = {:L}%VS by move=> z; rewrite in_zs defEm memvf.
+have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
+pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
+have{splitLq} [zs DqL defL] := splitLq.
+have Uzs: uniq zs.
+  rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
+  rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
+  rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
+  by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
+have in_zs: zs =i Em.
+  move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
+  rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
+  elim: (d) => [|i IHi]; first by rewrite gal_id.
+  by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf ?card_Fp.
+have defEm: Em = {:L}%VS.
   apply/eqP; rewrite eqEsubv subvf -defL -[Em]subfield_closed agenvS //.
   by rewrite subv_add sub1v; apply/span_subvP=> z; rewrite in_zs.
+have FmEzs : Fm =i zs.
+  by move=> z; rewrite in_zs defEm memvf.
+have Cfm : #|Fm| = m. 
+  rewrite (eq_card FmEzs).
+  apply: succn_inj.
+  rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
+  by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
 have /hasP[x _ xE] :
     has (m.-1).-primitive_root [seq val i | i <- enum [finType of {unit Fm}]].
   apply: cyclic.has_prim_root => //.
@@ -973,7 +998,7 @@ have /hasP[x _ xE] :
   - rewrite map_inj_uniq; first by apply: enum_uniq.
     by apply: val_inj. 
   by rewrite size_map -cardE -cardsT card_finField_unit Cfm.
-have kDm1 : (k %| m.-1)%N by rewrite -subn1 -eqn_mod_dvd // ordern_exp.
+have kDm1 : (k %| m.-1)%N by rewrite -subn1 -eqn_mod_dvd // order_modn_exp.
 have mkDm1 : (m.-1 %/ k %| m.-1)%N.
   by apply/dvdnP; exists k; rewrite mulnC divnK.
 have kPr : k.-primitive_root (x ^+ (m.-1 %/ k)).
@@ -981,7 +1006,61 @@ have kPr : k.-primitive_root (x ^+ (m.-1 %/ k)).
     by apply: exp_prim_root.
   by rewrite (gcdn_idPl mkDm1) divnA // mulnC mulnK.
 have /polyOver1P[h hE] := minPolyOver 1 (x ^+ (m.-1 %/ k)).
-have hS : size h = d.+1 by apply: foo.
+pose z :=  x ^+ (m.-1 %/ k).
+have g1L : galois 1%AS {: L}%AS.
+  by apply: finField_galois (sub1v _).
+pose g := ('Gal({: L}%AS /<<1; z>>))%G.
+pose E := <<1; z>>%VS.
+pose e := \dim E.
+have dE : d = \dim {: L}.
+  have /eqP := @card_vspace _ Fm _ {:L}.
+  rewrite card_vspacef Cfm card_Fp /m //.
+  by rewrite eqn_exp2l ?prime_gt1 // => /eqP.
+have eDd : (e %| d)%N.
+  by rewrite dE; apply/field_dimS/subvf.
+have gEL : galois E {: L}%AS.
+  by apply: finField_galois (subvf _).
+have kDpe : (k %| (p ^ e).-1)%N.
+  rewrite (prim_order_dvd kPr) -/z.
+  rewrite -subn1 expfB; last first.
+    by rewrite -(exp1n e) ltn_exp2r ?prime_gt1 // adim_gt0.
+  have-> : z ^+ (p ^ e) = (a ^+ e)%g z.
+    elim: (e) => [|n IH]; first by rewrite gal_id expr1.
+    by rewrite expgSr expnSr exprM galM ?IH ?Da ?memvf ?card_Fp.
+  have F1 : (<[a ^+ e]> \subset 'Gal({:L}/E))%g.
+    rewrite -(cyclic.cardSg_cyclic (cyclic.cycle_cyclic a)) //=; last first.
+    - rewrite -(eqP Ca).
+      by apply: galS; apply sub1v.
+    - by apply: cycleX.
+    rewrite [#|_|]cyclic.orderXgcd.
+    rewrite /order -(eqP Ca) -galois_dim // dimv1 divn1 -dE.
+    by rewrite (gcdn_idPr eDd) -galois_dim // -dE.
+  have -> : (a ^+ e)%g z = z.
+    rewrite galois_connection in F1.
+      have /FadjoinP[_ /mem_fixedFieldP[_]] := F1.
+      apply.
+      by apply: cycle_id.
+    by apply: subvf.
+  rewrite expr1 divff //.
+  apply/eqP=> zE0; have /eqP := prim_expr_order kPr.
+  by rewrite -/z zE0 expr0n eqn0Ngt k_gt0 eq_sym oner_eq0.
+have peE1 : p ^ e = 1 %[mod k].
+  rewrite -[_ ^ _]prednK ?expn_gt0 ?prime_gt0 //.
+  by rewrite -addn1 -modnDm (eqP kDpe) add0n modn_mod.
+have hS : size h = d.+1.
+  have := size_minPoly 1%AS (x ^+ (m.-1 %/ k)).
+  rewrite /adjoin_degree dimv1 divn1 -/E -/e.
+  rewrite hE size_map_poly prednK ?adim_gt0 // => ->.
+  congr (_.+1); apply/eqP; rewrite eqn_dvd.
+  apply/andP; split.
+    by rewrite dE; apply/field_dimS/subvf.
+  rewrite /d /order_modn; case: insubP => [u|/negP[]]; rewrite !unitZpE //=.
+  move=> _ uE.
+  rewrite cyclic.order_dvdn.
+  apply/eqP/val_eqP.
+  rewrite FinRing.val_unitX /= uE.
+  rewrite -natrX.
+  by rewrite -(Zp_nat_mod k_gt1) peE1 modn_small //.
 have minD : minPoly 1%AS (x ^+ (m.-1 %/ k)) %| 'X^k - 1.
   apply: minPoly_dvdp.
     by rewrite !(rpredB, rpredX, rpred1, polyOverX).
@@ -1035,15 +1114,14 @@ by apply: leq_sum => i _; case: coprime.
 Qed.
 
 (*115 *)
-Lemma main_aks (F : finFieldType) n k (p := #|F|) :
-  p \in [char F] -> aks_criteria F n k -> is_power n p.
+Lemma main_aks n k p (F := [finRingType of 'F_p]) :
+  prime p -> aks_criteria F n k -> is_power n p.
 Proof.
 pose a := log2n n ^ 2; pose s := (sqrtn (totient k) * log2n n)%N.
-move => pC [n_gt0 k_gt0 /(_ p pC)[pO_gt1 pDn kLp lnLnO Hr]].
-have pP : prime p := charf_prime pC.
+move => pP [n_gt0 k_gt0 /(_ p (char_Fp pP))[pO_gt1 pDn kLp lnLnO Hr]].
+have pC := char_Fp pP.
 have p_gt1 := prime_gt1 pP.
-have k_gt1 : 1 < k.
-  by move: pO_gt1; rewrite /ordern; case: (leqP 2 k).
+have k_gt1 : 1 < k by apply: order_modn_gt1 pO_gt1.
 have n_gt1 : 1 < n.
   apply: leq_trans (prime_gt1 pP) _.
   by apply: dvdn_leq.
@@ -1055,19 +1133,20 @@ have [/eqP nE|/negP nis2p] := boolP (is_2power n).
     by move=> _; apply: is_power_exp.
   by case: (p) pP => // [] // [].
 have kCn : coprime k n.
-  have : 1 <= ordern k n.
+  have : 1 <= order_modn k n.
     apply: leq_trans lnLnO.
     rewrite (@leq_exp2r 1 _ 2) //.
     by apply: (@leq_log2n 2).
-  by rewrite /ordern andbC; case: coprime.
+  rewrite /order_modn.
+  by case: insubP => /=;  rewrite unitZpE.
 have kCp : coprime k p by apply: coprime_dvdr kCn.
-have nI : is_iexp F k s n.
+have nI : is_iexp [ringType of 'F_p] k s n.
   split => [|c cB]; first by rewrite coprime_sym.
   apply/eqP.
   rewrite comp_polyD comp_polyC comp_polyX.
   by apply: Hr.
   have := cyclotomic_special_order.
-have [h [hMI hDxk1 jS hO]]:=  cyclotomic_special_order pC k_gt0 pO_gt1.
+have [h [hMI hDxk1 jS hO]]:= cyclotomic_special_order pP k_gt0 pO_gt1.
 have [//|/negP nP] := boolP (is_power n p).
 have /classicP[] := @Mk_Cexists F k s.
 move=> [M hMk].
@@ -1076,8 +1155,9 @@ move=> [Q hQh].
 pose t := #|M|.
 have t_gt1 : 1 < t.
   apply: leq_trans pO_gt1 _.
-  apply: is_iexpm_order (hMk) _  => //.
-  by apply: is_iexp_fin_char; rewrite // coprime_sym.
+  apply: is_iexpm_order (hMk) _ => //.
+  apply: is_iexp_fin_char; first by apply: char_Fp.
+  by rewrite coprime_sym.
 have nLst : n ^ sqrtn t < 2 ^ minn s t.
   apply: exp_Mk_upper_bound hMk _ _ _ _ _ _ _  _ => //.
   by apply/negP.
@@ -1091,7 +1171,7 @@ have stLQ : 2 ^ minn s t <= #|Q|.
   have /andP[/(leq_trans _)->//] := sqrtn_bound (totient k).
   rewrite expnS expn1 leq_mul2l -(sqrnK (log2n n)).
   rewrite leq_sqrtn ?orbT //.
-  by apply: leq_trans (leq_ordern_totient n _).
+  by apply: leq_trans (leq_order_totient n _).
 pose q := (n %/ p)%N.
 have nE : n = (q * p)%N.
   by rewrite [n](divn_eq _ p) (eqP pDn) addn0.
@@ -1113,7 +1193,7 @@ have : #|f @: N1| <= t.
   by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
 rewrite leqNgt=> /negP[].
 rewrite card_in_imset; last first.
-  apply: is_iexp_inj => //; first by rewrite -dvdpE.
+  apply: (is_iexp_inj hMk hQh) => //; first by rewrite -dvdpE.
   rewrite mulnC -nE.
   by apply: leq_trans stLQ.
 rewrite card_Nbar //; last first.

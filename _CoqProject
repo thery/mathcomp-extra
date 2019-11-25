@@ -1,3 +1,4 @@
+-arg -w -arg -notation-overridden
 -I .
 -R . extra
 fib.v

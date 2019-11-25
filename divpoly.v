@@ -136,7 +136,7 @@ Proof. by apply/eqP/val_eqP; exact: oner_neq0. Qed.
 
 End Zmod.
 
-Notation "{ 'divpoly'  h }" := (divpoly (divpoly_quotient h))
+Notation "{ 'divpoly' h }" := (divpoly (divpoly_quotient h))
   (format "{ 'divpoly'  h }").
 
 Section Fin.
@@ -621,7 +621,7 @@ Canonical divpoly_vectType := VectType A {divpoly h} divpoly_vectMixin.
 End Vector.
 End PType.
 
-Notation "{ 'divpoly'  h }" := (divpoly (divpoly_quotient h))
+Notation "{ 'divpoly' h }" := (divpoly (divpoly_quotient h))
   (format "{ 'divpoly'  h }").
 
 Section inPoly.
