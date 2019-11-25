@@ -541,3 +541,54 @@ Lemma roots_geq_poly_eq0 p (rs : seq R) : all (root p) rs -> uniq rs ->
 Proof. by move=> ??; apply: contraTeq => ?; rewrite leqNgt max_poly_roots. Qed.
 
 End alreadyin.
+
+Section FinField.
+
+(* We extract a part of *)
+Lemma Fp_splittingField p d : prime p -> (0 < d)%N ->
+  {L: splittingFieldType 'F_p | #|FinFieldExtType L| = (p ^ d)%N}.
+Proof.
+move=> pP d_gt0.
+pose m := (p ^ d)%N.
+have m_gt1: (m > 1)%N by rewrite (ltn_exp2l 0) ?prime_gt1.
+have m_gt0 := ltnW m_gt1; have m1_gt0: (m.-1 > 0)%N by rewrite -ltnS prednK.
+pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
+  by rewrite subr0 mulrBl mul1r -exprSr prednK.
+have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
+  by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
+rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
+exists L.
+have charL: p \in [char L] by rewrite char_lalg char_Fp .
+have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
+pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
+have{splitLq} [zs DqL defL] := splitLq.
+have Uzs: uniq zs.
+  rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
+  rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
+  rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
+  by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
+have in_zs: zs =i Em.
+  move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
+  rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
+  elim: (d) => [|i IHi]; first by rewrite gal_id.
+  by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf ?card_Fp.
+have defEm: Em = {:L}%VS.
+  apply/eqP; rewrite eqEsubv subvf -defL -[Em]subfield_closed agenvS //.
+  by rewrite subv_add sub1v; apply/span_subvP=> z; rewrite in_zs.
+have/eq_card-> : FinFieldExtType L =i zs.
+  by move=> z; rewrite in_zs defEm memvf.
+apply: succn_inj.
+rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
+by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
+Qed.
+
+Lemma PrimePowerField p k (m := (p ^ k)%N) :
+  prime p -> (0 < k)%N -> {Fm : finFieldType | p \in [char Fm] & #|Fm| = m}.
+Proof.
+move=> pP k_gt0.
+have [L LC] := Fp_splittingField pP k_gt0.
+have charL: p \in [char L] by rewrite char_lalg char_Fp.
+by exists (FinFieldExtType L).
+Qed.
+
+End FinField.

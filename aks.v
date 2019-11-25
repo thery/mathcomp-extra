@@ -833,7 +833,6 @@ have F4 : rmodp (p \Po 'X^m) z = rmodp (p \Po 'X^n) z.
 by rewrite F2 -F4 -F3.
 Qed.
 
-
 (* 113 *)
 (* in order to be able to talk about Qh I need to limit this theorem to 
    finField *)
@@ -953,40 +952,11 @@ move=> pP k_gt0 d_gt1.
 have k_gt1 :=  order_modn_gt1 d_gt1.
 have kCp := order_modn_coprime d_gt1.
 have d_gt0 : 0 < d by apply: leq_trans d_gt1.
-pose m := p ^ d.
+have /= [L LC] := Fp_splittingField pP d_gt0.
+set m := p ^ d in LC.
 have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
-pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
-  by rewrite subr0 mulrBl mul1r -exprSr prednK.
-have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
-  by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
-rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
-have charL: p \in [char L] by rewrite char_lalg char_Fp .
 pose Fm := FinFieldExtType L.
-have pCm : p \in [char Fm] by [].
-have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
-pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
-have{splitLq} [zs DqL defL] := splitLq.
-have Uzs: uniq zs.
-  rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
-  rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
-  rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
-  by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
-have in_zs: zs =i Em.
-  move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
-  rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
-  elim: (d) => [|i IHi]; first by rewrite gal_id.
-  by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf ?card_Fp.
-have defEm: Em = {:L}%VS.
-  apply/eqP; rewrite eqEsubv subvf -defL -[Em]subfield_closed agenvS //.
-  by rewrite subv_add sub1v; apply/span_subvP=> z; rewrite in_zs.
-have FmEzs : Fm =i zs.
-  by move=> z; rewrite in_zs defEm memvf.
-have Cfm : #|Fm| = m. 
-  rewrite (eq_card FmEzs).
-  apply: succn_inj.
-  rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
-  by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
 have /hasP[x _ xE] :
     has (m.-1).-primitive_root [seq val i | i <- enum [finType of {unit Fm}]].
   apply: cyclic.has_prim_root => //.
@@ -994,19 +964,19 @@ have /hasP[x _ xE] :
     apply/unity_rootP => /=.
     rewrite -FinRing.val_unitX -(_ : #|[set : {unit Fm}]%g| = m.-1).
       by rewrite cyclic.expg_cardG ?inE.
-    by rewrite card_finField_unit Cfm.
+    by rewrite card_finField_unit LC.
   - rewrite map_inj_uniq; first by apply: enum_uniq.
     by apply: val_inj. 
-  by rewrite size_map -cardE -cardsT card_finField_unit Cfm.
+  by rewrite size_map -cardE -cardsT card_finField_unit LC.
 have kDm1 : (k %| m.-1)%N by rewrite -subn1 -eqn_mod_dvd // order_modn_exp.
 have mkDm1 : (m.-1 %/ k %| m.-1)%N.
   by apply/dvdnP; exists k; rewrite mulnC divnK.
-have kPr : k.-primitive_root (x ^+ (m.-1 %/ k)).
+pose z :=  x ^+ (m.-1 %/ k).
+have kPr : k.-primitive_root z.
   rewrite {1}(_ : k = m.-1 %/ gcdn (m.-1 %/ k) m.-1)%N //.
     by apply: exp_prim_root.
   by rewrite (gcdn_idPl mkDm1) divnA // mulnC mulnK.
-have /polyOver1P[h hE] := minPolyOver 1 (x ^+ (m.-1 %/ k)).
-pose z :=  x ^+ (m.-1 %/ k).
+have /polyOver1P[h hE] := minPolyOver 1 z.
 have g1L : galois 1%AS {: L}%AS.
   by apply: finField_galois (sub1v _).
 pose g := ('Gal({: L}%AS /<<1; z>>))%G.
@@ -1014,41 +984,25 @@ pose E := <<1; z>>%VS.
 pose e := \dim E.
 have dE : d = \dim {: L}.
   have /eqP := @card_vspace _ Fm _ {:L}.
-  rewrite card_vspacef Cfm card_Fp /m //.
+  rewrite card_vspacef LC card_Fp /m //.
   by rewrite eqn_exp2l ?prime_gt1 // => /eqP.
 have eDd : (e %| d)%N.
   by rewrite dE; apply/field_dimS/subvf.
 have gEL : galois E {: L}%AS.
   by apply: finField_galois (subvf _).
 have kDpe : (k %| (p ^ e).-1)%N.
-  rewrite (prim_order_dvd kPr) -/z.
-  rewrite -subn1 expfB; last first.
+  rewrite (prim_order_dvd kPr) -subn1 expfB ?expr1; last first.
     by rewrite -(exp1n e) ltn_exp2r ?prime_gt1 // adim_gt0.
-  have-> : z ^+ (p ^ e) = (a ^+ e)%g z.
-    elim: (e) => [|n IH]; first by rewrite gal_id expr1.
-    by rewrite expgSr expnSr exprM galM ?IH ?Da ?memvf ?card_Fp.
-  have F1 : (<[a ^+ e]> \subset 'Gal({:L}/E))%g.
-    rewrite -(cyclic.cardSg_cyclic (cyclic.cycle_cyclic a)) //=; last first.
-    - rewrite -(eqP Ca).
-      by apply: galS; apply sub1v.
-    - by apply: cycleX.
-    rewrite [#|_|]cyclic.orderXgcd.
-    rewrite /order -(eqP Ca) -galois_dim // dimv1 divn1 -dE.
-    by rewrite (gcdn_idPr eDd) -galois_dim // -dE.
-  have -> : (a ^+ e)%g z = z.
-    rewrite galois_connection in F1.
-      have /FadjoinP[_ /mem_fixedFieldP[_]] := F1.
-      apply.
-      by apply: cycle_id.
-    by apply: subvf.
-  rewrite expr1 divff //.
+  have: z \in E by apply: memv_adjoin.
+  rewrite Fermat's_little_theorem -/E card_Fp -/e // => /eqP->.
+  rewrite divff //.
   apply/eqP=> zE0; have /eqP := prim_expr_order kPr.
-  by rewrite -/z zE0 expr0n eqn0Ngt k_gt0 eq_sym oner_eq0.
+  by rewrite zE0 expr0n eqn0Ngt k_gt0 eq_sym oner_eq0.
 have peE1 : p ^ e = 1 %[mod k].
   rewrite -[_ ^ _]prednK ?expn_gt0 ?prime_gt0 //.
   by rewrite -addn1 -modnDm (eqP kDpe) add0n modn_mod.
 have hS : size h = d.+1.
-  have := size_minPoly 1%AS (x ^+ (m.-1 %/ k)).
+  have := size_minPoly 1%AS z.
   rewrite /adjoin_degree dimv1 divn1 -/E -/e.
   rewrite hE size_map_poly prednK ?adim_gt0 // => ->.
   congr (_.+1); apply/eqP; rewrite eqn_dvd.
@@ -1061,7 +1015,7 @@ have hS : size h = d.+1.
   rewrite FinRing.val_unitX /= uE.
   rewrite -natrX.
   by rewrite -(Zp_nat_mod k_gt1) peE1 modn_small //.
-have minD : minPoly 1%AS (x ^+ (m.-1 %/ k)) %| 'X^k - 1.
+have minD : minPoly 1%AS z %| 'X^k - 1.
   apply: minPoly_dvdp.
     by rewrite !(rpredB, rpredX, rpred1, polyOverX).
   rewrite rootE !hornerE hornerXn -exprM divnK //.
@@ -1072,32 +1026,30 @@ have hD : h %| 'X^k - 1.
     by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
   by rewrite hE dvdp_map.
 have hM : h \is monic.
-  have := monic_minPoly 1 (x ^+ (m.-1 %/ k)).
+  have := monic_minPoly 1 z.
   by rewrite hE map_monic.
 exists h; split => //.
 - split => //.
-  split; first by rewrite hS.
-  move=> p1 Sp1 p1Dh.
+  split=> [|p1 Sp1 p1Dh]; first by rewrite hS.
   pose fp1 := map_poly (in_alg L) p1.
   have /(minPoly_irr (alg_polyOver _ _))/orP[] : 
-      fp1 %| minPoly 1%AS (x ^+ (m.-1 %/ k)) by rewrite hE dvdp_map.
+      fp1 %| minPoly 1%AS z by rewrite hE dvdp_map.
     by rewrite hE eqp_map.
   rewrite  -(_ : map_poly (in_alg L) 1 = 1).
     by rewrite eqp_map -size_poly_eq1 (negPf Sp1).
   by rewrite map_polyC /= scale1r.
-apply: poly_orderE; first by rewrite k_gt0 leqnn.
+apply: poly_orderE=> [||k1 k1_gt0 /eqP]; first by rewrite k_gt0 leqnn.
   apply/eqP; rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
   rewrite -subr_eq0 -rmodp_sub //.
   by rewrite -[_ == 0]/(rdvdp h ('X^k - 1)) -dvdpE.
-move=> k1 k1_gt0 /eqP.
 rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
 rewrite -subr_eq0 -rmodp_sub //.
 rewrite -[_ == 0]/(rdvdp h ('X^k1 - 1)) -dvdpE => hDk1.
 apply: dvdn_leq => //.
-suff: minPoly 1%AS (x ^+ (m.-1 %/ k)) %| 'X^k1 - 1.
+suff: minPoly 1%AS z %| 'X^k1 - 1.
   move=> Hk1.
   rewrite (prim_order_dvd kPr).
-  have : ('X^k1 - 1).[x ^+ (m.-1 %/ k)] == 0.
+  have : ('X^k1 - 1).[z] == 0.
     by case/dvdpP: Hk1 => r ->; rewrite hornerE minPolyxx mulr0.
   by rewrite !hornerE !hornerXn subr_eq0.
 rewrite hE.
