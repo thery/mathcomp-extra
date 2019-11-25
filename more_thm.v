@@ -1,5 +1,6 @@
 (* Theorems to be added to the mathcomp library  *)
-From mathcomp Require Import all_ssreflect all_fingroup all_algebra all_field.
+From mathcomp Require Import all_ssreflect all_fingroup all_field.
+From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -284,8 +285,8 @@ Section Firreducible.
 Variable F : finFieldType.
 
 Definition irreducibleb (p : {poly F}) :=
-  (1 < size p)%N && 
-  [forall q : (size p).-1.-tuple F, (Poly q %| p) ==> (size (Poly q) <= 1)%N].
+  (1 < size p) && 
+  [forall q : (size p).-1.-tuple F, (Poly q %| p) ==> (size (Poly q) <= 1)].
 
 Lemma irreducibleP (p : {poly F}) : 
   reflect (irreducible_poly p) (irreducibleb p).
@@ -295,7 +296,7 @@ apply: (iffP idP) => [/andP[Sp /forallP Fp]|[Sp Fpoly]].
   split => // q SqD1 qDp.
   rewrite -dvdp_size_eqp //.
   have pD0 : p != 0 by rewrite -size_poly_eq0; case: size Sp.
-  have: (size q <= size p)%N by apply: dvdp_leq.
+  have: size q <= size p by apply: dvdp_leq.
   rewrite leq_eqVlt => /orP[//|SqLp].
   have xF : size (q ++ nseq ((size p).-1 - size q) 0) == (size p).-1.
     by rewrite size_cat size_nseq addnC subnK //;  case: size Sp SqLp.
@@ -314,7 +315,7 @@ by case: size Sp => // k; rewrite ltnn.
 Qed.
 
 Lemma irreducible_dvdp (p : {poly F}) :
-  (1 < size p)%N -> exists2 q, irreducible_poly q & q %| p.
+  1 < size p -> exists2 q, irreducible_poly q & q %| p.
 Proof.
 elim: {p}_.+1 {-2}p  (ltnSn (size p)) => // k IH p SpLk Sp_gt1.
 have [/irreducibleP pI|] := boolP (irreducibleb p); first by exists p.
@@ -332,7 +333,7 @@ Section irreducible.
 Variable R : idomainType.
 
 Lemma irreducible_exp n (p q : {poly R}) :
-  irreducible_poly p -> (0 < n)%N -> p %| q ^+ n = (p %| q).
+  irreducible_poly p -> 0 < n -> p %| q ^+ n = (p %| q).
 Proof.
 move=> pI.
 elim: n => // [] [|n] // /(_ isT) IH _.
@@ -354,7 +355,7 @@ End Firreducible.
 Section separable.
 
 Lemma separable_exp (F : finFieldType) n (p q : {poly F}) :
-  separable_poly p -> (0 < n)%N -> p %| q ^+ n = (p %| q).
+  separable_poly p -> 0 < n -> p %| q ^+ n = (p %| q).
 Proof.
 case: n => // n pS _.
 apply/idP/idP; last first.
@@ -378,7 +379,7 @@ apply: IH; last 2 first.
 rewrite -(ltn_add2r (size r)) -[(_ + size _)%N]prednK; last first.
   by case: rI; case: size => // k1; rewrite addnS.
 rewrite -size_mul; last by apply: irredp_neq0.
-  rewrite -pE (leq_trans _ (_ : (k + 2 <= _)%N)) //.
+  rewrite -pE (leq_trans _ (_ : (k + 2 <= _))) //.
     by rewrite !addnS addn0 ltnS.
   by rewrite leq_add2l; case: rI.
 apply: separable_poly_neq0.
@@ -389,7 +390,7 @@ Lemma separable_polyXnsub1 (R : fieldType) n :
  n%:R != 0 :> R -> separable_poly ('X^n - 1 : {poly R}).
 Proof.
 move=> nC.
-have n_gt0 : (0 < n)%N by case: n nC => //; rewrite eqxx.
+have n_gt0 : 0 < n by case: n nC => //; rewrite eqxx.
 rewrite /separable_poly !derivE subr0.
 suff ->: 'X^n - 1 = (n%:R^-1 *: 'X) * ('X^n.-1 *+ n) + (-1) :> {poly R}.
   rewrite coprimep_sym coprimep_addl_mul.
@@ -524,7 +525,7 @@ Variable R : idomainType.
 Implicit Type p : {poly R}.
 
 Theorem max_poly_roots p rs :
-  p != 0 -> all (root p) rs -> uniq rs -> (size rs < size p)%N.
+  p != 0 -> all (root p) rs -> uniq rs -> size rs < size p.
 Proof.
 elim: rs p => [p pn0 _ _ | r rs ihrs p pn0] /=; first by rewrite size_poly_gt0.
 case/andP => rpr arrs /andP [rnrs urs]; case/factor_theorem: rpr => q epq.
@@ -537,7 +538,7 @@ by move: rnrs; rewrite -exr xrs.
 Qed.
 
 Lemma roots_geq_poly_eq0 p (rs : seq R) : all (root p) rs -> uniq rs ->
-  (size rs >= size p)%N -> p = 0.
+  size rs >= size p -> p = 0.
 Proof. by move=> ??; apply: contraTeq => ?; rewrite leqNgt max_poly_roots. Qed.
 
 End alreadyin.
@@ -545,13 +546,13 @@ End alreadyin.
 Section FinField.
 
 (* We extract a part of *)
-Lemma Fp_splittingField p d : prime p -> (0 < d)%N ->
-  {L: splittingFieldType 'F_p | #|FinFieldExtType L| = (p ^ d)%N}.
+Lemma Fp_splittingField p d : prime p -> 0 < d ->
+  {L: splittingFieldType 'F_p | #|FinFieldExtType L| = p ^ d}.
 Proof.
 move=> pP d_gt0.
-pose m := (p ^ d)%N.
-have m_gt1: (m > 1)%N by rewrite (ltn_exp2l 0) ?prime_gt1.
-have m_gt0 := ltnW m_gt1; have m1_gt0: (m.-1 > 0)%N by rewrite -ltnS prednK.
+pose m := p ^ d.
+have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
+have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
 pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
 have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
@@ -582,8 +583,8 @@ rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
 by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
 Qed.
 
-Lemma PrimePowerField p k (m := (p ^ k)%N) :
-  prime p -> (0 < k)%N -> {Fm : finFieldType | p \in [char Fm] & #|Fm| = m}.
+Lemma PrimePowerField p k (m := (p ^ k)) :
+  prime p -> 0 < k -> {Fm : finFieldType | p \in [char Fm] & #|Fm| = m}.
 Proof.
 move=> pP k_gt0.
 have [L LC] := Fp_splittingField pP k_gt0.
@@ -592,3 +593,172 @@ by exists (FinFieldExtType L).
 Qed.
 
 End FinField.
+
+
+Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
+  n \in [char F] -> c%:R ^+ n = c%:R :> F.
+Proof.
+move=> nC.
+have Pp : prime n by apply: charf_prime nC.
+have Cn : [char F].-nat n by rewrite pnatE.
+elim: c => [|c IH]; first by rewrite -natrX exp0n ?prime_gt0.
+by rewrite -addn1 natrD exprDn_char // IH -natrX exp1n.
+Qed.
+
+
+Lemma poly_geom (R : comRingType) n (p : {poly R}) : 
+  p ^+ n.+1 - 1 = (p - 1) * \sum_(i < n.+1) p ^+ i.
+Proof.
+rewrite mulrBl mul1r {1}big_ord_recr big_ord_recl /=.
+rewrite [_ + p^+_]addrC mulrDr -exprS expr0 addrAC opprD addrA mulr_sumr.
+rewrite (eq_bigr (fun i : 'I_n => p * p ^+ i)) ?subrK // => i _.
+by rewrite exprS.
+Qed.
+
+Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
+  p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
+Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
+
+(* Definition of the order for Z_k *)
+Definition order_modn n m :=
+  oapp (fingroup.order : {unit 'Z_n} -> nat) 0%N (insub m%:R).
+
+Lemma order_modn_gt1 k m : 1 < order_modn k m -> 1 < k.
+Proof.
+rewrite /order_modn; case: insubP => //= u mU uE oLu.
+suff : 1 < #|[set : {unit 'Z_k}]|.
+  by case: (k) => [|[|]]; rewrite ?(@card_units_Zp 2).
+apply: leq_trans oLu _.
+apply/subset_leq_card/subsetP => i.
+by rewrite !inE.
+Qed.
+
+Lemma order_modn_coprime k m : 1 < order_modn k m -> coprime k m.
+Proof.
+move=> o_gt1.
+have k_gt1 := order_modn_gt1 o_gt1.
+move: o_gt1.
+rewrite /order_modn; case: insubP => //= u mU uE oLu.
+by rewrite -unitZpE.
+Qed.
+
+Lemma order_modn_mod k m : 1 < k -> order_modn k (m %% k) = order_modn k m.
+Proof.
+move=> k_gt1.
+rewrite /order_modn.
+do 2 case: insubP; rewrite !unitZpE //.
+- move=> u1 _ u1E u2 _ u2E; rewrite (_ : u2 = u1) //.
+  by apply/val_eqP; rewrite u1E u2E Zp_nat_mod.
+- by move=> /negP; rewrite coprime_modr.
+by move=> u kCm _ /negP[]; rewrite coprime_modr.
+Qed.
+
+(* k > 1 not necessary *)
+Lemma order_modn_exp k m :
+  1 < k -> coprime k m -> m ^ order_modn k m = 1 %[mod k].
+Proof.
+move=> k_gt1 kCm.
+rewrite /order_modn; case: insubP; rewrite !unitZpE //= => u _ uE.
+rewrite  -val_Zp_nat // natrX.
+have /val_eqP := expg_order u.
+rewrite  -val_Zp_nat // FinRing.val_unitX /= uE => /eqP->.
+by rewrite modn_small.
+Qed.
+
+Lemma leq_order_totient k m : 0 < k -> order_modn k m <= totient k.
+Proof.
+move=> k_gt0.
+rewrite -card_units_Zp // /order_modn.
+case: insubP => //= u uU uE.
+by apply/subset_leq_card/subsetP=> i; rewrite inE.
+Qed.
+
+(* Definition of order for poly *)
+Definition poly_order {R : ringType} (h p :  {poly R}) (n : nat) : nat := 
+  if [pick i | rmodp (p^+ (i : 'I_n.+1).-1.+1) h == 1] is Some v then
+      [arg min_(i < v | (rmodp (p^+ i.-1.+1) h == 1)) i].-1.+1 else 0.
+
+Lemma poly_orderE (R : ringType) (h p : {poly R}) n m :
+  0 < m <= n ->
+  rmodp (p ^+ m) h = 1 ->
+  (forall k, 0 < k -> rmodp (p^+ k) h = 1 -> m <= k) ->
+  poly_order h p n = m.
+Proof.
+move=> /andP[m_gt0 mLn] /eqP mM HmM.
+rewrite -ltnS in mLn.
+rewrite /poly_order; case: pickP => [z zM|/(_ (Ordinal mLn))]; last first.
+  by rewrite prednK //= (eqP mM) eqxx.
+case: arg_minP => //.
+move=> i /eqP /HmM /= Hj /(_ (Ordinal mLn)).
+rewrite prednK //= => /(_ mM) iLm.
+apply/eqP; rewrite eqn_leq Hj // andbT.
+by case: (i: nat) iLm.
+Qed.
+
+Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
+  0 < n -> poly_order h p n <= n.
+Proof.
+by rewrite /poly_order; case: pickP => // x Hx; case: arg_minP => // [] [[|m]].
+Qed.
+
+Lemma poly_order_gt0_rmodp (R : ringType) (h p : {poly R}) n :
+  0 < poly_order h p n ->  rmodp (p^+ poly_order h p n) h == 1.
+Proof.
+by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minP.
+Qed.
+
+Lemma poly_order_eq0_rmodp (R : ringType) (h p : {poly R}) m n :
+  poly_order h p n = 0%N -> 0 < m <= n -> rmodp (p^+ m) h != 1.
+Proof.
+rewrite -[_ <= n]ltnS /poly_order; case: pickP => // HM _ /andP[m_gt0 mLn].
+by have /= := HM (Ordinal mLn); case: (m) m_gt0 => //= k _ /idP/negP.
+Qed.
+
+Lemma poly_order_lt (R : ringType) (h p : {poly R}) m n :
+   0 < m < poly_order h p n -> rmodp (p^+ m) h != 1.
+Proof.
+rewrite /poly_order; case: pickP=> [x Hx|]; last by rewrite ltn0 andbF.
+case: arg_minP => // i Hi Hmin /andP[m_gt0 mLi].
+have mLn : m < n.+1.
+  by rewrite (leq_trans mLi) // (leq_trans _ (ltn_ord i)) //; case: (i : nat).
+apply/negP; rewrite -[m]prednK // => /(Hmin (Ordinal mLn)) /=.
+rewrite leqNgt; case: (i : nat) mLi  => [/=|j ->//].
+by case: (m) m_gt0.
+Qed.
+
+(* To be a power of 2 *)
+Definition is_2power n := n == 2 ^ log2n n.
+Definition isnot_2power n := n != 2 ^ log2n n.
+
+Lemma sqrtn_gt0 n : (0 < sqrtn n) = (0 < n).
+Proof.
+by case: n => [|n]; rewrite // -[1%N]/(sqrtn 1) // leq_sqrtn.
+Qed.
+
+(* To be a power *)
+
+Definition is_power p q := p == q ^ logn q p.
+
+Lemma prime_is_power_exp p q n :
+  prime p -> 1 < q -> 0 < n -> 
+  is_power (q ^ n) p -> is_power q p.
+Proof.
+move=> pP q_gt1 n_gt0.
+have q_gt0 : 0 < q by apply: ltnW.
+by rewrite  /is_power lognX mulnC expnM eqn_exp2r.
+Qed.
+
+Lemma is_power_exp p n : prime p -> is_power (p ^ n) p.
+Proof.
+by move=> pP; rewrite /is_power eqn_exp2l ?prime_gt1 // pfactorK.
+Qed.
+
+Lemma is_power_id p : prime p -> is_power p p.
+Proof. by move=> pP; rewrite -{1}(expn1 p) is_power_exp. Qed.
+
+Lemma totient_leq n : totient n <= n.
+Proof.
+rewrite totient_count_coprime.
+rewrite -{3}[n]muln1 -{3}[n]subn0 -sum_nat_const_nat.
+by apply: leq_sum => i _; case: coprime.
+Qed.

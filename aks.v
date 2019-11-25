@@ -29,28 +29,6 @@ Proof. by rewrite /introspective expr1n comp_polyC polyC1. Qed.
 Lemma introspectiveX (R : ringType) k n : n ⋈[k] ('X : {poly R}).
 Proof. by rewrite /introspective comp_polyX. Qed.
 
-Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
-  n \in [char F] -> c%:R ^+ n = c%:R :> F.
-Proof.
-move=> nC.
-have Pp : prime n by apply: charf_prime nC.
-have Cn : [char F].-nat n by rewrite pnatE.
-elim: c => [|c IH]; first by rewrite -natrX exp0n ?prime_gt0.
-by rewrite -addn1 natrD exprDn_char // IH -natrX exp1n.
-Qed.
-
-Lemma poly_geom (R : comRingType) n (p : {poly R}) : 
-  p ^+ n.+1 - 1 = (p - 1) * \sum_(i < n.+1) p ^+ i.
-Proof.
-rewrite mulrBl mul1r {1}big_ord_recr big_ord_recl /=.
-rewrite [_ + p^+_]addrC mulrDr -exprS expr0 addrAC opprD addrA mulr_sumr.
-rewrite (eq_bigr (fun i : 'I_n => p * p ^+ i)) ?subrK // => i _.
-by rewrite exprS.
-Qed.
-
-Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
-  p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
-Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
 
 (* 98 *)
 Lemma introspec_char (F : finFieldType) (k p c : nat) :
@@ -281,89 +259,6 @@ rewrite totient_count_coprime big_mkord.
 by apply: eq_bigr => i _; rewrite inE coprime_sym.
 Qed.
 
-Lemma mk_Zp_unit_proof k m : 
-  (if (1 < k) && coprime k m then (m%:R : 'Z_k) else 1) \is a GRing.unit.
-Proof.
-case: leqP =>  [_|k_gt1]; first by apply: unitr1.
-by case: coprime (unitZpE m k_gt1) => [//|_]; apply: unitr1.
-Qed.
-
-(*
-Definition mk_Zp_unit (k m : nat) :=
-  FinRing.unit 'Z_k (mk_Zp_unit_proof k m).
-
-Lemma val_mk_Zp_unit k m :
-  1 < k -> coprime k m -> val (mk_Zp_unit k m) = (m %% k)%N :> nat.
-Proof.
-by move=> k_gt1 kCm; rewrite /= k_gt1 kCm val_Zp_nat.
-Qed.
-
-Lemma val_mk_Zp_unit_Zp k (m : 'Z_k) :
-  1 < k -> coprime k m -> val (mk_Zp_unit k m) = m.
-Proof.
-move=> k_gt1 kCm; apply/val_eqP/eqP; rewrite /= k_gt1 kCm val_Zp_nat //=.
-by rewrite modn_small //; move: (m); rewrite Zp_cast.
-Qed.
-*)
-(*
-Definition ordern k m := 
-  if (1 < k) && coprime k m then #[mk_Zp_unit k m]%g else 0%N.
-*)
-
-Definition order_modn n m :=
-  oapp (fingroup.order : {unit 'Z_n} -> nat) 0%N (insub m%:R).
-
-
-Lemma order_modn_gt1 k m : 1 < order_modn k m -> 1 < k.
-Proof.
-rewrite /order_modn; case: insubP => //= u mU uE oLu.
-suff : 1 < #|[set : {unit 'Z_k}]|.
-  by case: (k) => [|[|]]; rewrite ?(@card_units_Zp 2).
-apply: leq_trans oLu _.
-apply/subset_leq_card/subsetP => i.
-by rewrite !inE.
-Qed.
-
-Lemma order_modn_coprime k m : 1 < order_modn k m -> coprime k m.
-Proof.
-move=> o_gt1.
-have k_gt1 := order_modn_gt1 o_gt1.
-move: o_gt1.
-rewrite /order_modn; case: insubP => //= u mU uE oLu.
-by rewrite -unitZpE.
-Qed.
-
-Lemma order_modn_mod k m : 
-  1 < k -> order_modn k (m %% k) = order_modn k m.
-Proof.
-move=> k_gt1.
-rewrite /order_modn.
-do 2 case: insubP; rewrite !unitZpE //.
-- move=> u1 _ u1E u2 _ u2E; rewrite (_ : u2 = u1) //.
-  by apply/val_eqP; rewrite u1E u2E Zp_nat_mod.
-- by move=> /negP; rewrite coprime_modr.
-by move=> u kCm _ /negP[]; rewrite coprime_modr.
-Qed.
-
-(* k > 1 not necessary *)
-Lemma order_modn_exp k m :
-  1 < k -> coprime k m -> m ^ order_modn k m = 1 %[mod k].
-Proof.
-move=> k_gt1 kCm.
-rewrite /order_modn; case: insubP; rewrite !unitZpE //= => u _ uE.
-rewrite  -val_Zp_nat // natrX.
-have /val_eqP := expg_order u.
-rewrite  -val_Zp_nat // FinRing.val_unitX /= uE => /eqP->.
-by rewrite modn_small.
-Qed.
-
-Lemma leq_order_totient k m : 0 < k -> order_modn k m <= totient k.
-Proof.
-move=> k_gt0.
-rewrite -card_units_Zp // /order_modn.
-case: insubP => //= u uU uE.
-by apply/subset_leq_card/subsetP=> i; rewrite inE.
-Qed.
 
 (* 104 *)
 Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) n :
@@ -388,58 +283,6 @@ Proof.
 move=> hM zM /(rdvdp_trans hM zM) => /(_ (p - q)).
 rewrite /rdvdp !rmodp_sub // !subr_eq0 => H /eqP H1; apply/eqP.
 by apply: H.
-Qed.
-
-Definition poly_order {R : ringType} (h p :  {poly R}) (n : nat) : nat := 
-  if [pick i | rmodp (p^+ (i : 'I_n.+1).-1.+1) h == 1] is Some v then
-      [arg min_(i < v | (rmodp (p^+ i.-1.+1) h == 1)) i].-1.+1 else 0%N.
-
-Lemma poly_orderE (R : ringType) (h p : {poly R}) n m :
-  0 < m <= n ->
-  rmodp (p^+ m) h = 1 ->
-  (forall k, 0 < k -> rmodp (p^+ k) h = 1 -> m <= k) ->
-  poly_order h p n = m.
-Proof.
-move=> /andP[m_gt0 mLn] /eqP mM HmM.
-rewrite -ltnS in mLn.
-rewrite /poly_order; case: pickP => [z zM|/(_ (Ordinal mLn))]; last first.
-  by rewrite prednK //= (eqP mM) eqxx.
-case: arg_minP => //.
-move=> i /eqP /HmM /= Hj /(_ (Ordinal mLn)).
-rewrite prednK //= => /(_ mM) iLm.
-apply/eqP; rewrite eqn_leq Hj // andbT.
-by case: (i: nat) iLm.
-Qed.
-
-Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
-  0 < n -> poly_order h p n <= n.
-Proof.
-by rewrite /poly_order; case: pickP => // x Hx; case: arg_minP => // [] [[|m]].
-Qed.
-
-Lemma poly_order_gt0_rmodp (R : ringType) (h p : {poly R}) n :
-  0 < poly_order h p n ->  rmodp (p^+ poly_order h p n) h == 1.
-Proof.
-by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minP.
-Qed.
-
-Lemma poly_order_eq0_rmodp (R : ringType) (h p : {poly R}) m n :
-  poly_order h p n = 0%N -> 0 < m <= n -> rmodp (p^+ m) h != 1.
-Proof.
-rewrite -[_ <= n]ltnS /poly_order; case: pickP => // HM _ /andP[m_gt0 mLn].
-by have /= := HM (Ordinal mLn); case: (m) m_gt0 => //= k _ /idP/negP.
-Qed.
-
-Lemma poly_order_lt (R : ringType) (h p : {poly R}) m n :
-   0 < m < poly_order h p n -> rmodp (p^+ m) h != 1.
-Proof.
-rewrite /poly_order; case: pickP=> [x Hx|]; last by rewrite ltn0 andbF.
-case: arg_minP => // i Hi Hmin /andP[m_gt0 mLi].
-have mLn : m < n.+1.
-  by rewrite (leq_trans mLi) // (leq_trans _ (ltn_ord i)) //; case: (i : nat).
-apply/negP; rewrite -[m]prednK // => /(Hmin (Ordinal mLn)) /=.
-rewrite leqNgt; case: (i : nat) mLi  => [/=|j ->//].
-by case: (m) m_gt0.
 Qed.
 
 (* 106  we reformulate it because we can't have order for poly directly *)
@@ -746,13 +589,6 @@ apply: Mk_rmodp_inj (F3 _ m1I) (F3 _ m2I) (F4 _ m1I) (F4 _ m2I) H => //.
 by rewrite hQE.
 Qed.
 
-Definition is_2power n := n == 2 ^ log2n n.
-Definition isnot_2power n := n != 2 ^ log2n n.
-
-Lemma sqrtn_gt0 n : (0 < sqrtn n) = (0 < n).
-Proof.
-by case: n => [|n]; rewrite // -[1%N]/(sqrtn 1) // leq_sqrtn.
-Qed.
 
 (* 110 *)
 Lemma exp_Mk_upper_bound (R : comRingType) k s n a (M : {set 'Z_k}) :
@@ -884,25 +720,6 @@ Definition aks_criteria (R : ringType) n k :=
    log2n n ^ 2 <= order_modn k n &
    poly_intro_range R k n (sqrtn (totient k) * log2n n)
  ].
-
-Definition is_power p q := p == q ^ logn q p.
-
-Lemma prime_is_power_exp p q n :
-  prime p -> 1 < q -> 0 < n -> 
-  is_power (q ^ n) p -> is_power q p.
-Proof.
-move=> pP q_gt1 n_gt0.
-have q_gt0 : 0 < q by apply: ltnW.
-by rewrite  /is_power lognX mulnC expnM eqn_exp2r.
-Qed.
-
-Lemma is_power_exp p n : prime p -> is_power (p ^ n) p.
-Proof.
-by move=> pP; rewrite /is_power eqn_exp2l ?prime_gt1 // pfactorK.
-Qed.
-
-Lemma is_power_id p : prime p -> is_power p p.
-Proof. by move=> pP; rewrite -{1}(expn1 p) is_power_exp. Qed.
 
 Lemma card_Nbar p q m : prime p -> 1 < q -> ~ is_power q p -> 
    #|Nbar p q m| = m.+1 ^ 2.
@@ -1056,13 +873,6 @@ rewrite hE.
 have ->: 'X^k1 - 1 = map_poly (in_alg L) ('X^k1 - 1).
   by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
 by rewrite dvdp_map.
-Qed.
-
-Lemma totient_leq n : totient n <= n.
-Proof.
-rewrite totient_count_coprime.
-rewrite -{3}[n]muln1 -{3}[n]subn0 -sum_nat_const_nat.
-by apply: leq_sum => i _; case: coprime.
 Qed.
 
 (*115 *)
