@@ -38,7 +38,7 @@ have a_gt0 : 0 < a by case: a pNDa.
 have aCp : coprime a p by rewrite coprime_sym prime_coprime //; apply/negP.
 have aE : (egcdn a p).1 * a = 1 %[mod p].
   by case: egcdnP => //= km kn -> _; rewrite (eqP aCp) modnMDl.
-rewrite -[_^ _]muln1 -modnMmr -{1}aE // modnMmr.
+rewrite -[_^ _]muln1 -modnMmr -[in LHS]aE // modnMmr.
 rewrite mulnC -mulnA -expnS prednK ?prime_gt0 //.
 by rewrite -modnMmr fermat_little // modnMmr aE.
 Qed.
@@ -80,7 +80,7 @@ apply/andP; split.
   have [pDw|/negP pNDw] := boolP (p r %| w).
     by rewrite -modnXm (eqP pDw) exp0n ?mod0n.
   rewrite (divn_eq (_ * _) (pq r)) edE [1 %% _]modn_small // addn1 expnS.
-  rewrite -{3}[w]muln1 -modnMmr -[_ * 1 %% _]modnMmr.
+  rewrite -[X in _ == X %% _]muln1 -modnMmr -[_ * 1 %% _]modnMmr.
   apply/eqP; congr (_ * _ %% _).
   rewrite mulnC expnM -(exp1n ((e r * d r) %/ pq r)).
   rewrite -[LHS]modnXm -[RHS]modnXm; congr (_ ^ _ %% _).
@@ -90,7 +90,7 @@ apply/andP; split.
 have [qDw|/negP qNDw] := boolP (q r %| w).
   by rewrite -modnXm (eqP qDw) exp0n ?mod0n.
 rewrite (divn_eq (_ * _) (pq r)) edE [1 %% _]modn_small // addn1 expnS.
-rewrite -{3}[w]muln1 -modnMmr -[_ * 1 %% _]modnMmr.
+rewrite -[X in _ == X %% _]muln1 -modnMmr -[_ * 1 %% _]modnMmr.
 apply/eqP; congr (_ * _ %% _).
 rewrite mulnC expnM -(exp1n ((e r * d r) %/ pq r)).
 rewrite -[LHS]modnXm -[RHS]modnXm; congr (_ ^ _ %% _).

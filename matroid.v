@@ -190,7 +190,7 @@ Lemma mclosure_invo s : mclosure (mclosure s) = mclosure s.
 Proof.
 apply/eqP; rewrite eqEsubset mclosure_sub andbT.
 apply/subsetP=> x; rewrite !inE mclosure_mrank => /eqP rkxsE.
-rewrite eqn_leq -{1}rkxsE !mrank_subset //; first by apply: subsetUr.
+rewrite eqn_leq -[X in (_ <= X) && _]rkxsE !mrank_subset //; first by apply: subsetUr.
 by apply/setUS/mclosure_sub.
 Qed.
 
@@ -204,7 +204,8 @@ have->: x |: s2 = (x |: s1) :|: s2.
   rewrite -setUA; congr (_ |: _).
   by apply/sym_equal/setUidPr.
 rewrite -(leq_add2r (mrank ((x |: s1) :&: s2))) (addnC (mrank s2)).
-suff {2}->: mrank ((x |: s1) :&: s2) = mrank (x |: s1) by apply: mrank_mod.
+suff mrE : mrank ((x |: s1) :&: s2) = mrank (x |: s1).
+  by rewrite [X in _ <= X + _]mrE; apply: mrank_mod.
 have [xIs2|xNIs2] := boolP (x \in s2).
   congr mrank; apply/setIidPl.
   by rewrite subUset /= sub1set xIs2.
@@ -264,7 +265,9 @@ Lemma mflats_setI s1 s2 :
 Proof.
 rewrite !inE => s1F s2F.
 rewrite eqEsubset mclosure_sub andbT subsetI.
-by rewrite  -{2}(eqP s1F) -{3}(eqP s2F) !mclosure_subset ?subsetIr ?subsetIl.
+rewrite -[in X in (_ \subset X) && _](eqP s1F).
+rewrite -[in X in _ && (_ \subset X)](eqP s2F).
+by rewrite !mclosure_subset ?subsetIr ?subsetIl.
 Qed.
 
 Lemma mclosure_mflats s : mclosure s \in mflats.
@@ -321,7 +324,7 @@ move=> s1F.
 elim: {s2}_.+1 {-2}s2 (ltnSn #|s2|) => // n IH s2 s2Ln s2F s1Ps2.
 have [s2Cs1|] := boolP (mcover s2 s1).
   by exists s2 => //; case/andP: s1Ps2.
-rewrite {1}/mcover s1F s2F s1Ps2 negb_forall => /existsP[s3].
+rewrite [in X in X -> _]/mcover s1F s2F s1Ps2 negb_forall => /existsP[s3].
 rewrite negb_imply negb_or => /and3P[/and3P[s3F s1Ss3 s3Ss2] s3Ds2 s3Ds1].
 have [|||s sCs1 sSs3] := IH s3 => //.
 - have /proper_card/leq_trans->// : s3 \proper s2 by rewrite properEneq s3Ds2.
@@ -345,7 +348,7 @@ suff/eqP->: cl(a |: s1) == cl(b |: s1) by rewrite -sE.
 rewrite eqEsubset; apply/andP; split; last first.
   by rewrite -sE (subset_trans _ s1Sas1).
 rewrite -(mclosure_invo (b |: _)) mclosure_subset //.
-rewrite subUset sub1set -{2}(mflats_mclosure s1F).
+rewrite subUset sub1set -[in X in _ && (X \subset _)](mflats_mclosure s1F).
 rewrite mclosure_subset ?andbT ?subsetUr //.
 suff : a \in (mclosure (b |: s1) :\: mclosure s1) by rewrite inE => /andP[].
 apply: mclosure_ex.

@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
 From mathcomp Require cyclic.
-Require Import more_thm divpoly.
+Require Import more_thm rootn divpoly.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

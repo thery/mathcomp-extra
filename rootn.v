@@ -206,14 +206,64 @@ rewrite mulnDl addnA (mulnC (r ^ n')) ltn_add2r.
 by rewrite addnC mulnC.
 Qed.
 
-Lemma rootnP i n : 0 < n -> rootn n i ^ n <= i < (rootn n i).+1 ^ n.
+Lemma rootn_bound n i : 0 < n -> rootn n i ^ n <= i < (rootn n i).+1 ^ n.
 Proof.
 rewrite /rootn => n_gt0; have [H1 H2] := pre_rootnP (leqnn i) n_gt0.
 by rewrite -[X in (_ <= X) && _ ]H1 leq_addr.
 Qed.
 
-Lemma is_rootnP i n : 0 < n -> is_rootn n i = (rootn n i ^ n == i).
+Lemma leq_rootn n x y : 0 < n -> x <= y -> rootn n x <= rootn n y.
 Proof.
-rewrite /is_rootn /rootn => n_gt0; have [H1 H2] := pre_rootnP (leqnn i) n_gt0.
-by rewrite -[X in _ = (_ == X)]H1 -[X in _ = (X == _)]addn0 eqn_add2l eq_sym.
+move=> n_gt0 xLy.
+rewrite -ltnS -(ltn_exp2r _ _ n_gt0).
+have /andP[rLx _] := rootn_bound x n_gt0.
+have /andP[_ yLr] := rootn_bound y n_gt0.
+by apply: leq_ltn_trans rLx (leq_ltn_trans _ yLr).
+Qed.
+
+Lemma rootnE n x y :
+  0 < n -> y ^ n <= x < y.+1 ^ n -> rootn n x = y.
+Proof.
+move=> n_gt0 /andP[ynLx xLySn].
+have /andP[rLx xLrS] := rootn_bound x n_gt0.
+apply/eqP; rewrite eqn_leq.
+rewrite -ltnS -(ltn_exp2r _ _ n_gt0) (leq_ltn_trans rLx) //.
+by rewrite -ltnS -(ltn_exp2r _ _ n_gt0) (leq_ltn_trans ynLx).
+Qed.
+
+Lemma expnK n x : 0 < n -> rootn n (x ^ n) = x.
+Proof.
+by move=> n_gt0; apply: rootnE; rewrite // leqnn ltn_exp2r ?ltnSn.
+Qed.
+
+Lemma rootn_leq n x y :
+  0 < n -> x ^ n <= y -> x <= rootn n y.
+Proof. by move=> n_gt0 xnLy; rewrite -(expnK x n_gt0) leq_rootn. Qed.
+
+Lemma rootn_ltn n x y :
+  0 < n -> x < y.+1 ^ n -> rootn n x <= y.
+Proof.
+move=> n_gt0; rewrite ltnNge [in X in _ -> X]leqNgt.
+apply: contra => yLrx.
+have /andP[rLx _] := rootn_bound x n_gt0.
+by apply: leq_trans rLx; rewrite leq_exp2r.
+Qed.
+
+Definition sqrtn := rootn 2.
+
+Lemma sqrtn_bound n : (sqrtn n) ^ 2 <= n < ((sqrtn n).+1) ^ 2.
+Proof. by apply: rootn_bound. Qed.
+
+Lemma sqrtnE n x : x ^ 2 <= n < x.+1^2 -> sqrtn n = x.
+Proof. by apply: rootnE. Qed.
+
+Lemma leq_sqrtn m n : m <= n -> sqrtn m <= sqrtn n.
+Proof. by apply: leq_rootn. Qed.
+
+Lemma sqrnK n : sqrtn (n ^ 2) = n.
+Proof. by apply: expnK. Qed.
+
+Lemma sqrtn_gt0 n : (0 < sqrtn n) = (0 < n).
+Proof.
+by case: n => [|n]; rewrite // -[1%N]/(sqrtn 1) // leq_sqrtn.
 Qed.

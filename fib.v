@@ -103,7 +103,7 @@ Qed.
 Lemma fib_monotone : forall m n, m <= n -> fib m <= fib n.
 Proof.
 move=> m n; elim: n=> [|[|n] IH]; first by case: m.
-  by case: m{IH}=> [|[]].
+  by case: {IH}m => [|[]].
 rewrite fibSS leq_eqVlt; case/orP=>[|Hm]; first by move/eqP->.
 by apply: (leq_trans (IH _)) => //; exact: leq_addr.
 Qed.
@@ -150,7 +150,7 @@ case/orP: (Hf _ (dvdn_fib _ _ (dvdn_mulr d (dvdnn k)))).
     by case/andP=>->.
   by rewrite Hk; case: (d)=> [|[|[|]]].
 rewrite fib_eq; case/or3P; last by case/andP;move/eqP->; case: (d)=> [|[|]].
-  rewrite -{1}[k]muln1; rewrite eqn_mul2l; case/orP; move/eqP=> HH.
+  rewrite -[X in X == _ -> _]muln1; rewrite eqn_mul2l; case/orP; move/eqP=> HH.
     by move: Pp; rewrite Hp HH.
   by rewrite -HH eqxx.
 by case/andP; move/eqP->; rewrite mul1n eqxx orbT.
@@ -162,7 +162,7 @@ Lemma fib_sub : forall m n, n <= m ->
 Proof.
 elim=> [|m IH]; first by case=> /=.
 case=> [|n Hn]; first by rewrite muln0 muln1 !subn0.
-by rewrite -{2}[n.+1]add1n odd_add (addTb (odd n)) subSS IH //; case: odd;
+by rewrite -[in odd _]add1n odd_add (addTb (odd n)) subSS IH //; case: odd;
    rewrite !fibSS !mulnDr !mulnDl !subnDA !addKn.
 Qed.
 
@@ -234,7 +234,8 @@ Qed.
 Lemma double_lucas: forall n, 3 <= n -> (lucas n).*2 = fib (n.+3) + fib (n-3).
 Proof.
 case=> [|[|[|n]]] // _; rewrite !subSS subn0.
-apply/eqP; rewrite -(eqn_add2l (lucas n.+4)) {2}lucasSS addnC -addnn.
+apply/eqP.
+rewrite -(eqn_add2l (lucas n.+4)) [X in _ == X + _]lucasSS addnC -addnn.
 rewrite -2![lucas _ + _ + _]addnA eqn_add2l addnC -lucasSS.
 rewrite !lucas_fib // [_ + (_ + _)]addnC -[fib _ + _ + _]addnA eqn_add2l.
 by rewrite [_ + (_ + _)]addnC -addnA -fibSS.
@@ -255,10 +256,11 @@ Lemma fib_square: forall n, (fib n)^2 = if odd n then (fib n.+1 * fib n.-1).+1
                                         else (fib n.+1 * fib n.-1).-1.
 Proof.
 case=> [|n] //; move: (fib_sub (n.+1) n (leqnSn _)).
-rewrite subSn // subnn fib1 -{8}[n.+1]add1n odd_add addTb.
+rewrite subSn // subnn fib1 -[in odd _.+1]add1n odd_add addTb.
 case: odd=> H1; last first.
-  by rewrite -[(_ * _).+1]addn1 {2}H1 addnC subnK // ltnW // -subn_gt0 -H1.
-by apply/eqP; rewrite -subn1 {2}H1 subKn // ltnW // -subn_gt0 -H1.
+  by rewrite -[(_ * _).+1]addn1 [in _ + _]H1 addnC subnK //
+             ltnW // -subn_gt0 -H1.
+by  apply/eqP; rewrite -subn1 [in _ - _]H1 subKn // ltnW // -subn_gt0 -H1.
 Qed.
 
 Lemma fib_sum : forall n, \sum_(i < n) fib i = (fib n.+1).-1.

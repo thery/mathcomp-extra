@@ -6,105 +6,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* in ssrnat *)
-
-Definition sqrtn n := 
-  let fix loop (m2 dm1 m k : nat) {struct k} : nat :=
-  if k is k1.+1 then
-    let m2' := m2 + dm1 in
-    if n < m2' then m else 
-    loop m2' dm1.+2 m.+1 k1
-  else m in loop 0 1 0 n.
-
-Fixpoint divloop (m2 dm1 m k : nat) {struct k} : nat :=
-   if k is k1.+1 then
-     if m + k < m2 + dm1 then m else divloop (m2 + dm1) dm1.+2 m.+1 k1
-   else m.
-
-Lemma divloopE n : sqrtn n = divloop 0 1 0 n.
-Proof.
-rewrite /sqrtn; move: {1 4}0 => m2; move: 1 => dm1.
-rewrite -{1}[n]add0n; move: 0 => m.
-elim: n m2 dm1 m => //= n IH m2 dm1 m.
-by case: leqP => // _; rewrite -IH addSnnS.
-Qed.
-
-Lemma divloop_leq m2 dm1 m k : m <= divloop m2 dm1 m k.
-Proof.
-elim: k m2 dm1 m => //= k IH m2 dm1 m.
-by case: leqP => // _; apply: leq_trans (IH _ _ _).
-Qed.
-
-Lemma sqrtSn m : m.+1 ^ 2 = m ^ 2 + m.*2.+1.
-Proof. by rewrite -[m.+1]addn1 sqrnD muln1 mul2n -addnA. Qed.
-
-Lemma sqrn_leq_eq1 m : (m ^ 2 <= m) = (m <= 1).
-Proof.
-case: m => [|[|m]] //=.
-by rewrite leqNgt expnS expn1 mulSn -addSnnS leq_addr.
-Qed.
-
-Lemma sqrtn_bound n : (sqrtn n) ^ 2 <= n < ((sqrtn n).+1) ^ 2.
-Proof.
-suff : 
-   forall k m, m ^ 2 <= m + k ->
-      (divloop (m ^ 2) (m.*2.+1) m k) ^ 2 <= m + k < 
-      (divloop (m ^ 2) (m.*2.+1) m k).+1 ^ 2.
-  by move/(_ n 0); rewrite divloopE; apply.
-elim=> [m -> /=|k IH m /= m2Lmk].
-  by rewrite addn0 expnS expn1 mulnS leq_addr.
-case: leqP => [m2m21Lmk1|mk1Lm2m21].
-  rewrite -[m + k.+1]addSnnS -sqrtSn.
-  by apply: IH; rewrite sqrtSn addSnnS.
-by rewrite m2Lmk sqrtSn.
-Qed.
-
-Lemma sqrtn_leq n x : x ^ 2 <= n -> x <= sqrtn n.
-Proof.
-suff : 
-   forall k m, m <= x -> m ^ 2 <= m + k -> x ^ 2 <= m + k ->
-      x <= divloop (m ^ 2) (m.*2.+1) m k.
-  by move/(_ n 0); rewrite divloopE; apply.
-elim=> [m /=|k IH m /= mLx m2Lmk1 x2Lmk1].
-  rewrite addn0 sqrn_leq_eq1.
-  by case: m => [|[|]] //; case: x => [|[|]].
-(case: leqP; rewrite -sqrtSn)=> [JJ|]; last first.
-  by move=> /(leq_ltn_trans x2Lmk1); rewrite ltn_sqr ltnS.
-move: mLx; rewrite leq_eqVlt => /orP[/eqP<-|mLx].
-  by apply: leq_trans (divloop_leq _ _ _ _).
-by apply: IH; rewrite ?addSnnS.
-Qed.
-
-Lemma sqrtn_lt n x : n < x.+1 ^ 2 -> sqrtn n <= x.
-Proof.
-suff : 
-   forall k m, m ^ 2 <= m + k ->
-      m + k < x.+1 ^ 2 ->
-      divloop (m ^ 2) (m.*2.+1) m k <= x.
-  by move/(_ n 0); rewrite divloopE; apply.
-elim=> /= [m m2Lmk1 mk2Lx12| k IH m m2Lmk1 mk2Lx12].
-  by rewrite -ltnS -ltn_sqr (leq_ltn_trans m2Lmk1).
-case: leqP; rewrite // -sqrtSn => H.
-  by apply: IH; rewrite ?addSnnS.
-by rewrite -ltnS -ltn_sqr (leq_ltn_trans m2Lmk1).
-Qed.
-
-Lemma sqrtnE n x : x ^ 2 <= n < x.+1^2 -> sqrtn n = x.
-Proof.
-move=> /andP[/sqrtn_leq xLsn /sqrtn_lt snLx].
-by apply/esym/eqP; rewrite eqn_leq xLsn.
-Qed.
-
-Lemma leq_sqrtn m n : m <= n -> sqrtn m <= sqrtn n.
-Proof.
-move=> mLn.
-apply: sqrtn_lt.
-by have /andP[_ /(leq_ltn_trans _)->//]:= sqrtn_bound n.
-Qed.
-
-Lemma sqrnK n : sqrtn (n ^ 2) = n.
-Proof. by apply: sqrtnE; rewrite leqnn ltn_sqr // leqnn. Qed.
-
 Definition log2n n := 
   let v := trunc_log 2 n in if n <= 2 ^ v then v else v.+1.
 
@@ -729,11 +630,6 @@ Qed.
 (* To be a power of 2 *)
 Definition is_2power n := n == 2 ^ log2n n.
 Definition isnot_2power n := n != 2 ^ log2n n.
-
-Lemma sqrtn_gt0 n : (0 < sqrtn n) = (0 < n).
-Proof.
-by case: n => [|n]; rewrite // -[1%N]/(sqrtn 1) // leq_sqrtn.
-Qed.
 
 (* To be a power *)
 
