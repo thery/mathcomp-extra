@@ -54,7 +54,7 @@ Lemma seq_pol_addP s1 s2 x :
    seq_pol_eval (seq_pol_add s1 s2) x = 
    seq_pol_eval s1 x + seq_pol_eval s2 x.
 Proof.
-elim: s1 s2 => [| a s1 IH [| b s2]] //=.
+elim: s1 s2 => [| a s1 IH [| b s2]] //=; first by rewrite addn0.
 by rewrite IH mulnDr !addnA (addnAC a).
 Qed.
 
