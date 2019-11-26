@@ -29,23 +29,26 @@ Definition seq_2Xp1_exp_n (n : nat) := seq_pol_exp [:: 1; 2] n.
 Fixpoint seq_pol_eval (s : seq nat) (x : nat) :=
   if s is a :: s1 then a + x * seq_pol_eval s1 x else 0.
 
-Fixpoint pre_rootn (fuel i : nat) (n : nat) :=
+Fixpoint pre_rootn l n (fuel i : nat) :=
   if fuel is fuel1.+1 then
     if i == 0 then 
       (0, 0)
     else
-      let i' := i %/ (2 ^ n) in
-      let k' := i %% (2 ^n) in
-      let (r, k2) := pre_rootn fuel1 i' n in
-        let remainder := seq_pol_eval (take n (seq_2Xp1_exp_n n)) r in
-        if remainder <=  2 ^ n * k2 + k' then
-           ((2 * r).+1, 2 ^n * k2 + k'- remainder)
+      let i' := i %/ n in
+      let k' := i %% n in
+      let (r, k2) := pre_rootn l n fuel1 i' in
+        let remainder := seq_pol_eval l r in
+        if remainder <=  n * k2 + k' then
+           (r.*2.+1, n * k2 + k'- remainder)
         else
-           (2 * r, 2 ^ n * k2 + k')
+           (r.*2, n * k2 + k')
   else (0, 0).
 
-Definition rootn (n i : nat) := (pre_rootn i i n).1.
-Definition is_rootn (n i : nat) := (pre_rootn i i n).2 == 0.
+Definition rootn (n i : nat) := 
+  (pre_rootn ((take n (seq_2Xp1_exp_n n))) (2 ^ n) i i).1.
+
+Definition is_rootn (n i : nat) :=
+  (pre_rootn ((take n (seq_2Xp1_exp_n n))) (2 ^ n) i i).2.
 
 Lemma seq_pol_addP s1 s2 x :
    seq_pol_eval (seq_pol_add s1 s2) x = 
@@ -84,11 +87,11 @@ by rewrite seq_pol_addP seq_pol_scal mulnDl IH /= add0n mulnA (mulnC _ x).
 Qed.
 
 Lemma seq_2Xp1_exp_nP n x :
-  seq_pol_eval (seq_2Xp1_exp_n n) x = (2 * x).+1 ^ n.
+  seq_pol_eval (seq_2Xp1_exp_n n) x = x.*2.+1 ^ n.
 Proof.
 rewrite /seq_2Xp1_exp_n.
 elim: n => [| n IH]; first by rewrite /= muln0 expn0.
-by rewrite expnS /seq_pol_exp iterS pol_mulP IH /= muln0 addn0 (mulnC 2).
+by rewrite expnS /seq_pol_exp iterS pol_mulP IH /= muln0 addn0 muln2.
 Qed.
 
 Lemma seq_pol_add_size s1 s2 : 
@@ -155,24 +158,24 @@ by rewrite -map_drop IH /= expnS.
 Qed.
 
 Lemma test_pol_correct n r:
-  seq_pol_eval (take n (seq_2Xp1_exp_n n)) r + 2 ^ n * r ^ n =
-  (2 * r ).+1 ^ n.
+  seq_pol_eval (take n (seq_2Xp1_exp_n n)) r + 2 ^ n * r ^ n = r.*2.+1 ^ n.
 Proof.
 rewrite -seq_2Xp1_exp_nP -(seq_pol_eval_cut (seq_2Xp1_exp_n n) n r).
 by congr (_ + _); rewrite seq_2Xp1_exp_n_lead /= muln0 addn0 mulnC.
 Qed.
 
-Lemma pre_rootnP fuel i n :
+Lemma pre_rootnP fuel i n (l := take n (seq_2Xp1_exp_n n)) :
   i <= fuel -> 0 < n ->
-  (pre_rootn fuel i n).1 ^ n + (pre_rootn fuel i n).2 = i /\
-  i < ((pre_rootn fuel i n).1.+1) ^ n.
+  (pre_rootn l (2 ^ n) fuel i).1 ^ n + (pre_rootn l (2 ^ n) fuel i).2 = i /\
+  i < ((pre_rootn l (2 ^ n) fuel i).1.+1) ^ n.
 Proof.
-case: n => [// | n] ilefuel _; set n':= n.+1; move: ilefuel.
+revert l.
+case: n => [// | n] l ilefuel _; set n':= n.+1; move: ilefuel.
 elim: fuel i => [| fuel IH] i //.
   rewrite leqn0 => /eqP -> /=; rewrite expnS mul0n !add0n; split => //.
   by rewrite expn_gt0.
 move=> fuelc.
-elim/abstract_context : (pre_rootn fuel.+1 i n.+1) => Q defQ.
+elim/abstract_context : (pre_rootn l (2 ^ n.+1) fuel.+1 i) => Q defQ.
 rewrite /=.
 case: ifP => [/eqP iis0 | in0].
   by rewrite defQ /= iis0 expnS mul0n !add0n expn_gt0; split.
@@ -194,12 +197,12 @@ case: ifP => [below | above].
   rewrite (addnAC (seq_pol_eval _ _)) subnKC; last by exact below.
   rewrite (addnC (2 ^ n' * k')) -addnA -mulnDr (addnC k') req.
   rewrite addnC mulnC -divn_eq; split; first by [].
-  rewrite [(2 * r).+2](_ : _ = 2 * r.+1); last by rewrite mulnS.
-  rewrite expnMn.
+  rewrite -doubleS -mul2n expnMn.
   move: rlt; rewrite -(leq_pmul2l divgt0); apply: leq_trans.
   by rewrite mulnC; apply: (ltn_ceil i divgt0).
 move/negbT: above; rewrite -ltnNge=> above.
-rewrite defQ; cbn [fst snd]; rewrite addnA expnMn -mulnDr mulnC req -divn_eq.
+rewrite defQ; cbn [fst snd].
+rewrite addnA -mul2n expnMn mul2n -mulnDr mulnC req -divn_eq.
 split; first by[].
 rewrite -test_pol_correct (divn_eq i (2 ^ n.+1)) -/q addnC -req -(addnC k').
 rewrite mulnDl addnA (mulnC (r ^ n')) ltn_add2r.
