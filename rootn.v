@@ -48,7 +48,7 @@ Definition rootn (n i : nat) :=
   (pre_rootn ((take n (seq_2Xp1_exp_n n))) (2 ^ n) i i).1.
 
 Definition is_rootn (n i : nat) :=
-  (pre_rootn ((take n (seq_2Xp1_exp_n n))) (2 ^ n) i i).2.
+  (pre_rootn ((take n (seq_2Xp1_exp_n n))) (2 ^ n) i i).2  == 0.
 
 Lemma seq_pol_addP s1 s2 x :
    seq_pol_eval (seq_pol_add s1 s2) x = 
@@ -213,6 +213,12 @@ Lemma rootn_bound n i : 0 < n -> rootn n i ^ n <= i < (rootn n i).+1 ^ n.
 Proof.
 rewrite /rootn => n_gt0; have [H1 H2] := pre_rootnP (leqnn i) n_gt0.
 by rewrite -[X in (_ <= X) && _ ]H1 leq_addr.
+Qed.
+
+Lemma is_rootnE n i : 0 < n -> is_rootn n i = (i == rootn n i ^ n).
+Proof.
+rewrite /rootn /is_rootn => n_gt0; have [H1 H2] := pre_rootnP (leqnn i) n_gt0.
+by rewrite -[X in _ = (X == _)]H1 -[X in _ = (_ == X)]addn0 eqn_add2l.
 Qed.
 
 Lemma leq_rootn n x y : 0 < n -> x <= y -> rootn n x <= rootn n y.

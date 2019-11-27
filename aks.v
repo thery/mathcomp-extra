@@ -962,6 +962,59 @@ rewrite card_Nbar //; last first.
 by have /andP[] := sqrtn_bound t.
 Qed.
 
+Fixpoint power_free (n : nat) k :=
+  if k is k1.+1 then 
+    if k1 is _.+1 then 
+      if is_rootn k n then false
+      else power_free n k1
+    else (1 < n) 
+  else (1 < n).
+
+Lemma power_freeSS n k : 
+  power_free n k.+2 = if is_rootn k.+2 n then false else power_free n k.+1.
+Proof. by []. Qed.
+
+Compute (fun n => power_free n (log2n n)) 128.
+
+Lemma power_freePn n :
+  ~~ power_free n (log2n n) -> 
+  exists m, exists2 k, 1 < k & n = m ^ k.
+Proof.
+elim: log2n => [|[|k] IH].
+- case: n => [|[|n]] //= _; first by exists 0%N; exists 2%N.
+  by exists 1%N; exists 2%N.
+- case: {IH}n => [|[|n]] //= _; first by exists 0%N; exists 2%N.
+  by exists 1%N; exists 2%N.
+rewrite power_freeSS is_rootnE //.
+case: (n =P rootn k.+2 n ^ k.+2) => [-> _|_].
+  by exists (rootn k.+2 n); exists k.+2.
+by case: k IH.
+Qed.
+
+Lemma power_freeP n m k :
+  power_free n (log2n n) -> n = m ^ k -> k = 1%N.
+Proof.
+move=> pH nE.
+have: k <= log2n n.
+  case: m pH nE => [|[|m]] //.
+  - by case: k => // k; rewrite exp0n; case: n.
+  - by rewrite exp1n; case: n => [|[|]].
+  move=> pH nE.
+  have m_gt1 : 1 < m.+2 by [].
+  rewrite -(leq_exp2l _ _ m_gt1).
+  rewrite -nE.
+  apply: leq_trans (log2nP _) _.
+  rewrite leq_exp2r // log2n_gt0.
+  by case: (n) pH => [|[|]].
+elim: log2n pH => [|[|k1] IH].
+- by case: k nE => //=; case: n => [|[|]].
+- by case: {IH}k nE => [|[|k]] //=; case: n => [|[|]].
+rewrite power_freeSS; case E: is_rootn => // pH.
+rewrite leq_eqVlt => /orP[/eqP kE |kLk1]; last by apply: IH.
+move: E; rewrite is_rootnE // [in rootn _ _]nE kE.
+by rewrite expnK // -kE -nE eqxx.
+Qed.
+
 End AKS.
 
 Notation " n '⋈[' k ] p" := (introspective n k p) 
