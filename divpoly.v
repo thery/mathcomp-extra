@@ -40,7 +40,7 @@ Proof. exact: val_inj. Qed.
 
 End DivPolySub.
 
-Hint Resolve size_divpoly.
+Hint Resolve size_divpoly : core.
 
 Section Zmod.
 
