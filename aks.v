@@ -266,7 +266,7 @@ Lemma is_iexpm_order (R : comRingType) k s (M : {set 'Z_k}) n :
 Proof.
 move=> k_gt1 HMk nIN.
 have kCn : coprime k n by case: nIN; rewrite coprime_sym.
-rewrite /order_modn; case: insubP => //=  u nE uE.
+rewrite order_modnE //; case: insubP => //=  u nE uE.
 rewrite -[#[_]%g](card_imset _ val_inj).
 apply/subset_leq_card/subsetP => y /imsetP[z /cycleP[i ->] ->].
 rewrite FinRing.val_unitX /= uE.
@@ -823,7 +823,7 @@ have hS : size h = d.+1.
   congr (_.+1); apply/eqP; rewrite eqn_dvd.
   apply/andP; split.
     by rewrite dE; apply/field_dimS/subvf.
-  rewrite /d /order_modn; case: insubP => [u|/negP[]]; rewrite !unitZpE //=.
+  rewrite /d order_modnE //; case: insubP => [u|/negP[]]; rewrite !unitZpE //=.
   move=> _ uE.
   rewrite cyclic.order_dvdn.
   apply/eqP/val_eqP.
@@ -892,14 +892,13 @@ have [/eqP nE|/negP nis2p] := boolP (is_2power n).
   rewrite Euclid_dvdX // => /andP[/prime_nt_dvdP->] //.
     by move=> _; apply: is_power_exp.
   by case: (p) pP => // [] // [].
+have n_gt2 : 2 < n by case: (n) n_gt1 nis2p => [|[|[|]]].
 have kCn : coprime k n.
-  have : 1 <= order_modn k n.
-    apply: leq_trans lnLnO.
-    rewrite (@leq_exp2r 1 _ 2) //.
-    by apply: (@leq_log2n 2).
-  rewrite /order_modn.
-  by case: insubP => /=;  rewrite unitZpE.
-have kCp : coprime k p by apply: coprime_dvdr kCn.
+  apply: order_modn_coprime.
+  apply: leq_trans lnLnO.
+  rewrite (@ltn_exp2r 1 _ 2) //.
+  by apply: (@leq_log2n 3).
+have kCp : coprime k p by apply: order_modn_coprime.
 have nI : is_iexp [ringType of 'F_p] k s n.
   split => [|c cB]; first by rewrite coprime_sym.
   apply/eqP.
@@ -1014,6 +1013,25 @@ rewrite leq_eqVlt => /orP[/eqP kE |kLk1]; last by apply: IH.
 move: E; rewrite is_rootnE // [in rootn _ _]nE kE.
 by rewrite expnK // -kE -nE eqxx.
 Qed.
+
+Inductive aks_param_res := nice of nat | bad | good of nat.
+
+Fixpoint aks_param_search n a k c := 
+  if a <= 1 then nice n
+  else 
+    if c is c1.+1 then
+      if (k %| n)%nat then nice k
+      else if (a <= k) && (a <= order_modn k n) then good k
+      else aks_param_search n a k.+1 c1
+   else bad.
+
+Definition aks_param n l := 
+  let a := l ^ 2 in
+  let k := 2 in
+  let c := (l * (a ^ 2))./2.+1  in aks_param_search n a k c.
+
+
+Compute (fun n => aks_param n (log2n n)) 479.
 
 End AKS.
 

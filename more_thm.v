@@ -520,55 +520,124 @@ Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
   p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
 Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
 
+Lemma totient_leq n : totient n <= n.
+Proof.
+rewrite totient_count_coprime.
+rewrite -{3}[n]muln1 -{3}[n]subn0 -sum_nat_const_nat.
+by apply: leq_sum => i _; case: coprime.
+Qed.
+
 (* Definition of the order for Z_k *)
-Definition order_modn n m :=
-  oapp (fingroup.order : {unit 'Z_n} -> nat) 0%N (insub m%:R).
+Fixpoint order_modn_rec m n r i k :=
+  let r1 := ((r * n) %% m)%nat in
+  if r1 == 1%N then i else 
+  if k is k1.+1 then order_modn_rec m n r1 i.+1 k1 else i%nat.
+
+Lemma order_modn_recP m n r i k :
+  coprime n m ->
+  1 < m ->
+  0 < i ->
+  (forall j, 0 < j < i -> (n ^ j != 1 %[mod m])%N) ->
+  r = (n ^ i.-1 %% m)%nat -> m.+1 = (k + i)%nat -> 
+  [/\ 0%N < order_modn_rec m n r i k,
+  (n ^ order_modn_rec m n r i k = 1 %[mod m])%N &
+  (forall j, 0 < j < order_modn_rec m n r i k -> (n ^ j != 1 %[mod m])%N)].
+Proof.
+move=> nCm m_gt1.
+elim: k r i => /= [r i i_gt0 H rE mE| k IH r i i_gt0  H rE mE].
+  have /H/eqP[] : 0 < totient m < i.
+    by rewrite totient_gt0 ?(leq_trans _ m_gt1) // -[i]mE [_ < _]totient_leq.
+  by apply: cyclic.Euler_exp_totient.
+have niE : (n ^ i = r * n %[mod m])%N by rewrite rE modnMml -expnSr prednK.
+case: eqP => [rnE|/eqP rnE].
+  by rewrite niE {1}(modn_small m_gt1).
+apply: IH => [|i1 /andP[i1_gt0]||] //.
+  rewrite ltnS leq_eqVlt => /orP[/eqP->|i1Li].
+    by rewrite niE {1}(modn_small m_gt1).
+  by apply: H; rewrite i1_gt0.
+by rewrite mE addnS.
+Qed.
+
+Definition order_modn m n := 
+  if coprime n m && (1 < m) then order_modn_rec m n 1 1 m
+  else 0%nat.
+
+Lemma order_modnP m n :
+  1 < m -> coprime m n ->
+  [/\ 0 < order_modn m n,
+  (n ^ order_modn m n = 1 %[mod m])%N &
+  (forall j, 0 < j < order_modn m n -> n ^ j != 1 %[mod m])%N].
+Proof.
+move=> m_gt1 mCn.
+rewrite /order_modn m_gt1 coprime_sym mCn /=.
+apply: order_modn_recP => //; first by rewrite coprime_sym.
+- by case.
+- by rewrite modn_small.
+by rewrite addn1.
+Qed.
 
 Lemma order_modn_gt1 k m : 1 < order_modn k m -> 1 < k.
-Proof.
-rewrite /order_modn; case: insubP => //= u mU uE oLu.
-suff : 1 < #|[set : {unit 'Z_k}]|.
-  by case: (k) => [|[|]]; rewrite ?(@card_units_Zp 2).
-apply: leq_trans oLu _.
-apply/subset_leq_card/subsetP => i.
-by rewrite !inE.
-Qed.
+Proof. by rewrite /order_modn andbC; case: (1 < k). Qed.
 
 Lemma order_modn_coprime k m : 1 < order_modn k m -> coprime k m.
-Proof.
-move=> o_gt1.
-have k_gt1 := order_modn_gt1 o_gt1.
-move: o_gt1.
-rewrite /order_modn; case: insubP => //= u mU uE oLu.
-by rewrite -unitZpE.
-Qed.
+Proof. Proof. by rewrite /order_modn coprime_sym; case: coprime. Qed.
 
 Lemma order_modn_mod k m : 1 < k -> order_modn k (m %% k) = order_modn k m.
 Proof.
 move=> k_gt1.
-rewrite /order_modn.
-do 2 case: insubP; rewrite !unitZpE //.
-- move=> u1 _ u1E u2 _ u2E; rewrite (_ : u2 = u1) //.
-  by apply/val_eqP; rewrite u1E u2E Zp_nat_mod.
-- by move=> /negP; rewrite coprime_modr.
-by move=> u kCm _ /negP[]; rewrite coprime_modr.
+have [kCm| kNCm]:= boolP (coprime k m); last first.
+  have kNCmk : ~~ coprime k (m %% k) by rewrite coprime_modr.
+  by rewrite /order_modn coprime_sym (negPf kNCmk) coprime_sym (negPf kNCm).
+have kCmk : coprime k (m %% k) by rewrite coprime_modr.
+have [m_gt0 Hm Hmn] := order_modnP k_gt1 kCm.
+have [mk_gt0 Hmk Hmkn] := order_modnP k_gt1 kCmk.
+case: (leqP (order_modn k (m %% k)%N) (order_modn k m)) => [|mLmk].
+  rewrite leq_eqVlt => /orP[/eqP->//|mkLm].
+  have /Hmn/eqP[] :  0 < order_modn k (m %% k) < order_modn k m.
+    by rewrite mk_gt0.
+  by rewrite -modnXm.
+have /Hmkn/eqP[] :  0 < order_modn k m < order_modn k (m %% k).
+  by rewrite m_gt0.
+by rewrite modnXm.
+Qed.
+
+Lemma order_modnE n m :
+  1 < m -> coprime m n ->
+  order_modn m n =
+  oapp (fingroup.order : {unit 'Z_m} -> nat) 0%N (insub n%:R).
+Proof.
+move=> m_gt1 mCn.
+case: insubP; rewrite unitZpE ?mCn //= => u _ Hu.
+have  [o_gt0 moE1 Hmon] := order_modnP m_gt1 mCn.
+case: (leqP (order_modn m n) #[u]%g) => [|uLo].
+  rewrite leq_eqVlt => /orP[/eqP //|].
+  rewrite ltnNge => /negP[].
+  apply: dvdn_leq => //.
+  rewrite cyclic.order_dvdn.
+  apply/eqP/val_eqP => /=.
+  by rewrite FinRing.val_unitX /= Hu -natrX -Zp_nat_mod // moE1 modn_small.
+have : n ^ #[u]%g != 1 %[mod m] by apply: Hmon; rewrite order_gt0.
+have /val_eqP/= := expg_order u.
+rewrite FinRing.val_unitX /= Hu -natrX -val_Zp_nat // => /eqP->.
+by rewrite modn_small.
 Qed.
 
 (* k > 1 not necessary *)
 Lemma order_modn_exp k m :
   1 < k -> coprime k m -> m ^ order_modn k m = 1 %[mod k].
 Proof.
-move=> k_gt1 kCm.
-rewrite /order_modn; case: insubP; rewrite !unitZpE //= => u _ uE.
-rewrite  -val_Zp_nat // natrX.
-have /val_eqP := expg_order u.
-rewrite  -val_Zp_nat // FinRing.val_unitX /= uE => /eqP->.
-by rewrite modn_small.
+by move=> k_gt1 kCm; case: (order_modnP k_gt1 kCm).
 Qed.
 
 Lemma leq_order_totient k m : 0 < k -> order_modn k m <= totient k.
 Proof.
 move=> k_gt0.
+case: (leqP k 1) => [|k_gt1].
+  rewrite /order_modn.
+  by case: k k_gt0 => [|[|]]; rewrite ?ltnn ?andbF.
+have [kCm|kNCm] := boolP (coprime k m); last first.
+  by rewrite /order_modn coprime_sym (negPf kNCm).
+rewrite order_modnE //.
 rewrite -card_units_Zp // /order_modn.
 case: insubP => //= u uU uE.
 by apply/subset_leq_card/subsetP=> i; rewrite inE.
@@ -652,9 +721,3 @@ Qed.
 Lemma is_power_id p : prime p -> is_power p p.
 Proof. by move=> pP; rewrite -{1}(expn1 p) is_power_exp. Qed.
 
-Lemma totient_leq n : totient n <= n.
-Proof.
-rewrite totient_count_coprime.
-rewrite -{3}[n]muln1 -{3}[n]subn0 -sum_nat_const_nat.
-by apply: leq_sum => i _; case: coprime.
-Qed.
