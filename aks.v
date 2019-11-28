@@ -1017,19 +1017,80 @@ Qed.
 Inductive aks_param_res := nice of nat | bad | good of nat.
 
 Fixpoint aks_param_search n a k c := 
-  if a <= 1 then nice n
-  else 
-    if c is c1.+1 then
-      if (k %| n)%nat then nice k
-      else if (a <= k) && (a <= order_modn k n) then good k
-      else aks_param_search n a k.+1 c1
-   else bad.
+  if c is c1.+1 then
+    if (k %| n)%nat then nice k
+    else if (a <= k) && (a <= order_modn k n) then good k
+    else aks_param_search n a k.+1 c1
+  else bad.
+
+Lemma aks_param_search_goodP (n a k c r : nat) :
+  aks_param_search n a k c = good r ->
+  [/\  a <= r <= k + c, a <= order_modn r n &
+       forall j, k <= j <= r -> ~~ (j %| n)%nat].
+Proof.
+elim: c k => //= c IH k.
+have [//|ND] := boolP (_ %| _)%N.
+case: leqP => [aLk|kLa] /= ; last first.
+  have {IH} := IH k.+1.
+  case: aks_param_search => // r1 IH Hi.
+  have := IH Hi; rewrite addnS => [] [H1 H2 H3].
+  split=> // j /andP[].
+  rewrite leq_eqVlt => /orP[/eqP<-//| kLj jLn1].
+  by apply: H3; rewrite kLj.
+case: leqP => [aLo [<-]|_].
+  split => [||j] //; first by rewrite aLk leq_addr.
+  by rewrite -eqn_leq => /eqP<-.
+have {IH} := IH k.+1.
+case: aks_param_search => // r1 IH Hi.
+have := IH Hi; rewrite addnS => [] [H1 H2 H3].
+split=> // j /andP[].
+rewrite leq_eqVlt => /orP[/eqP<-//| kLj jLn1].
+by apply: H3; rewrite kLj.
+Qed.
+
+Lemma aks_param_search_niceP (n a k c r : nat) :
+  aks_param_search n a k c = nice r ->
+  [/\  r <= k + c, (r %| n)%nat &
+       forall j, k <= j < r -> ~~ (j %| n)%nat].
+Proof.
+elim: c k => //= c IH k.
+have [kDn [<-]|ND] := boolP (_ %| _)%N.
+  split=> [||j] //; first by apply: leq_addr.
+  by case: ltnP.
+case: (_ && _) => //.
+have {IH} := IH k.+1.
+case: aks_param_search => // r1 IH Hi.
+have := IH Hi; rewrite addnS => [] [H1 H2 H3].
+split=> // j /andP[].
+rewrite leq_eqVlt => /orP[/eqP<-//| kLj jLn1].
+by apply: H3; rewrite kLj.
+Qed.
+
+Lemma aks_param_search_badP (n a k c r : nat) :
+  aks_param_search n a k c = bad ->
+  (forall j , k <= j < k + c -> ~~(j %| n)%nat /\ order_modn j n < a).
+Proof.
+elim: c k => /= [k _ j|c IH k]; first by rewrite addn0; case: ltnP.
+have [//|ND] := boolP (_ %| _)%N.
+case: (leqP a k) => /= [aLk|kLa Hs j /andP[]] //.
+  case: leqP => /= [aLo|oLa Hs j /andP[]] //.
+  rewrite addnS leq_eqVlt => /orP[/eqP<- _|kLj jLkc]; first by split.
+  by apply: (IH k.+1); rewrite // kLj.
+rewrite addnS leq_eqVlt => /orP[/eqP<- _|kLj jLkc].
+  split=> //.
+  case: (k) kLa => [|k1 k1La].
+    by rewrite /order_modn andbF.
+  apply: leq_trans k1La.
+  apply: leq_trans (leq_order_totient _ _) _ => //.
+  by apply: totient_leq.
+by apply: (IH k.+1); rewrite ?kLj.
+Qed.
 
 Definition aks_param n l := 
   let a := l ^ 2 in
   let k := 2 in
-  let c := (l * (a ^ 2))./2.+1  in aks_param_search n a k c.
-
+  let c := (l * (a ^ 2))./2.+1  in
+  if l <= 1 then nice n else aks_param_search n a k c.
 
 Compute (fun n => aks_param n (log2n n)) 479.
 
