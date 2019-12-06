@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
 From mathcomp Require cyclic.
-Require Import more_thm rootn divpoly.
+Require Import more_thm rootn divpoly lcm_lbound.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1025,20 +1025,14 @@ Fixpoint aks_param_search n a k c :=
 
 Lemma aks_param_search_goodP (n a k c r : nat) :
   aks_param_search n a k c = good r ->
-  [/\  a <= r <= k + c, a <= order_modn r n &
+  [/\  a <= r < k + c, a <= order_modn r n &
        forall j, k <= j <= r -> ~~ (j %| n)%nat].
 Proof.
 elim: c k => //= c IH k.
 have [//|ND] := boolP (_ %| _)%N.
-case: leqP => [aLk|kLa] /= ; last first.
-  have {IH} := IH k.+1.
-  case: aks_param_search => // r1 IH Hi.
-  have := IH Hi; rewrite addnS => [] [H1 H2 H3].
-  split=> // j /andP[].
-  rewrite leq_eqVlt => /orP[/eqP<-//| kLj jLn1].
-  by apply: H3; rewrite kLj.
-case: leqP => [aLo [<-]|_].
-  split => [||j] //; first by rewrite aLk leq_addr.
+have [/andP[aLk aLo]|aLko] := boolP (_ && _).
+  case => <-; split => // [| j].
+    by rewrite aLk addnS ltnS leq_addr.
   by rewrite -eqn_leq => /eqP<-.
 have {IH} := IH k.+1.
 case: aks_param_search => // r1 IH Hi.
@@ -1050,23 +1044,23 @@ Qed.
 
 Lemma aks_param_search_niceP (n a k c r : nat) :
   aks_param_search n a k c = nice r ->
-  [/\  r <= k + c, (r %| n)%nat &
+  [/\  k <= r < k + c, (r %| n)%nat &
        forall j, k <= j < r -> ~~ (j %| n)%nat].
 Proof.
 elim: c k => //= c IH k.
 have [kDn [<-]|ND] := boolP (_ %| _)%N.
-  split=> [||j] //; first by apply: leq_addr.
+  split=> [||j] //; first by rewrite leqnn addnS ltnS leq_addr.
   by case: ltnP.
-case: (_ && _) => //.
+have [//|aLko] := boolP (_ && _).
 have {IH} := IH k.+1.
 case: aks_param_search => // r1 IH Hi.
-have := IH Hi; rewrite addnS => [] [H1 H2 H3].
-split=> // j /andP[].
+have := IH Hi; rewrite addnS => [] [/andP[H1 H2] H3 H4].
+split=> [||j /andP[]] //; first by rewrite ltnW.
 rewrite leq_eqVlt => /orP[/eqP<-//| kLj jLn1].
-by apply: H3; rewrite kLj.
+by apply: H4; rewrite kLj.
 Qed.
 
-Lemma aks_param_search_badP (n a k c r : nat) :
+Lemma aks_param_search_badP (n a k c : nat) :
   aks_param_search n a k c = bad ->
   (forall j , k <= j < k + c -> ~~(j %| n)%nat /\ order_modn j n < a).
 Proof.
@@ -1089,10 +1083,110 @@ Qed.
 Definition aks_param n l := 
   let a := l ^ 2 in
   let k := 2 in
-  let c := (l * (a ^ 2))./2.+1  in
+  let c := (l * (a ^ 2))./2  in
   if l <= 1 then nice n else aks_param_search n a k c.
 
-Compute (fun n => aks_param n (log2n n)) 479.
+(* This summarizes 63 64 66 *)
+Lemma aks_paramP n :
+  if aks_param n (log2n n) is good k then
+  [/\ 1 < k < n, k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
+      coprime k n & log2n n ^ 2 <= order_modn k n]
+  else if aks_param n (log2n n) is nice k then
+  1 < n ->
+  [/\ 1 < k, if n == 2 then k == 2 
+             else k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
+      (k %| n)%N & forall j, 1 < j < k -> ~~ (j %| n)%N]
+  else False.
+Proof.
+rewrite /aks_param; case: (leqP (log2n n) 1) => [l_gt1 | l_gt1].
+  rewrite leq_eqVlt => /orP[/eqP<-|n_gt2].
+    by split => // [] [|[|]].
+  move: l_gt1; rewrite leqNgt => /negP[].
+  rewrite  -[2]/(log2n 3).
+  by apply: leq_log2n.
+have n_gt1 : 1 < n by case: n l_gt1 => [|[|]].
+set a := log2n n ^ 2.
+have a_gt1 : 1 < a by rewrite (ltn_sqr 1).
+case E : aks_param_search => [k||k] //.
+- move=> _.
+  have [/andP[H1 H2] H3 H4]:= aks_param_search_niceP E.
+  split => //.
+  case: eqP => [nE|_].
+    have : k <= n.
+      by apply: dvdn_leq => //; rewrite ltnW.
+    move: H1 H3; rewrite nE.
+    by case: (k) => [|[|[|]]].
+  move: H2.
+  by rewrite addSn ltnS add1n.
+- pose k := (log2n n * (a ^ 2))./2.+1.
+  have k_gt1 : 1 < k.
+    rewrite ltnS half_gt0 -[1%N]/(1 * 1)%N.
+    apply: ltn_mul => //.
+    by rewrite -[1%N]/(1 ^ 2)%N ltn_sqr.
+  have H := aks_param_search_badP E.
+  rewrite addSn add1n -/k in H.
+  have lcmLprod : 2 ^ k.-1 <= \prod_(1 <= i < a) (n ^ i).-1.
+    apply: leq_trans (lcm_lbound k) _.
+    apply: dvdn_leq.
+      rewrite big_nat.
+      apply: prodn_cond_gt0 => [] [|i] //= _ .
+      suff ni_gt1 : 1 < n ^ i.+1 
+        by rewrite -ltnS prednK // (leq_trans _ ni_gt1).
+      apply: leq_trans (n_gt1) _.
+      by rewrite -[X in X <= _]expn1 leq_exp2l.
+    apply/dvdn_biglcmP => i /= _.
+    have iLk : i < k by apply: ltn_ord.
+    have [|i_gt0] := leqP i 0; first by rewrite leqn0 => /eqP->; apply: dvd1n.
+    have oLl : order_modn i.+1 n < a.
+      suff /H[] : 1 < i.+1 < k.+1 by [].
+      by rewrite ltnS i_gt0 /= ltnS ltn_ord.
+    have i1_gt1 : 1 < i.+1 by rewrite ltnS.
+    have i1Cn : coprime i.+1 n.
+      have : 0 < gcdn i.+1 n by rewrite gcdn_gt0.
+      rewrite leq_eqVlt => /orP[|g_gt1]; first by rewrite eq_sym.
+      suff /H[[/negP[]]] : 1 <  gcdn i.+1 n < k.+1 by apply: dvdn_gcdr.
+      rewrite g_gt1.
+      have /leq_ltn_trans->// : gcdn i.+1 n <= i.+1.
+      by rewrite dvdn_leq // dvdn_gcdl.
+    rewrite (bigD1_seq (order_modn i.+1 n)) ?iota_uniq //=; last first.
+      rewrite mem_index_iota oLl.
+      by have [] := (order_modnP i1_gt1 i1Cn); case: order_modn.
+    by apply/dvdn_mulr/order_modn_dvd.
+  have prodLprod : \prod_(1 <= i < a) (n ^ i).-1 < 2 ^ (log2n n * 'C(a,2)).
+    rewrite expnM; apply: leq_trans (_ : n ^ 'C(a, 2) <= _); last first.
+      rewrite leq_exp2r; first by apply: log2nP.
+      by rewrite bin_gt0.
+    rewrite -textbook_triangular_sum. 
+    elim: (a) a_gt1 => // a1 IH.
+    rewrite ltnS leq_eqVlt => /orP[/eqP<-|a1_gt1].
+      rewrite big_nat_recl // big_geq //.
+      rewrite big_nat_recl // big_nat_recl // big_geq // expn1 !muln1.
+      by rewrite prednK // (leq_trans _ n_gt1).
+    rewrite !big_nat_recr ?(leq_trans _ a1_gt1) //= expnD ltn_mul //.
+      by apply: IH.
+    by rewrite prednK // expn_gt0  (leq_trans _ n_gt1).
+  have := leq_ltn_trans lcmLprod prodLprod.
+  rewrite ltn_exp2l // /k /= bin2 ltnNge => /negP[].
+  rewrite -!divn2  leq_divRL // -mulnA leq_mul2l.
+   rewrite orbC (leq_trans (leq_trunc_div _ _)) //.
+  by rewrite leq_mul2l leq_pred orbT.
+have [/andP[H1 H2] H3 H4]:= aks_param_search_goodP E.
+rewrite addSn ltnS add1n in H2.
+split => //.
+  rewrite (leq_trans a_gt1) //.
+  case: leqP => // nLk.
+  have /H4/negP[] : 1 < n <= k by rewrite n_gt1.
+  by apply: dvdnn.
+have : 0 < gcdn k n by rewrite gcdn_gt0 orbC ltnW.
+rewrite /coprime leq_eqVlt=> /orP[/eqP<-|g_gt1] //.
+suff /H4/negP[] : 1 < gcdn k n <= k.
+  by apply: dvdn_gcdr.
+rewrite g_gt1 // dvdn_leq //.
+  rewrite (leq_trans _ H1) //.
+  by apply: ltnW.
+by apply: dvdn_gcdl.
+Qed.
+
 
 End AKS.
 

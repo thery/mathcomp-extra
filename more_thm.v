@@ -582,6 +582,15 @@ Proof. by rewrite /order_modn andbC; case: (1 < k). Qed.
 Lemma order_modn_coprime k m : 1 < order_modn k m -> coprime k m.
 Proof. Proof. by rewrite /order_modn coprime_sym; case: coprime. Qed.
 
+Lemma order_modn_dvd k m :
+   1 < k -> coprime k m -> (k %| (m ^ order_modn k m).-1)%N.
+Proof.
+move=> k_gt1 kCm.
+have /(order_modnP k_gt1)[o_gt0 /eqP] := kCm.
+rewrite /dvdn [(1 %% _)%N]modn_small // => /eqP modE _.
+by rewrite (divn_eq (_ ^ _) k) modE addn1 /= modnMl.
+Qed.
+
 Lemma order_modn_mod k m : 1 < k -> order_modn k (m %% k) = order_modn k m.
 Proof.
 move=> k_gt1.

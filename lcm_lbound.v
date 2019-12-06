@@ -111,7 +111,7 @@ rewrite (eq_bigr (fun i : 'I_n.+1 => 'L(n, 0 + i))) //.
 by rewrite leib_line.
 Qed.
 
-Lemma main_result n : 2^n.-1 <= \lcm_(i < n) i.+1.
+Lemma lcm_lbound n : 2^n.-1 <= \lcm_(i < n) i.+1.
 Proof.
 case: n => [|n /=]; first by rewrite big_ord0.
 have <-: \lcm_(i < n.+1) 'L(i, 0) = \lcm_(i < n.+1) i.+1.
