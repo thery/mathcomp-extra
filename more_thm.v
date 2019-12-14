@@ -446,11 +446,12 @@ End alreadyin.
 
 Section FinField.
 
-(* We extract a part of *)
-Lemma Fp_splittingField p d : prime p -> 0 < d ->
+(* We extract a part of PrimePowerField *)
+Lemma Fp_splittingField d p : prime p -> 0 < d ->
   {L: splittingFieldType 'F_p | #|FinFieldExtType L| = p ^ d}.
 Proof.
 move=> pP d_gt0.
+have p_gt1 := prime_gt1 pP.
 pose m := p ^ d.
 have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
@@ -460,7 +461,7 @@ have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
 rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
 exists L.
-have charL: p \in [char L] by rewrite char_lalg char_Fp .
+have charL: p \in [char L] by rewrite char_lalg /= char_Fp.
 have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
 pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
 have{splitLq} [zs DqL defL] := splitLq.
@@ -473,7 +474,7 @@ have in_zs: zs =i Em.
   move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
   rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
   elim: (d) => [|i IHi]; first by rewrite gal_id.
-  by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf ?card_Fp.
+  by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf // card_Fp.
 have defEm: Em = {:L}%VS.
   apply/eqP; rewrite eqEsubv subvf -defL -[Em]subfield_closed agenvS //.
   by rewrite subv_add sub1v; apply/span_subvP=> z; rewrite in_zs.
@@ -650,6 +651,40 @@ rewrite order_modnE //.
 rewrite -card_units_Zp // /order_modn.
 case: insubP => //= u uU uE.
 by apply/subset_leq_card/subsetP=> i; rewrite inE.
+Qed.
+
+
+Lemma modn_prodm I r (P : pred I) F d :
+  \prod_(i <- r | P i) (F i %% d) = \prod_(i <- r | P i) F i %[mod d].
+Proof.
+apply/eqP; elim/big_rec2: _ => // i m n _ /eqP nEm.
+by rewrite modnMml -modnMmr nEm modnMmr.
+Qed.
+
+Lemma order_gt1_prime k n :
+  1 < n -> 1 < order_modn k n ->
+  exists p : nat, [/\ (p %| n), prime p & 1 < order_modn k p]%nat.
+Proof.
+move=> n_gt1 o_gt1.
+have k_gt1 := order_modn_gt1 o_gt1.
+have [/allP Ho|/allPn] := 
+    boolP (all (fun i => order_modn k i <= 1) (primes n)); last first.
+  case=> p; rewrite mem_primes -ltnNge => /and3P[pP _ pDn] pO.
+  by exists p.
+have B1 : 0 < 1 < order_modn k n by [].
+have [_ _ /(_ _ B1)/eqP[]] := 
+     order_modnP k_gt1 (order_modn_coprime o_gt1).
+rewrite expn1 [n]prod_prime_decomp 1?ltnW // prime_decompE.
+rewrite big_seq_cond -modn_prodm big1 // => [] [p r].
+rewrite andbT => /mapP[q qP [-> ->]] /=.
+have oL1 := Ho _ qP.
+have kCq : coprime k q.
+  apply: coprime_dvdr (order_modn_coprime o_gt1).
+  by rewrite mem_primes in qP; case/and3P: qP.
+have [H1 H2 _] := order_modnP k_gt1 kCq.
+rewrite -modnXm -[q]expn1 -{1}(_ : order_modn k q = 1%nat).
+  by rewrite H2 modnXm exp1n modn_small.
+by apply/eqP; rewrite eqn_leq oL1.
 Qed.
 
 (* Definition of order for poly *)

@@ -766,6 +766,7 @@ Lemma cyclotomic_special_order k p :
 Proof.
 set d := order_modn _ _.
 move=> pP k_gt0 d_gt1.
+have p_gt1 := prime_gt1 pP.
 have k_gt1 :=  order_modn_gt1 d_gt1.
 have kCp := order_modn_coprime d_gt1.
 have d_gt0 : 0 < d by apply: leq_trans d_gt1.
@@ -801,8 +802,7 @@ pose E := <<1; z>>%VS.
 pose e := \dim E.
 have dE : d = \dim {: L}.
   have /eqP := @card_vspace _ Fm _ {:L}.
-  rewrite card_vspacef LC card_Fp /m //.
-  by rewrite eqn_exp2l ?prime_gt1 // => /eqP.
+  by rewrite card_vspacef LC card_Fp // eqn_exp2l // => /eqP.
 have eDd : (e %| d)%N.
   by rewrite dE; apply/field_dimS/subvf.
 have kDpe : (k %| (p ^ e).-1)%N.
@@ -874,17 +874,14 @@ by rewrite dvdp_map.
 Qed.
 
 (*115 *)
-Lemma main_aks n k p (F := [finRingType of 'F_p]) :
+Lemma main_aks p n k (F := [finRingType of 'F_p]) :
   prime p -> aks_criteria F n k -> is_power n p.
 Proof.
+move=> pP; have p_gt1 := prime_gt1 pP.
+have pC : p \in [char F] by apply: char_Fp.
 pose a := log2n n ^ 2; pose s := (sqrtn (totient k) * log2n n)%N.
-move => pP [n_gt0 k_gt0 /(_ p (char_Fp pP))[pO_gt1 pDn kLp lnLnO Hr]].
-have pC := char_Fp pP.
-have p_gt1 := prime_gt1 pP.
+move => [n_gt0 k_gt0 /(_ p pC) [pO_gt1 pDn kLp lnLnO Hr]].
 have k_gt1 : 1 < k by apply: order_modn_gt1 pO_gt1.
-have n_gt1 : 1 < n.
-  apply: leq_trans (prime_gt1 pP) _.
-  by apply: dvdn_leq.
 have := dvdn_leq n_gt0 pDn.
 rewrite leq_eqVlt => /orP[/eqP<-|pLn]; first by rewrite is_power_id.
 have [/eqP nE|/negP nis2p] := boolP (is_2power n).
@@ -892,6 +889,9 @@ have [/eqP nE|/negP nis2p] := boolP (is_2power n).
   rewrite Euclid_dvdX // => /andP[/prime_nt_dvdP->] //.
     by move=> _; apply: is_power_exp.
   by case: (p) pP => // [] // [].
+have n_gt1 : 1 < n.
+  apply: leq_trans (prime_gt1 pP) _.
+  by apply: dvdn_leq.
 have n_gt2 : 2 < n by case: (n) n_gt1 nis2p => [|[|[|]]].
 have kCn : coprime k n.
   apply: order_modn_coprime.
@@ -904,7 +904,6 @@ have nI : is_iexp [ringType of 'F_p] k s n.
   apply/eqP.
   rewrite comp_polyD comp_polyC comp_polyX.
   by apply: Hr.
-  have := cyclotomic_special_order.
 have [h [hMI hDxk1 jS hO]]:= cyclotomic_special_order pP k_gt0 pO_gt1.
 have [//|/negP nP] := boolP (is_power n p).
 have /classicP[] := @Mk_Cexists F k s.
@@ -1089,7 +1088,9 @@ Definition aks_param n l :=
 (* This summarizes 63 64 66 *)
 Lemma aks_paramP n :
   if aks_param n (log2n n) is good k then
-  [/\ 1 < k < n, k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
+  [/\ 1 < k < n,
+      forall j, 1 < j <= k -> ~~ (j %| n)%nat,
+      k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
       coprime k n & log2n n ^ 2 <= order_modn k n]
   else if aks_param n (log2n n) is nice k then
   1 < n ->
@@ -1144,7 +1145,7 @@ case E : aks_param_search => [k||k] //.
     have i1Cn : coprime i.+1 n.
       have : 0 < gcdn i.+1 n by rewrite gcdn_gt0.
       rewrite leq_eqVlt => /orP[|g_gt1]; first by rewrite eq_sym.
-      suff /H[[/negP[]]] : 1 <  gcdn i.+1 n < k.+1 by apply: dvdn_gcdr.
+      suff /H[/negP[]] : 1 <  gcdn i.+1 n < k.+1 by apply: dvdn_gcdr.
       rewrite g_gt1.
       have /leq_ltn_trans->// : gcdn i.+1 n <= i.+1.
       by rewrite dvdn_leq // dvdn_gcdl.
@@ -1177,6 +1178,7 @@ split => //.
   case: leqP => // nLk.
   have /H4/negP[] : 1 < n <= k by rewrite n_gt1.
   by apply: dvdnn.
+--
 have : 0 < gcdn k n by rewrite gcdn_gt0 orbC ltnW.
 rewrite /coprime leq_eqVlt=> /orP[/eqP<-|g_gt1] //.
 suff /H4/negP[] : 1 < gcdn k n <= k.
@@ -1187,6 +1189,506 @@ rewrite g_gt1 // dvdn_leq //.
 by apply: dvdn_gcdl.
 Qed.
 
+Lemma inZp0 p : inZp 0 = 0 :> 'Z_p.
+Proof. by apply/val_eqP; rewrite /= mod0n. Qed.
+
+(* Doing modn n, modp (X^k - 1) polynomials *)
+Definition PolyZ n k (l : seq nat) : {poly 'Z_n} := Poly (map inZp (take k l)).
+
+Lemma size_PolyZ n k l : size (PolyZ n k l) <= k.
+Proof.
+apply: leq_trans (size_Poly _) _.
+by rewrite size_map size_take; case: leqP.
+Qed.
+
+Lemma PolyZE n k l : 
+  PolyZ n k l = \sum_(i < k) (inZp (nth 0%N l i)) *: 'X^i.
+Proof.
+apply/polyP=> i; rewrite coef_sum.
+case (leqP k i) => [kLi|iLk].
+  rewrite nth_default; last first.
+    apply: leq_trans (size_Poly _) _.
+    rewrite size_map size_take.
+    by case: leqP => // /leq_trans->.
+  rewrite big1 // => j _.
+  rewrite coefZ coefXn.
+  by case: ltngtP (leq_trans (ltn_ord j) kLi); rewrite ?mulr0.
+rewrite coef_Poly (bigD1 (Ordinal iLk)) //= big1 => 
+    [|j /eqP /val_eqP /= jDi]; last first.
+  by rewrite coefZ coefXn eq_sym (negPf jDi) mulr0.
+rewrite addr0 coefZ coefXn eqxx mulr1.
+case: (leqP (size (take k l)) i) => [stLk|kLst]; last first.
+  by rewrite (nth_map 0%N) // nth_take.
+rewrite nth_default ?size_map //.
+move: stLk; rewrite size_take; case: leqP => [_ slLi|].
+  by rewrite nth_default // inZp0.
+by case: ltngtP iLk.
+Qed.
+
+Lemma PolyZ_nil n k : PolyZ n k [::] = 0.
+Proof. by rewrite PolyZE big1 // => i _; rewrite nth_nil inZp0 scale0r. Qed.
+
+Lemma PolyZ_cons n k a v : 0 < k -> 1 < n -> size v < k -> 
+  PolyZ n k (a :: v) = a%:R + 'X * PolyZ n k v :> {poly 'Z_n}.
+Proof.
+move=> k_gt0 n_gt1 svE; rewrite !PolyZE.
+rewrite -(prednK k_gt0) big_ord_recl /=; congr (_ + _).
+  by rewrite expr0 /= -Zp_nat scaler_nat.
+rewrite [in RHS]big_ord_recr /= nth_default ?svE; last first.
+  by rewrite -ltnS prednK.
+rewrite inZp0 scale0r addr0.
+rewrite mulr_sumr; apply: eq_bigr => i _.
+by rewrite -scalerAr exprS.
+Qed.
+
+Definition modnp_const (n k v : nat) := (v %% n)%N :: nseq k.-1 0%N.
+
+Lemma size_modnp_const n k v : 0 < k -> size (modnp_const n k v) = k.
+Proof. by move=> k_gt0; rewrite /= size_nseq prednK. Qed.
+
+Lemma poly_modnp_const n k v : 0 < k -> 1 < n ->
+  PolyZ n k (modnp_const n k v) = v%:R%:P.
+Proof.
+rewrite Zp_nat.
+move=> k_gt0 n_gt1; apply/polyP => i.
+rewrite coefC /PolyZ -[in take _](prednK k_gt0) /= coef_cons; case: eqP => iE.
+  by apply/val_eqP; rewrite /= Zp_cast // modn_mod.
+rewrite take_nseq //.
+case: (leqP k i) => iLk.
+  have k1Li1 : k.-1 <= i.-1 by rewrite -ltnS !prednK //; case: (i) iE.
+  by rewrite nth_default //= (leq_trans (size_Poly _)) // size_map size_nseq.
+have i1Lk1 : i.-1 < k.-1 by rewrite -ltnS !prednK //; case: (i) iE.
+by rewrite coef_Poly (nth_map 0%N) ?size_nseq // nth_nseq i1Lk1 // inZp0.
+Qed.
+
+Definition modnp_Xn (n k v : nat) := 
+    nseq (v %% k) 0%N ++ (1%N :: nseq (k.-1 - (v %% k)) 0%N).
+
+Lemma size_modnp_Xn n k v : 0 < k -> size (modnp_Xn n k v) = k.
+Proof. 
+move=> k_gt0; rewrite /= size_cat size_nseq /= size_nseq.
+by rewrite addnC addSn subnK ?prednK // -ltnS prednK // ltn_mod.
+Qed.
+
+Lemma rmodp_Xn_sub1 (R : comRingType) k n : 
+  0 < k -> rmodp ('X^(k * n) - 1) ('X^k - 1) = 0 :> {poly R}.
+Proof.
+move=> k_gt0; elim: n => [|n IH]; first by rewrite muln0 subrr rmod0p.
+rewrite mulnS exprD -{1}['X^k](subrK 1) mulrDl mul1r.
+rewrite -addrA rmodp_add ?monic_Xn_sub_1 // IH addr0.
+by rewrite mulrC rmodp_mull ?monic_Xn_sub_1.
+Qed.
+
+Lemma poly_modnp_Xn n k v : 0 < k -> 1 < n ->
+  PolyZ n k (modnp_Xn n k v) = rmodp 'X^v ('X^k - 1).
+Proof.
+move=> k_gt0 n_gt1.
+have XnM:= monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+rewrite [in 'X^ _](divn_eq v k) exprD mulnC.
+rewrite -{1}['X^(_ * _)](subrK 1) mulrDl.
+rewrite rmodp_add // mul1r -rmodp_mulml // rmodp_Xn_sub1 //.
+rewrite mul0r rmod0p add0r rmodp_small; last first.
+  by rewrite size_polyXn size_Xn_sub_1 // ltnS ltn_mod.
+apply/polyP => i.
+rewrite /PolyZ coef_Poly coefXn.
+case: (leqP k i) => iLk.
+  have k1Li1 : k.-1 <= i.-1 by rewrite -ltnS !prednK // (leq_trans k_gt0).
+  rewrite nth_default; last by rewrite size_map size_take size_modnp_Xn // ltnn.
+  by case: eqP => // iE; move: iLk; rewrite iE leqNgt ltn_mod k_gt0.
+rewrite (nth_map 0%N); last by rewrite size_take size_modnp_Xn // ltnn.
+rewrite nth_take // nth_cat size_nseq nth_nseq if_same.
+case: ltngtP => iLv; first by rewrite inZp0.
+  rewrite -cat1s nth_cat /= ifF.
+    by rewrite nth_nseq if_same inZp0.
+  by rewrite ltnNge -(subnn (v %% k)%N) ltn_sub2r.
+by rewrite iLv subnn.
+Qed.
+
+Definition modnp_mulX (n k : nat) (v : list nat) :=  belast (last 0%N v) v.
+  
+Lemma size_modnp_mulX n k v : 0 < k -> 
+  size v = k -> size (modnp_mulX n k v) = k.
+Proof. by move=> k_gt0 vsEk; rewrite size_belast. Qed.
+
+Lemma nth_belast_0 (I : eqType ) (l : seq I) i j :
+   0 < size l -> nth i (belast j l) 0 = j.
+Proof. by case: l. Qed.
+
+Lemma nth_belast_max (I : eqType ) (l : seq I) i j n :
+ n.+1 < size l -> nth i (belast j l) n.+1 = nth i l n.
+Proof.
+elim: l n j => [n j /=|a l IH n j /=]; first by rewrite nth_nil.
+by case: n => [|n /IH-> //]; case: (l).
+Qed.
+
+Lemma poly_modnp_mulX n k v : 0 < k -> 1 < n ->
+  size v = k ->
+  PolyZ n k (modnp_mulX n k v) = rmodp ('X * PolyZ n k v) ('X^k - 1).
+Proof.
+move=> k_gt0 n_gt1 vsE; rewrite !PolyZE.
+have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+rewrite mulr_sumr rmodp_sum  //= -[k]prednK // big_ord_recl big_ord_recr addrC.
+congr (_ + _); last first.
+  rewrite expr0 alg_polyC -scalerAr -exprS rmodp_scale ?prednK //.
+  rewrite [in 'X^_]prednK // [in modnp_mulX _ _]prednK //.
+  rewrite -{1}['X^k](subrK 1) // rmodp_add // rmodpp // add0r.
+  rewrite rmodp_small; last by rewrite size_poly1 size_Xn_sub_1.
+  rewrite alg_polyC; congr (_%:P).
+  apply/val_eqP; rewrite /= Zp_cast // /modnp_mulX.
+  case: v vsE => [|a v1 <- /=]; first by rewrite nth_nil.
+  by rewrite (last_nth 0%N).
+apply: eq_bigr => j _.
+rewrite -scalerAr -exprS rmodp_scale ?prednK //.
+congr (inZp _ *: _); last first.
+  rewrite rmodp_small //= prednK // size_Xn_sub_1 //.
+  by rewrite  size_polyXn !ltnS -{2}[k]prednK // ltnS ltn_ord.
+rewrite /modnp_mulX [in RHS]/= nth_belast_max //=.
+by rewrite vsE -[X in _ < X]prednK // ltnS.
+Qed.
+
+Compute (modnp_mulX 4 10 (modnp_Xn 4 10 9)).
+
+Fixpoint modnp_add (n k : nat) (v1 v2 : seq nat) :=
+  if k is k1.+1 then 
+    ((head 0%N v1 + head 0%N v2) %% n)%N :: 
+    modnp_add n k1 (behead v1) (behead v2)
+  else [::].
+
+Lemma size_modnp_add n k v1 v2 : size (modnp_add n k v1 v2) = k.
+Proof. by elim: k v1 v2 => //= k IH v1 v2; rewrite IH. Qed. 
+
+Lemma poly_modnp_add n k v1 v2 : 0 < k -> 1 < n ->
+  PolyZ n k (modnp_add n k v1 v2) = PolyZ n k v1 + PolyZ n k v2.
+Proof.
+move=> k_gt0 n_gt1; rewrite !PolyZE -big_split /=.
+apply: eq_bigr => i _.
+rewrite -scalerDl; congr (_ *: _).
+elim: (k) (val i) (ltn_ord i) v1 v2 => //= k1 IH [_ v1 v2|n1]; last first.
+  rewrite ltnS => /IH HE v1 v2; rewrite [in inZp _]/= HE.
+  by case: v1 => /=; case: v2 => /=; rewrite ?nth_nil.
+case: v1 => [|x _] /=; (case: v2 => [|y _] /=); 
+  rewrite ?(nth_nil, inZp0, add0r, addr0, add0n, addn0, mod0n) //=.
+- by apply/val_eqP; rewrite /= Zp_cast // modn_mod.
+- by apply/val_eqP; rewrite /= Zp_cast // modn_mod.
+by apply/val_eqP; rewrite /= Zp_cast // modn_mod modnDm.
+Qed.
+
+Compute (modnp_add 4 10 (modnp_Xn 4 10 9) (modnp_Xn 4 10 1)).
+
+Fixpoint modnp_scale (n k a : nat) (v : seq nat) :=
+  if k is k1.+1 then 
+    ((a * head 0%N v) %% n)%N :: modnp_scale n k1 a (behead v)
+  else [::].
+
+Lemma size_modnp_scale n k a v : size (modnp_scale n k a v) = k.
+Proof. by elim: k a v => //= k IH b v; rewrite IH. Qed.
+
+Lemma poly_modnp_scale n k a v : 0 < k -> 1 < n ->
+  PolyZ n k (modnp_scale n k a v) = inZp a *: PolyZ n k v.
+Proof.
+move=> k_gt0 n_gt1; rewrite !PolyZE /= scaler_sumr.
+apply: eq_bigr => i _.
+rewrite scalerA; congr (_ *: _).
+elim: (k) (val i) (ltn_ord i) v => //= k1 IH [_ v|n1]; last first.
+  rewrite ltnS => /IH HE v; rewrite [in inZp _]/= HE.
+  by case: v => /=; rewrite ?nth_nil.
+case: v => [|x _] /=; 
+  rewrite ?(nth_nil, inZp0, add0r, addr0, add0n, addn0, mod0n) //=.
+  by apply/val_eqP; rewrite /= Zp_cast // !muln0 !mod0n.
+by apply/val_eqP; rewrite /= Zp_cast // modn_mod modnMm.
+Qed.
+
+Fixpoint modnp_mul (n k : nat) (v1 v2 : seq nat) :=
+  if v2 is a :: v3 then
+    modnp_add n k (modnp_scale n k a v1) (modnp_mulX n k (modnp_mul n k v1 v3))
+  else modnp_const n k 0.
+
+Lemma size_modnp_mul n k v1 v2 : 0 < k -> size (modnp_mul n k v1 v2) = k.
+Proof.
+move=> k_gt0.
+case: v2 => [|a v4 /=]; first by rewrite size_modnp_const.
+by rewrite size_modnp_add.
+Qed.
+
+Lemma poly_modnp_mul n k v1 v2 : 0 < k -> 1 < n ->
+  size v2 = k ->
+  PolyZ n k (modnp_mul n k v1 v2) = 
+    rmodp (PolyZ n k v1 * PolyZ n k v2) ('X^k - 1).
+Proof.
+move=> k_gt0 n_gt1 sv2E.
+have : size v2 <= k by rewrite sv2E.
+have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+elim: {sv2E}v2 => /= [|a v4 IH sv4E].
+  by rewrite poly_modnp_const // PolyZ_nil mulr0 rmod0p Zp_nat inZp0.
+rewrite poly_modnp_add // poly_modnp_scale //.
+rewrite poly_modnp_mulX ?size_modnp_mul // IH; last by apply: ltnW.
+rewrite PolyZ_cons // mulrDr rmodp_add // rmodp_mulmr // mulrCA.
+congr (_ + _).
+rewrite -mulr_algr -Zp_nat scaler_nat.
+rewrite rmodp_small // size_Xn_sub_1 //.
+apply: leq_trans (size_mul_leq _ _) _.
+rewrite -poly_natmul size_polyC.
+apply: leq_trans (size_PolyZ n k v1).
+case: eqP=> _; first by rewrite addn0 leq_pred.
+by rewrite addn1.
+Qed.
+
+Compute (modnp_mul 4 10 (modnp_Xn 4 10 9) (modnp_Xn 4 10 1)).
+
+Import BinPos.
+
+Fixpoint modnp_pow (n k : nat) (p : positive) (v : seq nat) :=
+  if p is xO p1 then let r := modnp_pow n k p1 v in
+                     modnp_mul n k r r
+  else if p is xI p1 then let r := modnp_pow n k p1 v in
+                          modnp_mul n k v (modnp_mul n k r r)
+  else v.
+
+Lemma size_modnp_pow n k p v :
+  0 < k -> size v = k -> size (modnp_pow n k p v) = k.
+Proof.
+move=> k_gt0 svE.
+elim: p => //= p spE; first by rewrite !size_modnp_mul.
+by rewrite size_modnp_mul.
+Qed.
+
+Lemma poly_modnp_pow n k p v : 0 < k -> 1 < n ->
+  size v = k ->
+  PolyZ n k (modnp_pow n k p v) = 
+    rmodp (PolyZ n k v ^+ Pos.to_nat p) ('X^k - 1).
+Proof.
+move=> k_gt0 n_gt1 sv2E.
+have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+elim: p => [p1 IH|p1 IH|] /=; last first.
+- by rewrite expr1 rmodp_small // size_Xn_sub_1 // ltnS size_PolyZ.
+- rewrite poly_modnp_mul ?size_modnp_pow //= IH.
+  rewrite rmodp_mulmr // rmodp_mulml // -exprD.
+  by rewrite Pnat.Pos2Nat.inj_xO addnn -muln2 mulnC.
+rewrite !poly_modnp_mul ?(size_modnp_pow, size_modnp_mul) //= IH.
+rewrite rmodp_mulmr // mulrA rmodp_mulmr // mulrAC rmodp_mulmr //.
+by rewrite Pnat.Pos2Nat.inj_xI /= exprS !exprD expr0 mulr1 !mulrA.
+Qed.
+
+Compute (modnp_pow 4 10 (Pos.of_nat 4) (modnp_Xn 4 10 1)).
+
+Fixpoint modnp_eq (n k : nat) (v1 v2 : seq nat) : bool :=
+  if k is k1.+1 then 
+    ((head O v1) == (head O v2) %[mod n]) && 
+    modnp_eq n k1 (behead v1) (behead v2)
+  else true.
+
+Lemma poly_modnp_eq n k v1 v2 : 0 < k -> 1 < n ->
+  (modnp_eq n k v1 v2) = (PolyZ n k v1 == PolyZ n k v2).
+Proof.
+move=> k_gt0 n_gt1; rewrite !PolyZE.
+elim: (k) v1 v2 => [|k1 IH] v1 v2; first by rewrite !big1 ?eqxx // => [[]|[]].
+rewrite /= IH -!(poly_def _ (fun i => inZp (nth 0%nat _ i))).
+apply/andP/eqP=> [[/eqP hE /eqP/polyP pE]| /polyP pE].
+  apply/polyP=> i; rewrite !coef_poly; case: leqP => //.
+  case: i => [_|i].
+    by (case: (v1) hE; case: (v2)) => //= [a _ aE|a _ aE|a _ b _ aE];
+        apply/val_eqP/eqP; rewrite /= Zp_cast.
+  rewrite ltnS => iLk1.
+  have := pE i; rewrite !coef_poly iLk1.
+  by (case: (v1); case: (v2)) => //= [_ l <-|_ l ->]; rewrite nth_nil.
+split; apply/eqP.
+  have := pE 0%nat; rewrite !coef_poly ltnS leq0n.
+  by (case: (v1); case: (v2)) => //= [a _ |a _|a _ b _] /val_eqP/eqP/=;
+     rewrite Zp_cast.
+apply/polyP=> i; rewrite !coef_poly; case: leqP => // iLk1.
+have := pE i.+1; rewrite !coef_poly ltnS iLk1.
+by (case: (v1); case: (v2)) => //= [_ l|_ l]; rewrite nth_nil.
+Qed.
+
+Compute modnp_eq 4 10 (modnp_Xn 4 10 1) (modnp_Xn 4 10 11).
+
+Fixpoint poly_intro_range_aux n pn k c r := 
+  if r is r1.+1 then
+    let cc := modnp_const n k c in
+    let x := modnp_Xn n k 1 in
+    let xcc := modnp_add n k x cc in
+    let xve := modnp_pow n k pn xcc in
+    let xn := modnp_Xn n k n in
+    let xncc := modnp_add n k xn cc in
+    if modnp_eq n k xve xncc then poly_intro_range_aux n pn k c.+1 r1
+    else false
+  else true.
+
+Section inZp_morph.
+
+Variable n p : nat.
+Hypothesis n_gt1 : 1 < n.
+Hypothesis pP : prime p.
+Hypothesis pDn : (p %| n)%nat.
+
+Fact inZpm_is_rmorphism : rmorphism (inZp : 'Z_n -> 'F_p).
+Proof.
+have p_gt1 : 1 < p by apply: prime_gt1.
+split=> [[x xLn] [y yLn]|]; last first.
+  split => [[x xLn] [y yLn]|]; 
+      apply/val_eqP/eqP; rewrite /= !Fp_cast //.
+  by rewrite Zp_cast // modnMm modn_dvdm.
+apply/val_eqP => /=; rewrite Zp_cast // in xLn, yLn.
+rewrite !Fp_cast // !Zp_cast //.
+rewrite modnDm modn_dvdm ?pdiv_dvd //.
+rewrite (modnB (ltnW n_gt1) (ltnW yLn)).
+rewrite modnn addn0 (modn_small yLn).
+case: y yLn => [_|y yLn] /=.
+  by rewrite mod0n mul0n addn0 subn0 -modnDmr modnn addn0.
+rewrite mul1n -modnDmr modnB //; last 2 first.
+- by apply: ltnW.
+- by apply: leq_trans yLn.
+rewrite (eqP pDn) addn0.
+case: (_.+1 %% _)%nat => [|z] /=; last by rewrite mul1n.
+by rewrite addn0 subn0 -modnDmr modnn addn0.
+Qed.
+
+Definition inZpm : {rmorphism 'Z_n -> 'F_p} :=
+  RMorphism inZpm_is_rmorphism.
+
+Lemma eqp_rmodp_dvd (R : ringType) (p1 q r  :  {poly R}) :
+  p1 \is monic ->  (rmodp q p1 == rmodp r p1) = (rdvdp p1 (q - r)).
+Proof. by move=> pM; rewrite -subr_eq0 -rmodp_sub. Qed.
+
+Lemma inZpm_poly_intro_range k s : 0 < k ->
+  poly_intro_range [ringType of 'Z_n] k n s -> 
+  poly_intro_range [ringType of 'F_p] k n s.
+Proof.
+move=> k_gt0.
+have xnZM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+have xnFM := monic_Xn_sub_1 [ringType of 'F_p] k_gt0.
+have p_gt1 : 1 < pdiv n by apply/prime_gt1/pdiv_prime.
+move=> Hr c cB; apply/eqP; rewrite eqp_rmodp_dvd //.
+have /eqP := Hr c cB; rewrite eqp_rmodp_dvd //.
+case /(rdvdpP xnZM) => /= p1 pE; apply/(rdvdpP xnFM).
+exists (map_poly inZpm p1).
+rewrite (_ : 'X^k - 1 = map_poly inZpm ('X^k - 1)); last first.
+  by rewrite rmorphB rmorph1 /= (map_polyXn inZpm).
+have cE : inZp (c%:R : 'Z_n) = c%:R :> 'F_p.
+  by apply/val_eqP; 
+     rewrite /= !Zp_nat /= Fp_cast // Zp_cast // modn_dvdm // pDn.
+rewrite -rmorphM -pE !(rmorphB, rmorphX, rmorphD) /=.
+by rewrite (map_polyX inZpm) (map_polyC inZpm) /= cE.
+Qed.
+
+End inZp_morph.
+
+Lemma poly_intro_range_auxP n pn k c r :
+  1 < k -> 1 < n -> pn = Pos.of_nat n -> 
+  if poly_intro_range_aux n pn k c r then 
+  forall c1, c <= c1 < c + r ->
+   rmodp (('X + (c1%:R)%:P) ^+ n) ('X^k - 1) =
+   rmodp ('X^n + (c1%:R)%:P) ('X^k - 1) :> {poly 'Z_n}
+  else ~ prime n.
+Proof.
+move=> k_gt1 n_gt1 pnE.
+have k_gt0 : 0 < k by apply: leq_trans k_gt1.
+elim: r c => /= [c c1|r IH c]; first by rewrite addn0; case: ltngtP.
+rewrite poly_modnp_eq // poly_modnp_pow ?size_modnp_add //.
+rewrite !poly_modnp_add // !poly_modnp_Xn // poly_modnp_const // pnE.
+rewrite Pnat.Nat2Pos.id_max max_r; last by apply/leP/ltnW.
+rewrite expr1 [rmodp 'X _]rmodp_small; last first.
+  by rewrite size_polyX size_Xn_sub_1.
+case: eqP  => mE; last first.
+  move=> nP; case: mE.
+  have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+  rewrite exprDn_char /=; last first.
+    rewrite pnatE // char_poly /= inE nP /=.
+    apply/eqP/val_eqP=> /=.
+    by rewrite val_Zp_nat // modnn.
+  rewrite rmodp_add //; congr (_ + _).
+  rewrite rmodp_small //; last first.
+    apply: leq_ltn_trans (size_exp_leq _ _) _.
+    rewrite size_polyC size_Xn_sub_1 //.
+    by case: (_ != _).
+  rewrite -rmorphX; congr (_ %:P).
+  pose i := inZpm n_gt1 nP (dvdnn n).
+  suff : i (c%:R ^+ n) = i c%:R.
+    move/val_eqP/eqP=> /=; rewrite Fp_cast //.
+    rewrite !modn_small //; try by rewrite -[n]Zp_cast ?prime_gt1.
+    by move=> H; apply/val_eqP/eqP.
+  rewrite rmorphX rmorph_nat.
+  by apply: fin_little_fermat c (char_Fp nP).
+rewrite -pnE.
+case: poly_intro_range_aux (IH c.+1) => // H c1.
+rewrite addnS ltnS [c <= _]leq_eqVlt => /andP[/orP[/eqP<-//|cLc1] c1Lcr].
+  rewrite rmodp_add ?monic_Xn_sub_1 //.
+  rewrite [X in _ = _ + X]rmodp_small // size_Xn_sub_1 // size_polyC.
+  by case: eqP.
+by apply: H; rewrite cLc1.
+Qed.
+
+Definition fpoly_intro_range n k l := 
+  let r := (sqrtn (totient k) * l)%nat in
+  poly_intro_range_aux n (Pos.of_nat n) k 1 r.
+
+Lemma fpoly_intro_rangeP n k l :
+  1 < k -> 1 < n -> 
+  if fpoly_intro_range n k l then 
+  poly_intro_range [ringType of 'Z_n] k n (sqrtn (totient k) * l)
+  else ~ prime n.
+Proof.
+move=> k_gt1 n_gt1; rewrite /fpoly_intro_range.
+by apply: poly_intro_range_auxP.
+Qed.
+
+Definition aks n := 
+  let l := log2n n in
+  if power_free n l then
+    let v := aks_param n l in
+    if v is nice k then n == k else
+    if v is good k then fpoly_intro_range n k l else false
+  else false.
+
+Lemma aksP n : aks n = prime n.
+Proof.
+case: n => //; case => // m.
+have : 1 < m.+2 by []; move: m.+2 => {m}n n_gt1; 
+rewrite /aks; set l := log2n n.
+case: power_free (@power_freeP n) (@power_freePn n)
+      => [H _ | _ /(_ isT) [m [k k_gt1 ->]]]; last first.
+  have k_gt0 : 0 < k by apply: ltnW.
+  apply/sym_equal/idP => /primePn[].
+  case: m => [|[|m]]; first by left; rewrite exp0n.
+    by left; rewrite exp1n.
+  right; exists m.+2; first by rewrite /= -{1}[m.+2]expn1 ltn_exp2l.
+  by apply: dvdn_exp.
+case: aks_param (aks_paramP n) => // 
+   [m /(_ n_gt1) [m_gt1 _ mDn nP]|k [kB nP kLl kCm lLo]].
+  move: nP; case: eqP => [->|HD] nP; apply/sym_equal/idP.
+    apply/primeP; split => // [] [|[|d]] //.
+      by rewrite dvd0n; case: (m) m_gt1.
+    move=> dDm /=; case: eqP => // d2Dm.
+    suff /nP/negP[]/= : 1 < d.+2 < m by [].
+    by have := dvdn_leq (ltnW m_gt1) dDm; rewrite leq_eqVlt => /orP[/eqP|].
+  apply/negP/primePn; right; exists m => //.
+  rewrite m_gt1 /=.
+  have := dvdn_leq (ltnW n_gt1) mDn; rewrite leq_eqVlt => /orP[/eqP|] // mEn.
+  by case: HD.
+have k_gt1 : 1 < k by case/andP: kB.
+case: fpoly_intro_range (fpoly_intro_rangeP l k_gt1 n_gt1); last first.
+  by case: prime.
+case: (boolP (prime n)) => // /negP nNP.
+have pkn_gt1 : 1 < order_modn k n.
+  apply: leq_trans lLo.
+  apply: leq_trans (_ : log2n 4 ^ 2 <= _) => //.
+  rewrite leq_exp2r // leq_log2n //.
+  by case: (n) n_gt1 nNP => // [] [|[|[|]]].
+have [p [pDn pP pO]] := order_gt1_prime n_gt1 pkn_gt1. 
+move/(inZpm_poly_intro_range n_gt1 pP pDn (ltnW k_gt1)) => Hp.
+suff : is_power n p.
+  move/eqP => nE.
+  by case: nNP; rewrite nE (H _ _ isT nE) expn1.
+apply: (@main_aks p n k) => //.
+split => //=; try by apply: ltnW.
+move=> p1; rewrite inE => /andP[p1P].
+rewrite -(dvdn_charf (char_Fp _)) // dvdn_prime2 ?pdiv_prime // => /eqP<-.
+split=> //.
+case: leqP => // pLk.
+by have /nP/negP[] : 1 < p <= k by rewrite prime_gt1.
+Qed.
+
+Eval vm_compute in filter aks (iota 2 50).
 
 End AKS.
 
