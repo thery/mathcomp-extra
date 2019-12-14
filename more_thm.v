@@ -72,6 +72,9 @@ Import Pdiv.RingMonic.
 
 Local Open Scope ring_scope.
 
+Lemma inZp0 p : inZp 0 = 0 :> 'Z_p.
+Proof. by apply/val_eqP; rewrite /= mod0n. Qed.
+
 (* More on comp_compy *)
 Section Rcomp_poly.
 

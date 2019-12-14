@@ -967,6 +967,15 @@ rewrite card_Nbar //; last first.
 by have /andP[] := sqrtn_bound t.
 Qed.
 
+(******************************************************************************)
+(* Now that we have the main theorem we can start building the algorithm      *)
+(******************************************************************************)
+
+
+(******************************************************************************)
+(*    Power Free                                                              *)
+(******************************************************************************)
+
 Fixpoint power_free (n : nat) k :=
   if k is k1.+1 then 
     if k1 is _.+1 then 
@@ -1019,6 +1028,10 @@ rewrite leq_eqVlt => /orP[/eqP kE |kLk1]; last by apply: IH.
 move: E; rewrite is_rootnE // [in rootn _ _]nE kE.
 by rewrite expnK // -kE -nE eqxx.
 Qed.
+
+(******************************************************************************)
+(*    aks_param search                                                        *)
+(******************************************************************************)
 
 Inductive aks_param_res := nice of nat | bad | good of nat.
 
@@ -1185,7 +1198,6 @@ split => //.
   case: leqP => // nLk.
   have /H4/negP[] : 1 < n <= k by rewrite n_gt1.
   by apply: dvdnn.
---
 have : 0 < gcdn k n by rewrite gcdn_gt0 orbC ltnW.
 rewrite /coprime leq_eqVlt=> /orP[/eqP<-|g_gt1] //.
 suff /H4/negP[] : 1 < gcdn k n <= k.
@@ -1196,10 +1208,10 @@ rewrite g_gt1 // dvdn_leq //.
 by apply: dvdn_gcdl.
 Qed.
 
-Lemma inZp0 p : inZp 0 = 0 :> 'Z_p.
-Proof. by apply/val_eqP; rewrite /= mod0n. Qed.
+(******************************************************************************)
+(*    Polynomial modulo X^k - 1 with coefficient in Z_n                       *)
+(******************************************************************************)
 
-(* Doing modn n, modp (X^k - 1) polynomials *)
 Definition PolyZ n k (l : seq nat) : {poly 'Z_n} := Poly (map inZp (take k l)).
 
 Lemma size_PolyZ n k l : size (PolyZ n k l) <= k.
@@ -1248,6 +1260,10 @@ rewrite mulr_sumr; apply: eq_bigr => i _.
 by rewrite -scalerAr exprS.
 Qed.
 
+(******************************************************************************)
+(*    Polynomial modulo : constant                                            *)
+(******************************************************************************)
+
 Definition modnp_const (n k v : nat) := (v %% n)%N :: nseq k.-1 0%N.
 
 Lemma size_modnp_const n k v : 0 < k -> size (modnp_const n k v) = k.
@@ -1267,6 +1283,10 @@ case: (leqP k i) => iLk.
 have i1Lk1 : i.-1 < k.-1 by rewrite -ltnS !prednK //; case: (i) iE.
 by rewrite coef_Poly (nth_map 0%N) ?size_nseq // nth_nseq i1Lk1 // inZp0.
 Qed.
+
+(******************************************************************************)
+(*    Polynomial modulo : X^n                                                 *)
+(******************************************************************************)
 
 Definition modnp_Xn (n k v : nat) := 
     nseq (v %% k) 0%N ++ (1%N :: nseq (k.-1 - (v %% k)) 0%N).
@@ -1310,6 +1330,10 @@ case: ltngtP => iLv; first by rewrite inZp0.
   by rewrite ltnNge -(subnn (v %% k)%N) ltn_sub2r.
 by rewrite iLv subnn.
 Qed.
+
+(******************************************************************************)
+(*    Polynomial modulo : multiplication by X                                 *)
+(******************************************************************************)
 
 Definition modnp_mulX (n k : nat) (v : list nat) :=  belast (last 0%N v) v.
   
@@ -1355,6 +1379,10 @@ Qed.
 
 Compute (modnp_mulX 4 10 (modnp_Xn 4 10 9)).
 
+(******************************************************************************)
+(*    Polynomial modulo : addition                                            *)
+(******************************************************************************)
+
 Fixpoint modnp_add (n k : nat) (v1 v2 : seq nat) :=
   if k is k1.+1 then 
     ((head 0%N v1 + head 0%N v2) %% n)%N :: 
@@ -1382,6 +1410,10 @@ Qed.
 
 Compute (modnp_add 4 10 (modnp_Xn 4 10 9) (modnp_Xn 4 10 1)).
 
+(******************************************************************************)
+(*    Polynomial modulo : multiplication by a constant                        *)
+(******************************************************************************)
+
 Fixpoint modnp_scale (n k a : nat) (v : seq nat) :=
   if k is k1.+1 then 
     ((a * head 0%N v) %% n)%N :: modnp_scale n k1 a (behead v)
@@ -1404,6 +1436,10 @@ case: v => [|x _] /=;
   by apply/val_eqP; rewrite /= Zp_cast // !muln0 !mod0n.
 by apply/val_eqP; rewrite /= Zp_cast // modn_mod modnMm.
 Qed.
+
+(******************************************************************************)
+(*    Polynomial modulo : multiplication                                      *)
+(******************************************************************************)
 
 Fixpoint modnp_mul (n k : nat) (v1 v2 : seq nat) :=
   if v2 is a :: v3 then
@@ -1442,6 +1478,10 @@ Qed.
 
 Compute (modnp_mul 4 10 (modnp_Xn 4 10 9) (modnp_Xn 4 10 1)).
 
+(******************************************************************************)
+(*    Polynomial modulo : exponentiation                                      *)
+(******************************************************************************)
+
 Import BinPos.
 
 Fixpoint modnp_pow (n k : nat) (p : positive) (v : seq nat) :=
@@ -1478,6 +1518,10 @@ Qed.
 
 Compute (modnp_pow 4 10 (Pos.of_nat 4) (modnp_Xn 4 10 1)).
 
+(******************************************************************************)
+(*    Polynomial modulo : equality test                                       *)
+(******************************************************************************)
+
 Fixpoint modnp_eq (n k : nat) (v1 v2 : seq nat) : bool :=
   if k is k1.+1 then 
     ((head O v1) == (head O v2) %[mod n]) && 
@@ -1508,6 +1552,10 @@ by (case: (v1); case: (v2)) => //= [_ l|_ l]; rewrite nth_nil.
 Qed.
 
 Compute modnp_eq 4 10 (modnp_Xn 4 10 1) (modnp_Xn 4 10 11).
+
+(******************************************************************************)
+(*    introspection check                                                     *)
+(******************************************************************************)
 
 Fixpoint poly_intro_range_aux n pn k c r := 
   if r is r1.+1 then
@@ -1638,6 +1686,10 @@ Proof.
 move=> k_gt1 n_gt1; rewrite /fpoly_intro_range.
 by apply: poly_intro_range_auxP.
 Qed.
+
+(******************************************************************************)
+(*    Aks algorithmm                                                          *)
+(******************************************************************************)
 
 Definition aks n := 
   let l := log2n n in
