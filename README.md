@@ -19,4 +19,4 @@ Some extra material for mathcomp
 
  [Nth root for natural number](./rootn.v)
 
- [The aks algorithm](./aks.v)
+ [The aks algorithm](./aks.v)  a transcription of Hing Lun Chan's proof
