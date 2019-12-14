@@ -1747,7 +1747,8 @@ case: leqP => // pLk.
 by have /nP/negP[] : 1 < p <= k by rewrite prime_gt1.
 Qed.
 
-Eval vm_compute in filter aks (iota 2 50).
+Compute filter aks (iota 2 50).
+Check aksP.
 
 End AKS.
 
