@@ -126,7 +126,7 @@ Qed.
 (* I've departed from Chan thesis as it is not easy 
    to build non-constructive sets in Coq. So I turn 
    them into properties. Trying to sort things out 
-   went doing the proof by contradiction 
+   when doing the proof by contradiction 
  *)
 
 (* This 𝒩 as a predicate *)
