@@ -10,6 +10,13 @@ Unset Printing Implicit Defensive.
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
+(******************************************************************************)
+(*                                                                            *)
+(*  This is a direct transcription of the correctness proof of the            *)
+(*  AKS algorithm as given for HOL4 by Hing Lun Chan in his PhD thesis        *) 
+(*                                                                            *)
+(******************************************************************************)
+
 Section AKS.
 Import Pdiv.CommonRing.
 Import Pdiv.RingMonic.
