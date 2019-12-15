@@ -7,6 +7,7 @@ fib.v
 lcm_lbound.v
 matroid.v
 rsa.v
+aks_algo.v
 aks.v
 divpoly.v
 more_thm.v
