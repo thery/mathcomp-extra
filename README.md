@@ -19,7 +19,7 @@ Some extra material for mathcomp
 
  [Nth root for natural number](./rootn.v)
 
- [The aks algorithm](./aks_proof.v)  the algorithm as in Hing Lun Chan's PhD thesis
+ [The aks algorithm](./aks_algo.v)  the algorithm as in Hing Lun Chan's PhD thesis
  
  [The aks correctness proof](./aks.v)  a transcription of Hing Lun Chan's proof
  
