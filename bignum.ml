@@ -8,6 +8,13 @@ type bit = B0 | B1
 
 type bnat = bit list
 
+(** smart constructor **)
+
+let bcons b l =
+  match b, n with
+  | BO, [] -> []
+  | _ ->  b :: l
+
 (** Conversion to (nonnegative) primitive integers *)
 
 let bit_to_nat b =
@@ -83,7 +90,7 @@ let even n =
   | _ -> false
 
 let mul2 n =
-  B0::n
+  bcons B0 n
 
 let div2 n =
   match n with
@@ -128,7 +135,7 @@ let rec pred n =
   match n with
   | [] -> [] (* negative goes to zero *)
   | B1::[] -> [] (* 1-1 is zero *)
-  | B1::n' -> B0::n'
+  | B1::n' -> bcons B0 n'
   | B0::n' -> B1::(pred n')
 
 let sub_bit b n =
@@ -146,7 +153,7 @@ let (^-) n1 n2 =
         let r = sub_bit b (sub_bit b2 (add_bit b1 two)) in
         let (b3,bneg') = two_bits_repr r in
         let b' = bit_flip bneg' in
-        b3 :: (aux n1' n2' b')
+        bcons b3 (aux n1' n2' b')
     in
   aux n1 n2 B0
 
@@ -169,6 +176,8 @@ let rec (^^) a n =
 (** Coprime *)
 
 let rec coprime n1 n2 =
+   if n1 = 0 then n1 else
+   if n2 = 0 then n1 else
    let c = cmp n1 n2 in
    if c = 0 then
       n1 ^= one
