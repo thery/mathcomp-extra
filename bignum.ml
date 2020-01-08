@@ -22,6 +22,29 @@ let bit_to_nat b =
   | B0 -> 0
   | B1 -> 1
 
+(** Comparisons *)
+
+let rec cmp n1 n2 = (* returns -1, 0 or 1, according to sign(n1-n2) *)
+  match n1, n2 with
+  | [], [] -> 0
+  | [], _ -> -1
+  | _, [] -> 1
+  | b1::n1', b2::n2' ->
+      let c = cmp n1' n2' in
+      if c <> 0 then c
+      else if b1 = b2 then 0
+      else if b1 = B0 then -1
+      else 1
+
+let (^=) n1 n2 =
+  cmp n1 n2 = 0
+
+let (^<=) n1 n2 =
+  cmp n1 n2 <= 0
+
+let (^<) n1 n2 =
+  cmp n1 n2 < 0
+
 let rec bnat_to_nat n =
   match n with
   | [] -> 0
@@ -46,29 +69,6 @@ let zero = []
 let one = [B1]
 
 let two = [B0;B1]
-
-(** Comparisons *)
-
-let rec cmp n1 n2 = (* returns -1, 0 or 1, according to sign(n1-n2) *)
-  match n1, n2 with
-  | [], [] -> 0
-  | [], _ -> -1
-  | _, [] -> 1
-  | b1::n1', b2::n2' ->
-      let c = cmp n1' n2' in
-      if c <> 0 then c
-      else if b1 = b2 then 0
-      else if b1 = B0 then -1
-      else 1
-
-let (^=) n1 n2 =
-  cmp n1 n2 = 0
-
-let (^<=) n1 n2 =
-  cmp n1 n2 <= 0
-
-let (^<) n1 n2 =
-  cmp n1 n2 < 0
 
 (** Derived comparisons *)
 
@@ -176,8 +176,8 @@ let rec (^^) a n =
 (** Coprime *)
 
 let rec coprime n1 n2 =
-   if n1 = 0 then n1 else
-   if n2 = 0 then n1 else
+   if n1 ^= zero then n2 ^= one else
+   if n2 ^= zero then n1 ^= one else
    let c = cmp n1 n2 in
    if c = 0 then
       n1 ^= one
