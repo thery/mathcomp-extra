@@ -11,7 +11,7 @@ type bnat = bit list
 (** smart constructor **)
 
 let bcons b l =
-  match b, n with
+  match b, l with
   | BO, [] -> []
   | _ ->  b :: l
 
