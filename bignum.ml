@@ -70,7 +70,8 @@ let one = [B1]
 let two = [B0;B1]
 
 (** Comparison algorithm,
-    returns -1, 0 or 1, according to sign(n1-n2)  *)
+    returns -1, 0 or 1, according to sign(n1-n2).
+    Complexity: O(min(log n1, log n2)) *)
 
 let rec cmp n1 n2 =
   match n1, n2 with
@@ -110,12 +111,14 @@ let (^>) n1 n2 =
 (*****************************************************************************)
 (** * Addition and subtraction *)
 
-(** Multiplication by 2 *)
+(** Multiplication by 2
+    Complexity: O(1) *)
 
 let mul2 n =
   bcons B0 n
 
-(** Successor *)
+(** Successor
+    Complexity: O(log n) *)
 
 let rec succ n = (* returns n+1 *)
   match n with
@@ -130,7 +133,8 @@ let add_bit b n = (* returns n+b *)
     then n
     else succ n
 
-(** Addition *)
+(** Addition
+    Complexity: O(max(log n1, log n2)) *)
 
 let (^+) n1 n2 =
   let rec aux n1 n2 b = (* b is the carry bit *)
@@ -160,7 +164,8 @@ let sub_bit b n = (* returns n-b *)
     then n
     else pred n
 
-(* Subtraction *)
+(* Subtraction
+   Complexity: O(log n1) *)
 
 let (^-) n1 n2 = (* requires n1 >= n2 *)
   let rec aux n1 n2 b = (* b is the carry bit *)
@@ -181,7 +186,8 @@ let (^-) n1 n2 = (* requires n1 >= n2 *)
 (*****************************************************************************)
 (** * Multiplication and exponentiation *)
 
-(** Multiplication (naive) *)
+(** Multiplication (naive)
+    Complexity: O(log n1 * log n2) *)
 
 let rec (^*) n1 n2 =
   match n1 with
@@ -190,18 +196,20 @@ let rec (^*) n1 n2 =
      let r = mul2 (n1' ^* n2) in
      if b = B0 then r else r ^+ n2
 
-(** Power (naive) *)
+(** Power (naive)
+    Complexity: O(log n1 * log n2)  (?) *)
 
-let rec (^^) a n =
-  if n ^= zero
+let rec (^^) n1 n2 =
+  if n2 ^= zero
     then one
-    else a ^* a ^^ (n ^- one)
+    else n1 ^* n1 ^^ (n2 ^- one)
 
 
 (*****************************************************************************)
 (** * Division, modulo and co-primality *)
 
-(** Even test *)
+(** Even test
+    Complexity O(1) *)
 
 let even n =
   match n with
@@ -209,14 +217,16 @@ let even n =
   | B0::n' -> true
   | _ -> false
 
-(** Division by 2 *)
+(** Division by 2
+    Complexity O(1) *)
 
 let div2 n =
   match n with
   | [] -> []
   | b::n' -> n'
 
-(** Modulo *)
+(** Modulo
+    Complexity O(log n1 * log n2) *)
 
 let rec (^%) n1 n2 = (* requires n2 > 0 *)
   match n1 with
@@ -225,7 +235,8 @@ let rec (^%) n1 n2 = (* requires n2 > 0 *)
      let r = add_bit b (mul2 (n1' ^% n2)) in
      if n2 ^<= r then r ^- n2 else r
 
-(** Coprime *)
+(** Coprime
+    Complexity O(log n1 + log n2)^2) *)
 
 let rec coprime n1 n2 =
    let c = cmp n1 n2 in
