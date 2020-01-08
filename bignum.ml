@@ -12,7 +12,7 @@ type bnat = bit list
 
 let bcons b l =
   match b, l with
-  | BO, [] -> []
+  | B0, [] -> []
   | _ ->  b :: l
 
 (** Conversion to (nonnegative) primitive integers *)
