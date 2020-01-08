@@ -193,7 +193,11 @@ let rec coprime n1 n2 =
    else
       coprime n1 (n2 ^- n1)
 
-(** Modulo *)
+(** Modulo WARNING we assume n2 > 0*)
 
-let (^%) n1 n2 =
-  assert false (* TODO *)
+let rec (^%) n1 n2 =
+  match n1 with
+  | [] -> zero
+  | b::n1' ->
+     let r = add_bit b (mul2 (n1' ^% n2)) in
+     if n2 ^<= r then r ^- n2 else r
