@@ -251,7 +251,7 @@ let rec coprime n1 n2 =
         if even n then div2 n else n in
       if even n1 || even n2
         then coprime (simpl n1) (simpl n2)
-        else coprime (n1 ^- n2) n2
+        else coprime (div2 (n1 ^- n2)) n2
 
 
 (* alternative 1:
