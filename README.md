@@ -17,6 +17,8 @@ Some extra material for mathcomp
 
  [Polynomials modulo](./divpoly.v)
 
+ [Binary gcd](./bgcdn.v)
+
  [Nth root for natural number](./rootn.v)
 
  [The aks algorithm](./aks_algo.v)  the algorithm as in Hing Lun Chan's PhD thesis

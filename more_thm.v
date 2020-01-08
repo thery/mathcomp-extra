@@ -767,4 +767,3 @@ Qed.
 
 Lemma is_power_id p : prime p -> is_power p p.
 Proof. by move=> pP; rewrite -{1}(expn1 p) is_power_exp. Qed.
-
