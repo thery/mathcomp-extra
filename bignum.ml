@@ -143,6 +143,7 @@ let sub_bit b n =
     then n
     else pred n
 
+(* substraction WARNING only valid if n1 >= n2 *)
 let (^-) n1 n2 =
   let rec aux n1 n2 b = (* b is the carry bit *)
     match n1, n2 with
