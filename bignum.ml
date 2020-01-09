@@ -197,7 +197,7 @@ let rec (^*) n1 n2 =
      if b = B0 then r else r ^+ n2
 
 (** Power (naive)
-    Complexity: O(log n1 * log n2)  (?) *)
+    Complexity: O(log n1 * n2 ^ 2)  (?) *)
 
 let rec (^^) n1 n2 =
   if n2 ^= zero
