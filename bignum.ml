@@ -225,6 +225,13 @@ let div2 n =
   | [] -> []
   | b::n' -> n'
 
+(* Shiftr O (n2) *)
+
+let shiftr n1 n2 =
+  if n2 ^= zero
+    then n1
+    else shiftr (div2 n1) (pred n2)
+
 (** Modulo
     Complexity O(log n1 * log n2) *)
 
