@@ -107,7 +107,9 @@ let order_mod m n =
     then aux m n 1 1 m
     else 0
 
-(* totient function : number of elements smaller than n that are coprime with n 
+(* totient function : number of elements smaller than n that are coprime with n
+   if this function is hard to prove we can avoid while being still polynomial
+   see  fpoly_intro_range
 *)
 let totient n =
   let rec aux acc d =
@@ -303,6 +305,7 @@ let fpoly_intro_range n k l =
       && aux n k (c + 1) (r - 1)
       in
   aux n k 1 (sqrt (totient k) * l)
+  (* we can avoid using totient by replacing sqrt (totient k) * l with k *)
 
 (* Main algo *)
 
