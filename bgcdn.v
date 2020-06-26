@@ -41,7 +41,7 @@ have [Om|Em] := boolP (odd _); have [On|En] := boolP (odd _);
      rewrite ?add0n ?add1n => //= mE nE.
 - rewrite /maxn /minn; case: leqP => [nLm|mLn].
     have mDnE :  m.+2 - n.+2 = (m.+2 - n.+2)./2.*2.
-      by rewrite -{1}(odd_double_half (_ - _)) odd_sub //= Om On.
+      by rewrite -{1}(odd_double_half (_ - _)) oddB //= Om On.
     rewrite IH //.
       rewrite  -{2}[m.+2](subnK nLm) [RHS]gcdnC [RHS]gcdnDr [RHS]gcdnC.
       rewrite {2}mDnE -muln2 [LHS]gcdnC [RHS]gcdnC Gauss_gcdl //.
@@ -50,7 +50,7 @@ have [Om|Em] := boolP (odd _); have [On|En] := boolP (odd _);
     by rewrite (leq_trans _ (_ : m.+2 < _)) // ltnS leq_subr.
   have m1Ln : m.+1 < n.+2 by apply: leq_trans mLn.
   have nDmE :  n.+2 - m.+2 = (n.+2 - m.+2)./2.*2.
-    by rewrite -{1}(odd_double_half (_ - _)) odd_sub //= Om On.
+    by rewrite -{1}(odd_double_half (_ - _)) oddB //= Om On.
   rewrite [(_ + _)%Nrec]addnC addSnnS IH //; last first.
   - rewrite -ltn_double -nDmE -mul2n -expnS (leq_trans _ Hn) //.
     by rewrite (leq_trans _ (_ : n.+2 < _)) // ltnS leq_subr.

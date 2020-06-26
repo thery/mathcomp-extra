@@ -162,7 +162,7 @@ Lemma fib_sub : forall m n, n <= m ->
 Proof.
 elim=> [|m IH]; first by case=> /=.
 case=> [|n Hn]; first by rewrite muln0 muln1 !subn0.
-by rewrite -[in odd _]add1n odd_add (addTb (odd n)) subSS IH //; case: odd;
+by rewrite -[in odd _]add1n oddD (addTb (odd n)) subSS IH //; case: odd;
    rewrite !fibSS !mulnDr !mulnDl !subnDA !addKn.
 Qed.
 
@@ -256,7 +256,7 @@ Lemma fib_square: forall n, (fib n)^2 = if odd n then (fib n.+1 * fib n.-1).+1
                                         else (fib n.+1 * fib n.-1).-1.
 Proof.
 case=> [|n] //; move: (fib_sub (n.+1) n (leqnSn _)).
-rewrite subSn // subnn fib1 -[in odd _.+1]add1n odd_add addTb.
+rewrite subSn // subnn fib1 -[in odd _.+1]add1n oddD addTb.
 case: odd=> H1; last first.
   by rewrite -[(_ * _).+1]addn1 [in _ + _]H1 addnC subnK //
              ltnW // -subn_gt0 -H1.

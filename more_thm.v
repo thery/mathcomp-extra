@@ -705,7 +705,7 @@ move=> /andP[m_gt0 mLn] /eqP mM HmM.
 rewrite -ltnS in mLn.
 rewrite /poly_order; case: pickP => [z zM|/(_ (Ordinal mLn))]; last first.
   by rewrite prednK //= (eqP mM) eqxx.
-case: arg_minP => //.
+case: arg_minnP => //.
 move=> i /eqP /HmM /= Hj /(_ (Ordinal mLn)).
 rewrite prednK //= => /(_ mM) iLm.
 apply/eqP; rewrite eqn_leq Hj // andbT.
@@ -715,13 +715,13 @@ Qed.
 Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
   0 < n -> poly_order h p n <= n.
 Proof.
-by rewrite /poly_order; case: pickP => // x Hx; case: arg_minP => // [] [[|m]].
+by rewrite /poly_order; case: pickP => // x Hx; case: arg_minnP => // [] [[|m]].
 Qed.
 
 Lemma poly_order_gt0_rmodp (R : ringType) (h p : {poly R}) n :
   0 < poly_order h p n ->  rmodp (p^+ poly_order h p n) h == 1.
 Proof.
-by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minP.
+by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minnP.
 Qed.
 
 Lemma poly_order_eq0_rmodp (R : ringType) (h p : {poly R}) m n :
@@ -735,7 +735,7 @@ Lemma poly_order_lt (R : ringType) (h p : {poly R}) m n :
    0 < m < poly_order h p n -> rmodp (p^+ m) h != 1.
 Proof.
 rewrite /poly_order; case: pickP=> [x Hx|]; last by rewrite ltn0 andbF.
-case: arg_minP => // i Hi Hmin /andP[m_gt0 mLi].
+case: arg_minnP => // i Hi Hmin /andP[m_gt0 mLi].
 have mLn : m < n.+1.
   by rewrite (leq_trans mLi) // (leq_trans _ (ltn_ord i)) //; case: (i : nat).
 apply/negP; rewrite -[m]prednK // => /(Hmin (Ordinal mLn)) /=.
