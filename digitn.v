@@ -67,13 +67,12 @@ Section ExtraLemma.
 Variable R : ringType.
 
 Lemma expr_sum (I : Type) (s : seq I) (P : pred I) (F : I -> nat) x : 
-  x ^+ (\sum_(i <- s | P i) F i) = 
-  \prod_(i <- s | P i) x ^+ F i :> R.
+  x ^+ (\sum_(i <- s | P i) F i) = \prod_(i <- s | P i) x ^+ F i :> R.
 Proof. by apply: (big_morph _ (exprD _)). Qed.
 
 Lemma prodMrn  (I : Type) (s : seq I) (P : pred I) 
                (f : I -> R) (g : I -> nat) : 
-  \prod_(i <- s | P i) (f i *+ g i) = 
+  \prod_(i <- s | P i) (f i *+ g i) =
   \prod_(i <- s | P i) (f i) *+ \prod_(i <- s | P i) g i.
 Proof.
 elim/big_rec3: _ => // i y1 y2 y3 _ ->.
@@ -159,4 +158,3 @@ by rewrite (digitn_uniq _ _ nEs) // ffunE.
 Qed.
 
 End Lucas.
-
