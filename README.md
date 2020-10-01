@@ -25,3 +25,4 @@ Some extra material for mathcomp
  
  [The aks correctness proof](./aks.v)  a transcription of Hing Lun Chan's proof
  
+ [The proof of Lucas theorem for binomial] (./digitn.v) ()
