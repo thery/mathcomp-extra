@@ -70,7 +70,7 @@ Lemma expr_sum (I : Type) (s : seq I) (P : pred I) (F : I -> nat) x :
   x ^+ (\sum_(i <- s | P i) F i) = \prod_(i <- s | P i) x ^+ F i :> R.
 Proof. by apply: (big_morph _ (exprD _)). Qed.
 
-Lemma prodrM2n  (I : Type) (s : seq I) (P : pred I) 
+Lemma prodr_natmul  (I : Type) (s : seq I) (P : pred I) 
                (f : I -> R) (g : I -> nat) : 
   \prod_(i <- s | P i) (f i *+ g i) =
   \prod_(i <- s | P i) (f i) *+ \prod_(i <- s | P i) g i.
@@ -78,10 +78,6 @@ Proof.
 elim/big_rec3: _ => // i y1 y2 y3 _ ->.
 by rewrite !(mulrnAl, mulrnAr, mulrnA) -mulrnA mulnC mulrnA.
 Qed.
-
-Lemma prodrMn n (I : finType) (A : pred I) (F : I -> R) :
-  \prod_(i in A) (F i *+ n) = \prod_(i in A) F i *+ n ^ #|A|.
-Proof. by rewrite prodrM2n // prod_nat_const. Qed.
 
 Variable p : nat.
 Hypothesis Pp : prime p.
@@ -143,7 +139,7 @@ have H i :
 under eq_bigr do rewrite {}H.
 rewrite bigA_distr_bigA /= coef_sum.
 under eq_bigr do under eq_bigr do rewrite -exprM mulnC.
-under eq_bigr do rewrite prodrM2n -expr_sum coefMn coefXn.
+under eq_bigr do rewrite prodr_natmul -expr_sum coefMn coefXn.
 pose f := [ffun i : 'I_k =>  Ordinal (ltn_pdigit n i (prime_gt0 Pp))].
 rewrite (bigD1 f) //= [X in (_ %% X)%N]Fp_cast //= .
 rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [| i iDf].
