@@ -111,13 +111,13 @@ have pCF : [char {poly F}].-nat p.
   rewrite primes_prime //= inE => /eqP->.
   rewrite inE pP -poly_natmul polyC_eq0 /=.
   by case/andP : pC.
-rewrite -subr_eq0 -modp_opp -modp_add -[_ == 0]/(_ %| _).
+rewrite -subr_eq0 -modpN -modpD -[_ == 0]/(_ %| _).
 rewrite -(separable_exp _ (separable_polyXnsub1 _) (prime_gt0 pP)) //.
 rewrite exprDn_char // exprNn_char // -exprM divnK //.
 rewrite comp_polyD comp_polyC [_ ^+ p]exprDn_char //.
 rewrite comp_poly_exp comp_polyXn -exprM divnK //.
 rewrite -polyC_exp fin_little_fermat //.
-rewrite /dvdp modp_add modp_opp subr_eq0 //.
+rewrite /dvdp modpD modpN subr_eq0 //.
 move: nIkX.
 rewrite /introspective -!Pdiv.IdomainMonic.modpE ?monic_Xn_sub_1 //.
 by rewrite comp_polyD comp_polyC comp_polyX.
@@ -142,7 +142,7 @@ Qed.
 Lemma is_iexp_mul (R : comRingType) k s m1 m2 : 
   is_iexp R k s m1 -> is_iexp R k s m2 -> is_iexp R k s (m1 * m2).
 Proof.
-move=> [m1Ck Hm1] [m2Ck Hm2]; split; first by rewrite coprime_mull m1Ck.
+move=> [m1Ck Hm1] [m2Ck Hm2]; split; first by rewrite coprimeMl m1Ck.
 by move=> c Hc; apply: introspecMl; [apply: Hm1 | apply: Hm2].
 Qed.
 
@@ -163,7 +163,7 @@ Lemma is_iexp_fin_div (F : finFieldType) k s n p :
   is_iexp F k s n -> is_iexp F k s (n %/ p).
 Proof. 
 move=> pC pCk pDn[nCk nI]; split => [|c cB].
-  by have := nCk; rewrite -{1}(divnK pDn) coprime_mull => /andP[].
+  by have := nCk; rewrite -{1}(divnK pDn) coprimeMl => /andP[].
 apply: introspec_fin_div => //; first by rewrite coprime_sym.
 by apply: nI.
 Qed.
@@ -335,7 +335,7 @@ case: HM nIM => // m nE mI _.
 have xkM := monic_Xn_sub_1 R k_gt0.
 have F : rmodp 'X^n ('X^k - 1) = rmodp 'X^m ('X^k - 1) :> {poly R}.
   have F1 : rmodp 'X^k ('X^k - 1) = 1 :> {poly R}.
-    rewrite -{1}['X^k](subrK (1 : {poly R})) addrC rmodp_add // rmodpp //.
+    rewrite -{1}['X^k](subrK (1 : {poly R})) addrC rmodpD // rmodpp //.
     by rewrite addr0 rmodp_small // size_polyC oner_eq0 /= size_Xn_sub_1.
     rewrite (divn_eq m k) exprD mulnC exprM.
     rewrite mulrC -rmodp_mulmr // -[in RHS]rmodp_exp // F1 expr1n.
@@ -659,7 +659,7 @@ apply: rmodn_trans hDxk1 _; rewrite ?hMI -/z // rmod0p.
 rewrite comp_polyB !comp_polyXn rmodp_sub //.
 apply/eqP; rewrite subr_eq0; apply/eqP.
 have F0 : rmodp 'X^k z = 1.
-  rewrite -['X^k](subrK 1) rmodp_add // rmodpp // add0r rmodp_small //.
+  rewrite -['X^k](subrK 1) rmodpD // rmodpp // add0r rmodp_small //.
   by rewrite size_polyC size_Xn_sub_1 ?oner_eq0.
 have F1 : rmodp 'X^n z = rmodp 'X^m z.
   rewrite (divn_eq n k) (divn_eq m k) !exprD mMn.
@@ -1300,7 +1300,7 @@ Lemma rmodp_Xn_sub1 (R : comRingType) k n :
 Proof.
 move=> k_gt0; elim: n => [|n IH]; first by rewrite muln0 subrr rmod0p.
 rewrite mulnS exprD -{1}['X^k](subrK 1) mulrDl mul1r.
-rewrite -addrA rmodp_add ?monic_Xn_sub_1 // IH addr0.
+rewrite -addrA rmodpD ?monic_Xn_sub_1 // IH addr0.
 by rewrite mulrC rmodp_mull ?monic_Xn_sub_1.
 Qed.
 
@@ -1311,7 +1311,7 @@ move=> k_gt0 n_gt1.
 have XnM:= monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
 rewrite [in 'X^ _](divn_eq v k) exprD mulnC.
 rewrite -{1}['X^(_ * _)](subrK 1) mulrDl.
-rewrite rmodp_add // mul1r -rmodp_mulml // rmodp_Xn_sub1 //.
+rewrite rmodpD // mul1r -rmodp_mulml // rmodp_Xn_sub1 //.
 rewrite mul0r rmod0p add0r rmodp_small; last first.
   by rewrite size_polyXn size_Xn_sub_1 // ltnS ltn_mod.
 apply/polyP => i.
@@ -1360,7 +1360,7 @@ rewrite mulr_sumr rmodp_sum  //= -[k]prednK // big_ord_recl big_ord_recr addrC.
 congr (_ + _); last first.
   rewrite expr0 alg_polyC -scalerAr -exprS rmodp_scale ?prednK //.
   rewrite [in 'X^_]prednK // [in modnp_mulX _ _]prednK //.
-  rewrite -{1}['X^k](subrK 1) // rmodp_add // rmodpp // add0r.
+  rewrite -{1}['X^k](subrK 1) // rmodpD // rmodpp // add0r.
   rewrite rmodp_small; last by rewrite size_poly1 size_Xn_sub_1.
   rewrite alg_polyC; congr (_%:P).
   apply/val_eqP; rewrite /= Zp_cast // /modnp_mulX.
@@ -1463,7 +1463,7 @@ elim: {sv2E}v2 => /= [|a v4 IH sv4E].
   by rewrite poly_modnp_const // PolyZ_nil mulr0 rmod0p Zp_nat inZp0.
 rewrite poly_modnp_add // poly_modnp_scale //.
 rewrite poly_modnp_mulX ?size_modnp_mul // IH; last by apply: ltnW.
-rewrite PolyZ_cons // mulrDr rmodp_add // rmodp_mulmr // mulrCA.
+rewrite PolyZ_cons // mulrDr rmodpD // rmodp_mulmr // mulrCA.
 congr (_ + _).
 rewrite -mulr_algr -Zp_nat scaler_nat.
 rewrite rmodp_small // size_Xn_sub_1 //.
@@ -1649,7 +1649,7 @@ case: eqP  => mE; last first.
     rewrite pnatE // char_poly /= inE nP /=.
     apply/eqP/val_eqP=> /=.
     by rewrite val_Zp_nat // modnn.
-  rewrite rmodp_add //; congr (_ + _).
+  rewrite rmodpD //; congr (_ + _).
   rewrite rmodp_small //; last first.
     apply: leq_ltn_trans (size_exp_leq _ _) _.
     rewrite size_polyC size_Xn_sub_1 //.
@@ -1665,7 +1665,7 @@ case: eqP  => mE; last first.
 rewrite -pnE.
 case: poly_intro_range_aux (IH c.+1) => // H c1.
 rewrite addnS ltnS [c <= _]leq_eqVlt => /andP[/orP[/eqP<-//|cLc1] c1Lcr].
-  rewrite rmodp_add ?monic_Xn_sub_1 //.
+  rewrite rmodpD ?monic_Xn_sub_1 //.
   rewrite [X in _ = _ + X]rmodp_small // size_Xn_sub_1 // size_polyC.
   by case: eqP.
 by apply: H; rewrite cLc1.

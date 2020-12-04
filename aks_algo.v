@@ -33,7 +33,7 @@ Fixpoint seq_pol_mul (s1 s2 : seq nat) :=
      seq_pol_add [seq a * i | i <- s2] (seq_pol_mul s3 (0 :: s2))
   else [::].
 
-Fixpoint seq_pol_exp (s : seq nat) n := iter n (seq_pol_mul s) [:: 1].
+Definition seq_pol_exp (s : seq nat) n := iter n (seq_pol_mul s) [:: 1].
 
 Definition seq_2Xp1_exp_n (n : nat) := seq_pol_exp [:: 1; 2] n.
 

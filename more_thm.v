@@ -298,7 +298,7 @@ have n_gt0 : 0 < n by case: n nC => //; rewrite eqxx.
 rewrite /separable_poly !derivE subr0.
 suff ->: 'X^n - 1 = (n%:R^-1 *: 'X) * ('X^n.-1 *+ n) + (-1) :> {poly R}.
   rewrite coprimep_sym coprimep_addl_mul.
-  by rewrite -scaleN1r coprimep_scaler ?coprimep1 // oppr_eq0 oner_eq0.
+  by rewrite -scaleN1r coprimepZr ?coprimep1 // oppr_eq0 oner_eq0.
 rewrite -scaler_nat scalerCA scalerA mulVf //.
 by rewrite scale1r -exprS prednK.
 Qed.
@@ -326,7 +326,7 @@ Qed.
 
 Lemma rmodp_sub (d p q : {poly R}) : 
   d \is monic -> rmodp (p - q) d = (rmodp p d - rmodp q d)%R.
-Proof. by move=> dM; rewrite rmodp_add // rmodp_opp. Qed.
+Proof. by move=> dM; rewrite rmodpD // rmodp_opp. Qed.
 
 Lemma rmodp_scale (d : {poly R}) a p :
   d \is monic -> rmodp (a *: p) d = a *: (rmodp p d).
@@ -345,7 +345,7 @@ Lemma rmodp_sum (I : Type) (r : seq I) (P : pred I) (F : I -> {poly R}) d :
    rmodp (\sum_(i <- r | P i) F i) d = (\sum_(i <- r | P i) (rmodp (F i) d)).
 Proof.
 move=> dM.
-by elim/big_rec2: _ => [|i p q _ <-]; rewrite ?(rmod0p, rmodp_add).
+by elim/big_rec2: _ => [|i p q _ <-]; rewrite ?(rmod0p, rmodpD).
 Qed.
 
 Lemma coef_comp_poly (p q : {poly R}) n :
@@ -377,10 +377,10 @@ Proof.
 move=> dM.
 elim/poly_ind: p => [|p c IH].
   by rewrite !comp_polyC !rmod0p.
-rewrite !comp_polyD !comp_polyM addrC rmodp_add //.
+rewrite !comp_polyD !comp_polyM addrC rmodpD //.
  rewrite mulrC -rmodp_mulmr // IH rmodp_mulmr //.
  rewrite !comp_polyX !comp_polyC.
-by rewrite mulrC rmodp_mulmr // -rmodp_add // addrC.
+by rewrite mulrC rmodp_mulmr // -rmodpD // addrC.
 Qed.
 
 End CRmodp.
@@ -391,7 +391,7 @@ Section natmul.
 Variable R : ringType.
 
 Lemma poly_natmul p : p%:R%:P = p%:R :> {poly R}.
-Proof. by elim: p => //= p IH; rewrite !mulrS -IH polyC_add. Qed.
+Proof. by elim: p => //= p IH; rewrite !mulrS -IH polyCD. Qed.
 
 End natmul.
 

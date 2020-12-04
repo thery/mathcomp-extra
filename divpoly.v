@@ -108,13 +108,13 @@ Proof.
 have hQM := monic_divpoly_quotient.
 move=> p; apply/val_eqP.
 rewrite /divpoly_add /divpoly_opp /inDivPoly /=.
-by rewrite !(rmodp_sub, rmodp_add, rmodp_mod, rmodpp) // subrK.
+by rewrite !(rmodp_sub, rmodpD, rmodp_mod, rmodpp) // subrK.
 Qed.
 
 Lemma divpoly_addA : associative divpoly_add.
 Proof.
 have hQM := monic_divpoly_quotient.
-by move=> p q r; apply/val_eqP; rewrite /= !(rmodp_add, rmodp_mod) // addrA.
+by move=> p q r; apply/val_eqP; rewrite /= !(rmodpD, rmodp_mod) // addrA.
 Qed.
 
 Lemma divpoly_addC : commutative divpoly_add.
@@ -242,7 +242,7 @@ Lemma divpoly_mul_addr :
 Proof.
 have rPM := monic_divpoly_quotient.
 move=> p q r; apply: val_inj.
-by rewrite /= !(rmodp_mulmr, rmodp_add, rmodp_mod, mulrDr).
+by rewrite /= !(rmodp_mulmr, rmodpD, rmodp_mod, mulrDr).
 Qed.
 
 Lemma divpoly_mul_addl :
@@ -321,7 +321,7 @@ Qed.
 Lemma divpoly_constM : {morph (divpoly_const h) : a b / a * b >-> a * b}%R.
 Proof.
 move=> a b; apply/val_eqP/eqP=> /=.
-by rewrite -polyC_mul rmodp_small // PolDiv_const_proof.
+by rewrite -polyCM rmodp_small // PolDiv_const_proof.
 Qed.
 
 Lemma divpoly_const_is_rmorphism : rmorphism (divpoly_const h).
@@ -339,7 +339,7 @@ Fact divpoly_scaleA a b p :
   divpoly_scale a (divpoly_scale b p) = divpoly_scale (a * b) p.
 Proof. 
 have hQM := monic_divpoly_quotient.
-by apply/val_eqP; rewrite /= rmodp_mulmr // mulrA polyC_mul.
+by apply/val_eqP; rewrite /= rmodp_mulmr // mulrA polyCM.
 Qed.
 
 Fact divpoly_scale1l : left_id 1%R divpoly_scale.
@@ -352,7 +352,7 @@ Fact divpoly_scaleDr a : {morph divpoly_scale a : p q / (p + q)%R}.
 Proof.
 have hQM := monic_divpoly_quotient.
 move=> p q; apply/val_eqP; 
-rewrite /= -rmodp_add // rmodp_mulmr // -mulrDr.
+rewrite /= -rmodpD // rmodp_mulmr // -mulrDr.
 rewrite [rmodp (rmodp _ _) _]rmodp_small //.
 by apply: inDivPoly_mod.
 Qed.
@@ -361,7 +361,7 @@ Fact divpoly_scaleDl p : {morph divpoly_scale^~ p : a b / a + b}%R.
 Proof.
 have hQM := monic_divpoly_quotient.
 move=> a b; apply/val_eqP.
-rewrite /= -rmodp_add // -mulrDl -polyC_add [rmodp (rmodp _ _) _]rmodp_small //.
+rewrite /= -rmodpD // -mulrDl -polyCD [rmodp (rmodp _ _) _]rmodp_small //.
 by apply: inDivPoly_mod.
 Qed.
 
@@ -458,10 +458,10 @@ have F : (egcdp hQ p).1 * hQ + (egcdp hQ p).2 * p %= 1.
 rewrite rmodp_mulml // -mulrA -rmodp_mulmr // rmodp_mulml //.
 rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
 have := eqp_modpl hQ F.
-rewrite modp_add // modp_mull add0r // .
+rewrite modpD // modp_mull add0r // .
 rewrite [(1 %% _)%R]modp_small => // [egcdE|]; last first.
   by rewrite size_polyC oner_eq0 size_divpoly_quotient_gt1.
-rewrite {2}(eqpfP egcdE) lead_coefC divr1 alg_polyC -polyC_mul mulVf //.
+rewrite {2}(eqpfP egcdE) lead_coefC divr1 alg_polyC -polyCM mulVf //.
   by rewrite modp_small // size_polyC  oner_eq0 size_divpoly_quotient_gt1.
 rewrite lead_coef_eq0.
 apply/eqP => egcdZ.
@@ -477,7 +477,7 @@ Proof.
 have hQM := monic_divpoly_quotient h.
 case; rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE // => qp1.
 have:= coprimep1 hQ.
-rewrite -coprimep_modr -[1%R]qp1 !coprimep_modr coprimep_mulr; by case/andP.
+rewrite -coprimep_modr -[1%R]qp1 !coprimep_modr coprimepMr; by case/andP.
 Qed.
 
 Lemma divpoly_inv_out (p : {divpoly h}) : ~~ coprimep hQ p -> divpoly_inv p = p.
@@ -575,10 +575,10 @@ rewrite [X in _ = X](@bigID {poly A} 0%R _ _
 rewrite [X in _ = (_ + X)%R]big1 ?addr0 => [|i Li].
   apply: eq_bigr => i Li.
   rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
-  rewrite mul_polyC !modp_scalel // modp_mod modp_small //.
+  rewrite mul_polyC !modpZl // modp_mod modp_small //.
   by rewrite size_polyXn -[X in (_ < X)%N](prednK F0) ltnS.
 rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
-rewrite mul_polyC !modp_scalel modp_mod modp_small //.
+rewrite mul_polyC !modpZl modp_mod modp_small //.
   by rewrite -[poly_of_divpoly p]coefK coef_poly (negPf Li) scale0r.
 by rewrite size_polyXn -[X in (_ < X)%N](prednK F0) ltnS.
 Qed.
@@ -591,7 +591,7 @@ have Lf : linear f.
   move=> a /= p1 p2; apply/rowP=> i.
   rewrite /f /= !mxE.
   rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
-  rewrite   modp_add mul_polyC !modp_scalel modp_mod.
+  rewrite   modpD mul_polyC !modpZl modp_mod.
   by rewrite !modp_small ?size_divpoly // coefD coefZ.
 exists f => //.
 pose g (r : 'rV_(size hQ).-1) : {divpoly h} := 
@@ -603,13 +603,13 @@ apply/rowP => k.
   rewrite !mxE /=  poly_of_divpoly_sum  coef_sum /=.
   rewrite (bigD1 k) //= big1 => [|k1 k1Dk]; last first.
   rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
-  rewrite mul_polyC !modp_scalel modp_mod modp_small.
+  rewrite mul_polyC !modpZl modp_mod modp_small.
     rewrite coefZ coefXn.
     move/eqP/val_eqP : k1Dk; rewrite /= eq_sym => /negPf->.
     by rewrite mulr0.
   by rewrite size_polyXn -{2}(prednK F0) ltnS.
 rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
-rewrite addr0 mul_polyC !modp_scalel modp_mod modp_small.
+rewrite addr0 mul_polyC !modpZl modp_mod modp_small.
   by rewrite coefZ coefXn eqxx mulr1.
 by rewrite size_polyXn /=  -{2}(prednK F0) ltnS.
 Qed.

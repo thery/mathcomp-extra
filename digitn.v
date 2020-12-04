@@ -64,21 +64,6 @@ Local Open Scope ring_scope.
 
 Section ExtraLemma.
 
-Variable R : ringType.
-
-Lemma expr_sum (I : Type) (s : seq I) (P : pred I) (F : I -> nat) x : 
-  x ^+ (\sum_(i <- s | P i) F i) = \prod_(i <- s | P i) x ^+ F i :> R.
-Proof. by apply: (big_morph _ (exprD _)). Qed.
-
-Lemma prodr_natmul  (I : Type) (s : seq I) (P : pred I) 
-               (f : I -> R) (g : I -> nat) : 
-  \prod_(i <- s | P i) (f i *+ g i) =
-  \prod_(i <- s | P i) (f i) *+ \prod_(i <- s | P i) g i.
-Proof.
-elim/big_rec3: _ => // i y1 y2 y3 _ ->.
-by rewrite !(mulrnAl, mulrnAr, mulrnA) -mulrnA mulnC mulrnA.
-Qed.
-
 Variable p : nat.
 Hypothesis Pp : prime p.
 
@@ -91,7 +76,7 @@ rewrite subnn binn mul1r mulr1n big1 ?add0r // => i _.
 have /dvdnP[k ->] : (p %| 'C(p, (0 <= i) + i))%N.
    apply: prime_dvd_bin Pp _ => //.
    by rewrite add1n andTb -[X in (_ < X)%N](prednK (prime_gt0 Pp)) ltnS.
-by rewrite mulrnA -mulr_natr -polyC1 -polyC_muln char_Fp_0 // polyC0 !mulr0.
+by rewrite mulrnA -mulr_natr -polyC1 -polyCMn char_Fp_0 // polyC0 !mulr0.
 Qed.
 
 Lemma Fp_exprnDn n (p1 p2 : {poly 'F_p}) :
