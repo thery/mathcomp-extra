@@ -416,3 +416,5 @@ move=> /IH-> //.
 move=> b4 b4I.
 by apply: H; rewrite in_cons b4I orbT.
 Qed.  
+
+End Board.
