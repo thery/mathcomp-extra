@@ -168,6 +168,12 @@ Proof. by case: x; case: y; case: z. Qed.
 Lemma sltNge x y : x < y -> ~ (y <= x).
 Proof. by move/negP. Qed.
 
+Lemma sge_winE a : win <= a -> a = win.
+Proof. by case: a. Qed.
+ 
+Lemma sle_win a : a <= win.
+Proof. by case: a. Qed.
+
 Variable ieval : turn -> board -> option state.
 
 Hypothesis liveness : forall t b, (ieval t b == None) = (moves t b != nil).
@@ -387,6 +393,11 @@ elim: l res =>  /= [res|i l IH res]; first by apply: sle_refl.
 by apply: sle_trans (IH _) (sge_minr _ _).
 Qed.
 
+Definition eval1 t b := eval_rec1 (depth b) t b.
+
+Lemma eval1_correct t b : eval1 t b = eval t b.
+Proof. by apply: eval_rec1_correct. Qed.
+
 (* Second refinement we stop on first lost *)
 Fixpoint process_eval_rec2 (eval : board -> state) res l :=
   if l is i :: l1 then
@@ -420,6 +431,11 @@ have /process_eval_rec1_correct :
 move=> /(_ (moves t b)); rewrite cats0 => ->.
 by congr (sflip _); apply: eq_bigr => *; apply: IH.
 Qed.
+
+Definition eval2 t b := eval_rec2 (depth b) t b.
+
+Lemma eval2_correct t b : eval2 t b = eval t b.
+Proof. by apply: eval_rec2_correct. Qed.
 
 (* Third refinement we introduce alpha beta *)
 
@@ -456,12 +472,6 @@ Fixpoint eval_rec3 n t alpha beta b :=
      sflip (process_eval_rec3 (eval_rec3 n1 (flip t)) 
                 (sflip beta) (sflip alpha) win (moves t b))
   else draw.
-
-Lemma sge_winE a : win <= a -> a = win.
-Proof. by case: a. Qed.
- 
-Lemma sle_win a : a <= win.
-Proof. by case: a. Qed.
 
 Lemma process_eval_rec3_correct_a f1 f2 res alpha beta l :
   alpha <= beta ->
