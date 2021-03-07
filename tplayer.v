@@ -20,7 +20,8 @@ Variable init : board.
 Variable moves : turn -> board -> seq board.
 Variable depth : board -> nat.
 
-Hypothesis moves_depth : forall t b b1, b1 \in moves t b -> depth b1 < depth b.
+Hypothesis moves_depth : 
+  forall t b b1, b1 \in moves t b -> depth b1 = (depth b).-1.
 
 Inductive state := win | lost | draw.
 
@@ -90,7 +91,6 @@ Proof. by case. Qed.
 Canonical smax_monoid := Monoid.Law smaxA smaxln smaxnl.
 Canonical smax_comoid := Monoid.ComLaw smaxC.
 
-
 Notation "\smin_ ( i <- l ) F" := (\big[smin/win]_(i <- l) F)
  (at level 41, F at level 41, i, l at level 50,
   format "\smin_ ( i  <-  l )  F").
@@ -111,13 +111,14 @@ Proof. by case: s1; case: s2. Qed.
 Lemma sflip_min s1 s2 : sflip (smin s1 s2) = smax (sflip s1) (sflip s2).
 Proof. by case: s1; case: s2. Qed.
 
-Definition sle := [rel x y | 
+Definition sle x y := 
   match x with 
   | lost => true 
   | draw => if y is lost then false else true
   | win => if y is win then true else false 
-  end].
+  end.
 Notation " a <= b " := (sle a b).
+
 
 Lemma sle_refl : reflexive sle.
 Proof. by case. Qed.
@@ -139,6 +140,33 @@ Proof. by case: s1; case: s2. Qed.
 
 Lemma sle_maxl s1 s2 : s1 <= smax s1 s2.
 Proof. by case: s1; case: s2. Qed.
+
+
+Lemma smin_lel x y : x <= y -> smin x y = x.
+Proof. by case: x; case: y. Qed.
+
+Lemma smin_ler x y : x <= y -> smin y x = x.
+Proof. by case: x; case: y. Qed.
+
+Notation " x < y " := (~~ (y <= x)).
+
+Lemma sltW x y : x < y -> x <= y.
+Proof. by case: x; case: y. Qed.
+
+Lemma sle_lt_trans x y z : x <= y -> y < z -> x < z.
+Proof. by case: x; case: y; case: z. Qed.
+
+Lemma slt_le_trans x y z : x < y -> y <= z -> x < z.
+Proof. by case: x; case: y; case: z. Qed.
+
+Lemma slt_smin x y z : x < y -> x < z -> x < smin y z.
+Proof. by case: x; case: y; case: z. Qed.
+
+Lemma slt_trans x y z : x < y -> y < z -> x < z.
+Proof. by case: x; case: y; case: z. Qed.
+
+Lemma sltNge x y : x < y -> ~ (y <= x).
+Proof. by move/negP. Qed.
 
 Variable ieval : turn -> board -> option state.
 
@@ -174,7 +202,8 @@ elim: moves (@moves_depth t b) => [_ |b1 bs IH1 H1d].
 lazy zeta in IH1 |- *; rewrite !big_cons !sflip_min.
 rewrite IH ?IH1 //.
   by move=> b2 Hb2; apply: H1d; rewrite in_cons Hb2 orbT.
-by rewrite -ltnS (leq_trans _ Hd) // H1d // in_cons eqxx.
+rewrite H1d; last by rewrite in_cons eqxx.
+by rewrite -ltnS; case: depth Hd.
 Qed.
 
 Lemma eval_rec_stable m n t b : (depth b <= m <= n)%N ->
@@ -197,7 +226,7 @@ congr sflip; elim: moves Hd => [|b1 bs IH] Hd.
   by rewrite !big_nil.
 rewrite !big_cons IH => [|b2 Hb2]; last by rewrite Hd // in_cons Hb2 orbT.
 rewrite (eval_rec_stable _ (_ : depth b1 <= depth b1 <= n)%nat) //. 
-by rewrite leqnn -ltnS Hd // in_cons eqxx.
+by rewrite leqnn Hd ?leqnn // in_cons eqxx.
 Qed.
 
 Lemma i_eval t b v : ieval t b = some v -> eval t b = v.
@@ -319,4 +348,293 @@ move=> b5 Hb5; apply: H; rewrite !in_cons orbA [(b5 == _) || _]orbC -orbA.
 by rewrite -in_cons Hb5 orbT.
 Qed.
 
+(* First refinement we explictly compute the big op *)
+Fixpoint process_eval_rec1 (eval : board -> state) res l :=
+  if l is i :: l1 then
+    let res1 := smin (eval i) res in process_eval_rec1 eval res1 l1
+  else res.
+
+Fixpoint eval_rec1 n t b := 
+  if ieval t b is some v then v else
+  if n is n1.+1 then 
+     sflip (process_eval_rec1 (eval_rec n1 (flip t)) win (moves t b))
+  else draw.
+
+Lemma process_eval_rec1_correct f res l l1 :
+  res = \smin_(i <- l1) f i ->
+  process_eval_rec1 f res l = \smin_(i <- l ++ l1) f i.
+Proof.
+elim: l l1 res => //= i l IH l1 res resE.
+have /IH-> : smin (f i) res = \smin_(i <- (i :: l1)) f i.
+  by rewrite big_cons //= -resE.
+rewrite !(big_cat, big_cons) /=.
+by rewrite sminC -!sminA [X in smin _ X]sminC.
+Qed.
+
+Lemma eval_rec1_correct n t b : eval_rec1 n t b = eval_rec n t b.
+Proof.
+elim: n t b => //= n IH t b.
+case: ieval => //.
+have /process_eval_rec1_correct : 
+  win = \smin_(i <- [::]) (eval_rec n (flip t)) i by rewrite big_nil.
+by move=> /(_ (moves t b)); rewrite cats0 => ->.
+Qed.
+
+Lemma sle_process_eval_rec1 eval res l : 
+    process_eval_rec1 eval res l <= res.
+Proof.
+elim: l res =>  /= [res|i l IH res]; first by apply: sle_refl.
+by apply: sle_trans (IH _) (sge_minr _ _).
+Qed.
+
+(* Second refinement we stop on first lost *)
+Fixpoint process_eval_rec2 (eval : board -> state) res l :=
+  if l is i :: l1 then
+    let res1 := smin (eval i) res in 
+    if res1 is lost then lost else process_eval_rec2 eval res1 l1
+  else res.
+
+Fixpoint eval_rec2 n t b := 
+  if ieval t b is some v then v else
+  if n is n1.+1 then 
+     sflip (process_eval_rec2 (eval_rec2 n1 (flip t)) win (moves t b))
+  else draw.
+
+Lemma process_eval_rec1_lost f l : process_eval_rec1 f lost l = lost.
+Proof. by elim: l => //= i l H; rewrite sminnl. Qed. 
+
+Lemma process_eval_rec2_correct f res l :
+  process_eval_rec2 f res l = process_eval_rec1 f res l.
+Proof.
+elim: l res => //= i l IH res.
+by case: (f i); case: res; rewrite /= ?process_eval_rec1_lost.
+Qed.
+
+Lemma eval_rec2_correct n t b : eval_rec2 n t b = eval_rec n t b.
+Proof.
+elim: n t b => //= n IH t b.
+case: ieval => //.
+rewrite process_eval_rec2_correct.
+have /process_eval_rec1_correct : 
+  win = \smin_(i <- [::]) (eval_rec2 n (flip t)) i by rewrite big_nil.
+move=> /(_ (moves t b)); rewrite cats0 => ->.
+by congr (sflip _); apply: eq_bigr => *; apply: IH.
+Qed.
+
+(* Third refinement we introduce alpha beta *)
+
+Fixpoint process_eval_rec3 (eval :  state -> state -> board -> state) 
+                            alpha beta res l :=
+  if l is i :: l1 then
+    let res1 := eval alpha beta i in
+    if res <= res1 then process_eval_rec3 eval alpha beta res l1 else
+    (* res1 is good *)
+    if beta <= res1 then process_eval_rec3 eval alpha beta res1 l1
+    else 
+    (* we improve max *)
+    let beta := res1 in
+    if beta <= alpha then res1 (* cut *) else 
+        process_eval_rec3 eval alpha beta res1 l1 
+    else res.
+  
+Lemma sle_process_eval_rec3 eval alpha beta res l : 
+    process_eval_rec3 eval alpha beta res l <= res.
+Proof.
+elim: l alpha beta res => /= [_ _ res |i l IH alpha beta res].
+  by apply: sle_refl.
+have [E1|E1] := boolP (res <= _); first by apply: IH.
+have {}E1 : eval alpha beta i <= res by case: (eval _ _) E1; case: res.
+have [E2|E2] := boolP (beta <= _).
+  by apply: sle_trans E1; apply: IH.
+have [E3|E3] := boolP (_ <= alpha); first by case: (eval _ _) E1; case: res.
+by apply: sle_trans E1; apply: IH.
+Qed.
+
+Fixpoint eval_rec3 n t alpha beta b := 
+  if ieval t b is some v then v else
+  if n is n1.+1 then 
+     sflip (process_eval_rec3 (eval_rec3 n1 (flip t)) 
+                (sflip beta) (sflip alpha) win (moves t b))
+  else draw.
+
+Lemma sge_winE a : win <= a -> a = win.
+Proof. by case: a. Qed.
+ 
+Lemma sle_win a : a <= win.
+Proof. by case: a. Qed.
+
+Lemma process_eval_rec3_correct_a f1 f2 res alpha beta l :
+  alpha <= beta ->
+  (forall i b,  alpha <= b -> f1 i <= alpha -> f2 alpha b i <= alpha) ->
+  \smin_(i <- l) f1 i <= alpha ->
+  process_eval_rec3 f2 alpha beta res l <= alpha.
+Proof.
+elim: l res beta => [|i l IH] res beta aLb Hf.
+  by rewrite big_nil // => /sge_winE->; apply: sle_win.
+rewrite big_cons /= => H.
+have [E1|E1] := boolP (res <= _).
+  have [E2|E2] := boolP (f1 i <= \smin_(j <- l) f1 j).
+    apply: sle_trans (sle_process_eval_rec3 _ _ _ _ _) _ => //.
+    apply: sle_trans E1 _.
+    by move: H; rewrite smin_lel // => /(Hf _ _ aLb).
+  apply: IH => //.
+  by move: H; rewrite smin_ler // sltW.
+have [E2|E2] := boolP (beta <= _).
+  have [E3|E3] := boolP (f1 i <= \smin_(j <- l) f1 j).
+    apply: sle_trans (sle_process_eval_rec3 _ _ _ _ _) _ => //.
+    apply: Hf => //.
+    by move: H; rewrite smin_lel.
+  apply: IH => //.
+  by move: H; rewrite smin_ler // sltW.
+have [E3|E3] := boolP (f2 _ _ _ <= alpha) => //.
+apply: IH => //; first by apply: sltW.
+have [E4|E4] := boolP (f1 i <= (\smin_(j <- l) f1 j)).
+  case/sltNge: E3.
+  by apply: Hf => //; move: H; rewrite smin_lel //.
+by move: H; rewrite smin_ler // sltW.
+Qed.
+
+Lemma process_eval_rec3_correct_b f1 f2 res alpha beta l :
+  alpha <= beta ->
+  (forall i b,  alpha <= b -> b <= f1 i -> b <= f2 alpha b i) ->
+  beta <= \smin_(i <- l) f1 i ->
+  smin res beta <= process_eval_rec3 f2 alpha beta res l.
+Proof.
+elim: l res beta => /= [| i l IH] res beta aLb Hf.
+  by move=> _; apply: sge_minl.
+rewrite big_cons /= => H.
+have [E1|E1] := boolP (res <= _).
+  apply: IH => //.
+  by apply: sle_trans H (sge_minr _ _).
+have [E2|E2] := boolP (beta <= f2 _ _ _).
+  rewrite smin_ler; last by apply: sle_trans E2 (sltW _).
+  rewrite -{1}(smin_ler E2).
+  apply: IH => //.
+  by apply: sle_trans H (sge_minr _ _).
+case/sltNge: E2.
+apply: Hf => //.
+by apply: sle_trans H (sge_minl _ _).
+Qed.
+
+Lemma process_eval_rec3_correct f1 f2 res alpha beta l :
+  (forall i a b , a <= b -> f1 i <= a -> f2 a b i <= a) ->
+  (forall i a b , a <= b -> b <= f1 i -> b <= f2 a b i) ->
+  (forall i a b,
+     a <= f1 i -> f1 i <= b -> f2 a b i = f1 i) ->
+  alpha <= beta ->
+  let res1 := \smin_(i <- l) f1 i in
+  let res2 := process_eval_rec3 f2 alpha beta res l in
+    alpha <= res1 -> res1 <= beta -> res2 = smin res res1.
+Proof.
+move=> Hf1 Hf2 Hf3.
+elim: l res beta => [|i l IH] res beta aLb; lazy zeta.
+  by rewrite big_nil sminnw.
+rewrite big_cons /= => H1 H2.
+have [E1|E1] := boolP (res <= _).
+  have [E2|E2] := boolP (\smin_(j <- l) f1 j <= f1 i).
+    rewrite smin_ler // in H1 H2 |- *.
+    by apply: IH.
+  rewrite smin_lel // in H1 H2 *; try by apply: sltW.
+  rewrite Hf3 // in E1.
+  rewrite smin_lel //.
+  have [E3|E3] := boolP (\smin_(j <- l) f1 j <= beta).
+    rewrite IH //; last by apply: sle_trans (sltW E2).
+    by rewrite !smin_lel // (sle_trans _ (sltW E2)).
+  apply: sle_antisym.
+    rewrite sle_process_eval_rec3 /=.
+  rewrite -{1}(smin_lel (sle_trans E1 H2)).  
+  apply: process_eval_rec3_correct_b (sltW E3) => //.
+  by move=> *; apply: Hf2.
+have [E2|E2] := boolP (beta <= _).
+  have [E3|E3] := boolP (f1 i <= \smin_(j <- l) f1 j).
+    rewrite smin_lel // in H1 H2 *.
+    rewrite Hf3 // in E1 E2 *.
+    rewrite smin_ler; last by apply: sltW.
+    have [E4|E4] := boolP (\smin_(j <- l) f1 j <= beta).
+      rewrite IH //; first by apply: smin_lel.
+      by apply: sle_trans E3.
+    apply: sle_antisym.
+      rewrite sle_process_eval_rec3 /=.
+    have -> : f1 i = beta by apply: sle_antisym; rewrite H2.
+    rewrite -{1}(smin_lel (sle_refl beta)).
+    apply: process_eval_rec3_correct_b (sltW E4) => //.
+    by move=> *; apply: Hf2.
+  rewrite (smin_ler (sltW E3)).
+  rewrite smin_ler in H1 H2; last by apply sltW.
+  rewrite IH // !smin_ler //.
+    by apply: sle_trans H2 (sle_trans E2 (sltW _)).
+  by apply: sle_trans H2 _.
+have [E3|E3] := boolP (f2 _ _ _ <= alpha) => //.
+  have [E4|E4] := boolP (f1 i <= \smin_(j <- l) f1 j).
+    rewrite (smin_lel E4) in H1 H2 *.
+    rewrite (Hf3 _ _ _ H1 H2) in E1 E2 E3 *.
+    by rewrite smin_ler // sltW.
+  rewrite (smin_ler (sltW E4)) in H1 H2 *.
+  have H3 : alpha < f1 i by apply: sle_lt_trans H1 E4.
+  have H4 : alpha <= f1 i by apply: sltW.
+  have [E5|E5] := boolP (f1 i <= beta).
+    rewrite (Hf3 _ _ _ H4 E5) in E1 E2 E3 *.
+    by case/sltNge : H3.
+  case/sltNge: E2.
+  by apply/Hf2/sltW.
+have [E4|E4] := boolP (f1 i <= (\smin_(j <- l) f1 j)).
+  rewrite (smin_lel E4) in H1 H2 *.
+  rewrite (Hf3 _ _ _ H1 H2) in E1 E2 E3 *.
+  rewrite smin_ler; last by apply: sltW.
+  apply: sle_antisym; rewrite sle_process_eval_rec3 /=.
+  rewrite -{1}(smin_ler (sle_refl (f1 i))).
+  apply: process_eval_rec3_correct_b E4 => //.
+  by move=> *; apply: Hf2.
+rewrite (smin_ler (sltW E4)) in H1 H2 *.
+have [E5|E5] := boolP (f1 i <= beta).
+  have H3 : alpha < f1 i by apply: sle_lt_trans H1 E4.
+  have H4 : alpha <= f1 i by apply: sltW.
+  rewrite (Hf3 _ _ _ H4 E5) in E1 E2 E3 *.
+  rewrite IH //; last by apply: sltW.
+  rewrite !smin_ler //; last by apply: sltW.
+  by apply: sltW; apply: slt_trans E1.
+case/sltNge: E2.
+by apply/Hf2/sltW.
+Qed.
+
+Lemma eval_rec3_correct n t alpha beta b :
+  alpha <= beta ->
+  [/\ 
+    eval_rec n t b <= alpha -> eval_rec3 n t alpha beta b <= alpha,
+    beta <= eval_rec n t b  -> beta <= eval_rec3 n t alpha beta b &
+    alpha <= eval_rec n t b -> eval_rec n t b <= beta ->
+    eval_rec3 n t alpha beta b = eval_rec n t b].
+Proof.
+elim: n t alpha beta b => //= n IH t alpha beta b aLb.
+case: ieval => //; split.
+- rewrite -{1 3}(sflipK alpha) !sflip_sle => H.
+  apply: process_eval_rec3_correct_b H => //.
+    by rewrite sflip_sle.
+  move=> b1 s1 H1 H2.
+  by have [_ /(_ H2)-> _] := (IH (flip t) (sflip beta) s1 b1 H1).
+- rewrite -{1 2}(sflipK beta) !sflip_sle => H.
+  apply: process_eval_rec3_correct_a H => //.
+    by rewrite sflip_sle.
+  move=> b1 s1 H1 H2.
+  by have [/(_ H2)-> _ _] := (IH (flip t) (sflip beta) s1 b1 H1).
+rewrite -{1}(sflipK alpha) -{1}(sflipK beta) !sflip_sle => H1 H2.
+congr (sflip _).
+apply: process_eval_rec3_correct => //; last by rewrite sflip_sle.
+- move=> i a1 b1 a1Lb1.
+  by have [] := IH (flip t) a1 b1 i a1Lb1.
+- move=> i a1 b1 a1Lb1.
+  by have [] := IH (flip t) a1 b1 i a1Lb1.
+move=> i a1 b1 aL bL.
+have [_ _ ->//] := IH (flip t) a1 b1 i (sle_trans aL bL).
+Qed.
+
+Definition eval3 t b := eval_rec3 (depth b) t lost win b.
+
+Lemma eval3_correct t b : eval3 t b = eval t b.
+Proof.
+have [_ _ H] := eval_rec3_correct (depth b) t b (isT : lost <= win).
+by apply: H => //; apply: sle_win.
+Qed.
+
 End Board.
+
