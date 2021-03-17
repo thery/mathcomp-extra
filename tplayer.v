@@ -336,19 +336,19 @@ Qed.
 Fixpoint process_eval_rec1 (eval : board -> state) res l :=
   if l is i :: l1 then
     let res1 := smin (eval i) res in process_eval_rec1 eval res1 l1
-  else res.
+  else sflip res.
 
 Fixpoint eval_rec1 n t b := 
   if ieval t b is some v then v else
   if n is n1.+1 then 
-     sflip (process_eval_rec1 (eval_rec1 n1 (flip t)) win (moves t b))
+     process_eval_rec1 (eval_rec1 n1 (flip t)) win (moves t b)
   else draw.
 
 Lemma process_eval_rec1_correct f res l l1 :
   res = \smin_(i <- l1) f i ->
-  process_eval_rec1 f res l = \smin_(i <- l ++ l1) f i.
+  process_eval_rec1 f res l = sflip (\smin_(i <- l ++ l1) f i).
 Proof.
-elim: l l1 res => //= i l IH l1 res resE.
+elim: l l1 res => /= [|i l IH] l1 res resE; first by rewrite resE.
 have /IH-> : smin (f i) res = \smin_(i <- (i :: l1)) f i.
   by rewrite big_cons //= -resE.
 rewrite !(big_cat, big_cons) /=.
@@ -358,21 +358,23 @@ Qed.
 Lemma eval_rec1_correct n t b : eval_rec1 n t b = eval_rec n t b.
 Proof.
 elim: n t b => //= n IH t b.
-case: ieval => //; congr (sflip _).
+case: ieval => //.
 rewrite -{2}[moves t b]cats0.
 have H : win= \smin_(i <- [::]) eval_rec n (flip t) i by rewrite big_nil.
 rewrite {1}H.
 elim: (moves t b) [::]=> //= i l1 IH1 l2.
 have := IH1 (i :: l2).
-rewrite IH big_cons // => ->.
+rewrite IH big_cons // => ->; congr sflip.
 by rewrite !(big_cat, big_cons) /= sminC -sminA [X in smin _ X = _]sminC sminA.
 Qed.
 
-Lemma le_process_eval_rec1 eval res l : 
-    process_eval_rec1 eval res l <= res.
+Lemma ge_process_eval_rec1 eval res l : 
+    sflip res <= process_eval_rec1 eval res l.
 Proof.
 elim: l res =>  /= [res|i l IH res]; first by apply: leqnn.
-by apply: leq_trans (IH _) (ge_sminr _ _).
+apply: leq_trans (IH _).
+rewrite sflip_le.
+apply: ge_sminr.
 Qed.
 
 Definition eval1 t b := eval_rec1 (depth b) t b.
@@ -384,16 +386,16 @@ Proof. by apply: eval_rec1_correct. Qed.
 Fixpoint process_eval_rec2 (eval : board -> state) res l :=
   if l is i :: l1 then
     let res1 := smin (eval i) res in 
-    if res1 is loss then loss else process_eval_rec2 eval res1 l1
-  else res.
+    if res1 is loss then win else process_eval_rec2 eval res1 l1
+  else sflip res.
 
 Fixpoint eval_rec2 n t b := 
   if ieval t b is some v then v else
   if n is n1.+1 then 
-     sflip (process_eval_rec2 (eval_rec2 n1 (flip t)) win (moves t b))
+     process_eval_rec2 (eval_rec2 n1 (flip t)) win (moves t b)
   else draw.
 
-Lemma process_eval_rec1_loss f l : process_eval_rec1 f loss l = loss.
+Lemma process_eval_rec1_loss f l : process_eval_rec1 f loss l = win.
 Proof. by elim: l => //= i l H; rewrite sminnl. Qed. 
 
 Lemma process_eval_rec2_correct f res l :
@@ -431,28 +433,30 @@ Fixpoint process_eval_rec3 (eval :  state -> state -> board -> state)
     else 
     (* we improve max *)
     let beta := res1 in
-    if beta <= alpha then res1 (* cut *) else 
+    if beta <= alpha then sflip res1 (* cut *) else 
         process_eval_rec3 eval alpha beta res1 l1 
-    else res.
+    else sflip res.
   
-Lemma le_process_eval_rec3 eval alpha beta res l : 
-    process_eval_rec3 eval alpha beta res l <= res.
+Lemma ge_process_eval_rec3 eval alpha beta res l : 
+    sflip res <= process_eval_rec3 eval alpha beta res l.
 Proof.
 elim: l alpha beta res => /= [_ _ res |i l IH alpha beta res].
   by apply: leqnn.
 have [E1|E1] := leqP res _; first by apply: IH.
 have {}E1 : eval alpha beta i <= res by case: (eval _ _) E1; case: res.
 have [E2|E2] := leqP beta _.
-  by apply: leq_trans E1; apply: IH.
+  apply: leq_trans (IH _ _ _).
+  by rewrite sflip_le.
 have [E3|E3] := leqP _ alpha; first by case: (eval _ _) E1; case: res.
-by apply: leq_trans E1; apply: IH.
+apply: leq_trans (IH _ _ _).
+by rewrite sflip_le.
 Qed.
 
 Fixpoint eval_rec3 n t alpha beta b := 
   if ieval t b is some v then v else
   if n is n1.+1 then 
-     sflip (process_eval_rec3 (eval_rec3 n1 (flip t)) 
-                (sflip beta) (sflip alpha) win (moves t b))
+     process_eval_rec3 (eval_rec3 n1 (flip t)) 
+                (sflip beta) (sflip alpha) win (moves t b)
   else draw.
 
 Section ProcessEvalRec3.
@@ -470,40 +474,43 @@ Hypothesis f1H : forall i (a b : state),
 
 Lemma process_eval_rec3_correct_a res (beta : state) l :
   alpha < beta -> \smin_(i <- l) f1 i <= alpha ->
-  process_eval_rec3 f2 alpha beta res l <= alpha.
+  sflip alpha <= process_eval_rec3 f2 alpha beta res l.
 Proof.
 elim: l res beta => [|i l IH] res beta aLb.
-  by rewrite big_nil // => /ge_winE->; apply: le_win.
+  by rewrite big_nil // => /ge_winE->; apply: ge_loss.
 rewrite big_cons /= => H.
 have [E1|E1] := leqP res (f2 _ _ _). 
   have [E2|E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec3 _ _ _ _ _) _ => //.
+    apply: leq_trans (ge_process_eval_rec3 _ _ _ _ _) => //.
+    rewrite sflip_le.
     by apply: leq_trans E1 (f1Ha _); rewrite H.
   rewrite smin_ler in H; last by apply: ltnW.
   by apply: IH.
 have [E2|E2] := leqP beta (f2 _ _ _).
   have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec3 _ _ _ _ _) _ => //.
+    apply: leq_trans (ge_process_eval_rec3 _ _ _ _ _) => //.
+    rewrite sflip_le.
     by apply: f1Ha; rewrite H.
   rewrite smin_ler in H; last by apply: ltnW.
   by apply: IH.
-have [E3|E3] := leqP (f2 _ _ _) alpha => //.
+have [E3|E3] := leqP (f2 _ _ _) alpha; first by rewrite sflip_le.
 apply: IH => //.
-have [E4|E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
+have [E4|/ltnW E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
   rewrite ltnNge in E3; case/negP: E3.
   apply: f1Ha; rewrite aLb andbT.
   by move: H; rewrite smin_lel.
-by move: H; rewrite smin_ler // ltnW.
+by move: H; rewrite smin_ler.
 Qed.
 
 Lemma process_eval_rec3_correct_b (res beta : state) l :
   alpha < beta <= res ->
   beta <= \smin_(i <- l) f1 i ->
-  beta <= process_eval_rec3 f2 alpha beta res l.
+  process_eval_rec3 f2 alpha beta res l <= sflip beta.
 Proof.
-elim: l res beta => /= [| i l IH] res beta /andP[aLb bLr] //.
+elim: l res beta => /= [| i l IH] res beta /andP[aLb bLr].
+   by rewrite sflip_le.
 rewrite big_cons /= => H.
 have [E1|E1] := leqP res _.
   apply: IH => //; first by rewrite aLb.
@@ -520,42 +527,41 @@ Lemma process_eval_rec3_correct (res beta : state) l :
   alpha < beta -> alpha <= beta <= res ->
   let res1 := \smin_(i <- l) f1 i in
   let res2 := process_eval_rec3 f2 alpha beta res l in
-    alpha <= res1 <= beta -> res2 = res1.
+    alpha <= res1 <= beta -> res2 = sflip res1.
 Proof.
 elim: l res beta => [|i l IH] res beta aLsb /andP[aLb bLr]; lazy zeta.
   rewrite big_nil => /andP[_ /ge_winE rEwin].
   by move: bLr; rewrite rEwin => /ge_winE->.
 rewrite big_cons /= => H; have /andP[H1 H2] := H.
 have [E1|E1] := leqP res _.
-  have [E2|E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
+  have [E2|/ltnW E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
     rewrite smin_ler // in H H1 H2 *.
     by apply: IH => //; rewrite aLb.
-  rewrite smin_lel // in H H1 H2 *; try by apply: ltnW.
+  rewrite smin_lel // in H H1 H2 *.
   rewrite f1H // in E1.
   have f1E : f1 i = beta by apply: sle_antisym => //; apply: leq_trans E1.
   rewrite f1E in E1 E2 H1 H2 *.
   have rE : res = beta by apply: sle_antisym.
   rewrite rE. 
-  apply: sle_antisym => //.
-    by rewrite le_process_eval_rec3.
-  by apply: process_eval_rec3_correct_b (ltnW E2); rewrite aLsb leqnn.
+  apply: sle_antisym; last first.
+    by rewrite ge_process_eval_rec3.
+  by apply: process_eval_rec3_correct_b E2; rewrite aLsb leqnn.
 have [E2|E2] := leqP beta _.
-  have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H H1 H2 *.
     rewrite f1H // in E1 E2 *.
-    apply: sle_antisym.
-      by rewrite le_process_eval_rec3.
+    apply: sle_antisym; last first.
+      by rewrite ge_process_eval_rec3.
     have -> : f1 i = beta by apply: sle_antisym.
     apply: process_eval_rec3_correct_b (leq_trans E2 E3) => //.
     by rewrite aLsb leqnn.
-  rewrite (smin_ler (ltnW E3)).
-  rewrite smin_ler in H H1 H2; last by apply: ltnW.
+  rewrite smin_ler // in H H1 H2 *.
   by rewrite IH // aLb.
 have [E3|E3] := leqP (f2 _ _ _) alpha => //.
   have [E4|E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite (smin_lel E4) in H H1 H2 *.
     by rewrite (f1H aLsb H).
-  rewrite (smin_ler (ltnW E4)) in H H1 H2 *.
+  rewrite smin_ler // in H H1 H2 *; last by apply: ltnW.
   have H3 : alpha < f1 i by apply: leq_ltn_trans H1 E4.
   have H4 : alpha <= f1 i by apply: ltnW.
   have [E5|E5] := leqP (f1 i) beta.
@@ -565,12 +571,12 @@ have [E3|E3] := leqP (f2 _ _ _) alpha => //.
   rewrite ltnNge in E2; case/negP: E2.
   by apply: f1Hb; rewrite // aLsb /= ltnW.
 have [E4|E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
-  rewrite (smin_lel E4) in H H1 H2 *.
+  rewrite smin_lel // in H H1 H2 *.
   rewrite (f1H aLsb H) in E1 E2 E3 *.
-  apply: sle_antisym; first by rewrite le_process_eval_rec3.
+  apply: sle_antisym; last by rewrite ge_process_eval_rec3.
   apply: process_eval_rec3_correct_b E4 => //.
   by rewrite E3 leqnn.
-rewrite (smin_ler (ltnW E4)) in H H1 H2 *.
+rewrite smin_ler // in H H1 H2 *; last by apply: ltnW.
 have [E5|E5] := leqP (f1 i) beta.
   have H3 : alpha < f1 i by apply: leq_ltn_trans H1 E4.
   have H4 : alpha <= f1 i by apply: ltnW.
@@ -604,7 +610,6 @@ case: ieval => //; split.
   move=> b1 s1 /andP[H1 H2].
   by have [/(_ H1)-> _ _] := (IH (flip t) (sflip beta) s1 b1 H2).
 rewrite -{1}(sflipK alpha) -{1}(sflipK beta) !sflip_le => /andP[H1 H2].
-congr (sflip _).
 apply: process_eval_rec3_correct => //.
 - move=> i a1 /andP[H a1L].
   by have [_ /(_ a1L)] := IH (flip t) _ a1 i H.
@@ -771,29 +776,29 @@ Fixpoint process_eval_rec4 (eval :  estate -> estate -> board -> estate)
     (* we improve max *)
     if res1 <= alpha then 
       (if res1 is edraw then 
-           if l1 is _ :: _ then lossdraw else res1 else res1) (* cut *) else 
+           if l1 is _ :: _ then drawwin else esflip res1 
+        else esflip res1) (* cut *) else 
         process_eval_rec4 eval alpha res1 res1 l1 
-    else res.
+    else esflip res.
   
-Lemma le_process_eval_rec4 eval alpha beta res l : 
-    process_eval_rec4 eval alpha beta res l <= res.
+Lemma ge_process_eval_rec4 eval alpha beta res l : 
+    esflip res <= process_eval_rec4 eval alpha beta res l.
 Proof.
-elim: l alpha beta res => /= [_ _ res |i l IH alpha beta res].
-  by apply: leqnn.
+elim: l alpha beta res => /= [_ _ res |i l IH alpha beta res] //.
 have [E1|E1] := leqP res _; first by apply: IH.
 have {}E1 : eval alpha beta i <= res by case: (eval _ _) E1; case: res.
 have [E2|E2] := leqP beta _.
-  by apply: leq_trans E1; apply: IH.
+  by apply: leq_trans (IH _ _ _); rewrite esflip_le.
 have [E3|E3] := leqP _ alpha.
   by case: (eval _ _) E1; case: res; case: (l).
-by apply: leq_trans E1; apply: IH.
+by apply: leq_trans (IH _ _ _); rewrite esflip_le.
 Qed.
 
 Fixpoint eval_rec4 n t alpha beta b := 
   if ieval t b is some v then s2es v else
   if n is n1.+1 then 
-     esflip (process_eval_rec4 (eval_rec4 n1 (flip t)) 
-                (esflip beta) (esflip alpha) win (moves t b))
+     process_eval_rec4 (eval_rec4 n1 (flip t)) 
+                (esflip beta) (esflip alpha) win (moves t b)
   else edraw.
 
 Section ProcessEvalRec4.
@@ -804,99 +809,102 @@ Variable f2 : estate -> estate -> board -> estate.
 
 (** loss draw                                                                 *)
 
-Hypothesis Hloss_draw_loss : 
+Hypothesis H4loss_draw_loss : 
   forall i, f1 i = loss -> f2 eloss edraw i = eloss.
-Hypothesis Hloss_draw_draw : 
+Hypothesis H4loss_draw_draw : 
   forall i, f1 i = draw -> edraw <= f2 eloss edraw i <= drawwin.
-Hypothesis Hloss_draw_win : 
+Hypothesis H4loss_draw_win : 
   forall i, f1 i = win -> drawwin <= f2 eloss edraw i.
 
-Lemma Hloss_draw_ge i : draw <= f1 i -> edraw <= f2 eloss edraw i.
+Lemma H4loss_draw_ge i : draw <= f1 i -> edraw <= f2 eloss edraw i.
 Proof.
-case: f1 (@Hloss_draw_draw i) (@Hloss_draw_win i) => //.
+case: f1 (@H4loss_draw_draw i) (@H4loss_draw_win i) => //.
   by move=> _ /(_ (refl_equal _)) /(leq_trans _) H _; rewrite H.
 by move=> /(_ (refl_equal _)) /andP[].
 Qed.
 
-Lemma Hloss_draw_le i : f1 i <= draw -> f2 eloss edraw i <= drawwin.
+Lemma H4loss_draw_le i : f1 i <= draw -> f2 eloss edraw i <= drawwin.
 Proof.
-case: f1 (@Hloss_draw_loss i) (@Hloss_draw_draw i) => //.
+case: f1 (@H4loss_draw_loss i) (@H4loss_draw_draw i) => //.
   by move=> /(_ (refl_equal _))->.
 by move=> _ /(_ (refl_equal _)) /andP[].
 Qed.
 
-Lemma process_eval_rec4_loss_draw_ge (res : estate) l :
+Lemma process_eval_rec4_loss_draw_le (res : estate) l :
   draw <= res ->
   draw <= \smin_(i <- l) f1 i ->
-  draw <= process_eval_rec4 f2 eloss edraw res l.
+  process_eval_rec4 f2 eloss edraw res l <= draw.
 Proof.
-elim: l res => [|i l IH] res; first by rewrite big_nil.
+elim: l res => [|i l IH] res; first by rewrite big_nil (esflip_le _ edraw).
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H1 H2.
 have [E1|E1] := leqP res (f2 _ _ _).
   by apply: IH => //; apply: leq_trans H2 (ge_sminr _ _).
 rewrite ifT; last first.
-  by apply: Hloss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
+  by apply: H4loss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
 apply: IH => //.
-  by apply: Hloss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
+  by apply: H4loss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
 by apply: leq_trans H2 (ge_sminr _ _).
 Qed.
 
-Lemma process_eval_rec4_loss_draw_le (res : estate) l :
+Lemma process_eval_rec4_loss_draw_ge (res : estate) l :
   \smin_(i <- l) f1 i <= draw ->
-   process_eval_rec4 f2 eloss edraw res l <= drawwin.
+   lossdraw <= process_eval_rec4 f2 eloss edraw res l.
 Proof.
 elim: l res => [|i l IH] res; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H.
 have [E1|E1] := leqP res (f2 _ _ _).
-  have [E2|E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec4 _ _ _ _ _) _.
-    by apply: leq_trans E1 (Hloss_draw_le _).
-  rewrite smin_ler // in H; last by apply: ltnW.
+    apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+    rewrite (esflip_le drawwin).
+    by apply: leq_trans E1 (H4loss_draw_le _).
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E2|E2] := leqP edraw (f2 _ _ _).
-  have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec4 _ _ _ _ _) _.
-    by apply: leq_trans _ (Hloss_draw_le _).
-  rewrite smin_ler // in H; last by apply: ltnW.
+    apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+    rewrite (esflip_le drawwin).
+    by apply: leq_trans _ (H4loss_draw_le _).
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E3|E3] := leqP (f2 eloss edraw i) eloss.
   by rewrite (le_elossE E3).
-apply: leq_trans (le_process_eval_rec4 _ _ _ _ _) _.
+apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+rewrite (esflip_le drawwin).
 by apply: leq_trans (ltnW E2) _.
 Qed.
 
 Lemma process_eval_rec4_loss_draw_loss (res : estate) l :
   \smin_(i <- l) f1 i = loss ->
-   process_eval_rec4 f2 eloss edraw res l = eloss.
+   process_eval_rec4 f2 eloss edraw res l = ewin.
 Proof.
 elim: l res => [|i l IH] res; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H.
 have [E1|E1] := leqP res (f2 _ _ _).
-  have [E2|E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: le_elossE.
-    have -> : res = eloss by apply: le_elossE; rewrite -(Hloss_draw_loss H).
-    by apply: le_process_eval_rec4.
-  rewrite smin_ler // in H; last by apply: ltnW.
+    apply: ge_ewinE; rewrite -[ewin]/(esflip eloss).
+    have -> : res = eloss by apply: le_elossE; rewrite -(H4loss_draw_loss H).
+    by apply: ge_process_eval_rec4.
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E2|E2] := leqP _ (f2 _ _ _).
-  have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    rewrite Hloss_draw_loss //.
-    apply: le_elossE.
-    by apply: le_process_eval_rec4.
-  rewrite smin_ler // in H; last by apply: ltnW.
+    rewrite H4loss_draw_loss //.
+    apply: ge_ewinE; rewrite -[ewin]/(esflip eloss).
+    by apply: ge_process_eval_rec4.
+  rewrite smin_ler // in H.
   by apply: IH.
-rewrite Hloss_draw_loss //=.
-by case: f1 (@Hloss_draw_draw i) (@Hloss_draw_win i) => // [_|];
+rewrite H4loss_draw_loss //=.
+by case: f1 (@H4loss_draw_draw i) (@H4loss_draw_win i) => // [_|];
    move=> /(_ (refl_equal _)); case: f2 E2.
 Qed.
 
 Lemma process_eval_rec4_loss_draw_draw (res : estate) l :
   \smin_(i <- l) f1 i = draw -> draw <= res ->
-   draw <= process_eval_rec4 f2 eloss edraw res l <= drawwin.
+   lossdraw <= process_eval_rec4 f2 eloss edraw res l <= draw.
 Proof.
 move=> H1 H2.
 rewrite process_eval_rec4_loss_draw_ge ?H1 //.
@@ -905,9 +913,10 @@ Qed.
 
 Lemma process_eval_rec4_loss_draw_win (res : estate) l :
   \smin_(i <- l) f1 i = win -> drawwin <= res ->
-   drawwin <= process_eval_rec4 f2 eloss edraw res l.
+   process_eval_rec4 f2 eloss edraw res l <= lossdraw.
 Proof.
-elim: l res => [|i l IH] res; first by rewrite big_nil.
+elim: l res => [|i l IH] res.
+  by rewrite big_nil /= (esflip_le _ drawwin).
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H1 H2.
 have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
   have [E1|/ltnW E1] := leqP (f1 i) (\smin_(j <- l) f1 j).
@@ -919,63 +928,64 @@ have [E1|E1] := leqP res (f2 _ _ _).
   by apply: IH.
 have [E2|E2] := leqP _ (f2 _ _ _).
   apply: IH => //.
-  by apply: Hloss_draw_win.
+  by apply: H4loss_draw_win.
 rewrite ifN.
   rewrite ltnNge in E2; case/negP: E2.
-  by apply: leq_trans (Hloss_draw_win _).
+  by apply: leq_trans (H4loss_draw_win _).
 rewrite -ltnNge.
-by apply: leq_trans (Hloss_draw_win _).
+by apply: leq_trans (H4loss_draw_win _).
 Qed.
 
 (** draw win *)
 
-Hypothesis Hdraw_win_win : 
+Hypothesis H4draw_win_win : 
   forall i, f1 i = win -> f2 edraw ewin i = ewin.
-Hypothesis Hdraw_win_draw : 
+Hypothesis H4draw_win_draw : 
   forall i, f1 i = draw -> lossdraw <= f2 edraw ewin i <= edraw.
-Hypothesis Hdraw_win_loss: 
+Hypothesis H4draw_win_loss: 
   forall i, f1 i = loss -> f2 edraw ewin i <= lossdraw.
 
-Lemma Hdraw_win_le i : f1 i <= draw -> f2 edraw ewin i <= edraw.
+Lemma H4draw_win_le i : f1 i <= draw -> f2 edraw ewin i <= edraw.
 Proof.
-case: f1 (@Hdraw_win_loss i) (@Hdraw_win_draw i) => //.
+case: f1 (@H4draw_win_loss i) (@H4draw_win_draw i) => //.
   by move=> /(_ (refl_equal _)) /leq_trans->.
 by move=>  _ /(_ (refl_equal _)) /andP[].
 Qed.
 
-Lemma Hdraw_win_ge i : draw <= f1 i -> lossdraw <= f2 edraw ewin i.
+Lemma H4draw_win_ge i : draw <= f1 i -> lossdraw <= f2 edraw ewin i.
 Proof.
-case: f1 (@Hdraw_win_draw i) (@Hdraw_win_win i) => //.
+case: f1 (@H4draw_win_draw i) (@H4draw_win_win i) => //.
   by move=> _ /(_ (refl_equal _))->.
 by move=> /(_ (refl_equal _)) /andP[].
 Qed.
 
 Lemma process_eval_rec4_draw_win_le (res : estate) l :
   \smin_(i <- l) f1 i <= draw ->
-  process_eval_rec4 f2 edraw ewin res l <= draw.
+  edraw <= process_eval_rec4 f2 edraw ewin res l.
 Proof.
 elim: l res => [|i l IH] res; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H.
 have [E1|E1] := leqP res (f2 _ _ _).
-  have [E2|E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec4 _ _ _ _ _) _.
-    by apply: leq_trans E1 (Hdraw_win_le _).
-  rewrite smin_ler // in H; last by apply: ltnW.
+    apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+    rewrite (esflip_le edraw).
+    by apply: leq_trans E1 (H4draw_win_le _).
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E2|E2] := leqP ewin (f2 edraw ewin i).
-  have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     rewrite leqNgt in E2; case/negP: E2.
-    by apply: leq_ltn_trans (Hdraw_win_le _) _.
-  rewrite smin_ler // in H; last by apply: ltnW.
+    by apply: leq_ltn_trans (H4draw_win_le _) _.
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E3|E3] := leqP (f2 _ _ i) draw.
   by case: f2 E3 => //; case: (l).
 have [E4|E4] := leqP (f1 i) draw.
   rewrite ltnNge in E3; case/negP: E3.
-  by apply: Hdraw_win_le.
-rewrite Hdraw_win_win // in E2.
+  by apply: H4draw_win_le.
+rewrite H4draw_win_win // in E2.
 apply: ge_winE.
 by case: f1 E4.
 Qed.
@@ -983,26 +993,26 @@ Qed.
 Lemma process_eval_rec4_draw_win_ge (res : estate) l :
   lossdraw <= res ->
   draw <= \smin_(i <- l) f1 i ->
-  lossdraw <= process_eval_rec4 f2 edraw ewin res l.
+  process_eval_rec4 f2 edraw ewin res l <= drawwin.
 Proof.
-elim: l res => [|i l IH] res; first by rewrite big_nil.
+elim: l res => [|i l IH] res; first by rewrite big_nil (esflip_le _ lossdraw).
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H1 H2.
 have [E1|E1] := leqP res (f2 _ _ _).
   apply: IH => //.
   by apply: leq_trans H2 (ge_sminr _ _).
 have [E2|E2] := leqP ewin (f2 _ _ _).
   apply: IH => //.
-    apply: Hdraw_win_ge.
+    apply: H4draw_win_ge.
     by apply: leq_trans H2 (ge_sminl _ _).
   by apply: leq_trans H2 (ge_sminr _ _).
 have [E3|E3] := leqP (f2 edraw ewin i) edraw.
   have : lossdraw <= (f2 edraw ewin i).
-    apply: Hdraw_win_ge (leq_trans H2 (ge_sminl _ _)).
+    apply: H4draw_win_ge (leq_trans H2 (ge_sminl _ _)).
   by case: f2 => //=; case: (l).
 have [E4|E4] := leqP (f1 i) draw.
   rewrite ltnNge in E3; case/negP: E3.
-  by apply: Hdraw_win_le.
-rewrite Hdraw_win_win // in E2.
+  by apply: H4draw_win_le.
+rewrite H4draw_win_win // in E2.
 apply: ge_winE.
 by case: f1 E4.
 Qed.
@@ -1010,9 +1020,9 @@ Qed.
 Lemma process_eval_rec4_draw_win_win (res : estate) l :
   res = win ->
   \smin_(i <- l) f1 i = win ->
-   process_eval_rec4 f2 edraw ewin res l = ewin.
+   process_eval_rec4 f2 edraw ewin res l = eloss.
 Proof.
-elim: l res => [|i l IH] res; first by rewrite big_nil.
+elim: l res => [|i l IH] res; first by rewrite big_nil => ->.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H1 H2.
 have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
   have [E1|/ltnW E1] := leqP (f1 i) (\smin_(j <- l) f1 j).
@@ -1020,13 +1030,13 @@ have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
     by apply: ge_winE; rewrite -{1}H2.
   rewrite smin_ler // in H2; split => //.
   by apply: ge_winE; rewrite -{1}H2.
-rewrite Hdraw_win_win // H1 /=.
+rewrite H4draw_win_win // H1 /=.
 by apply: IH.
 Qed.
 
 Lemma process_eval_rec4_draw_win_draw (res : estate) l :
   \smin_(i <- l) f1 i = draw -> lossdraw <= res ->
-   lossdraw <= process_eval_rec4 f2 edraw ewin res l <= edraw.
+   edraw <= process_eval_rec4 f2 edraw ewin res l <= drawwin.
 Proof.
 move=> H1 H2.
 rewrite process_eval_rec4_draw_win_ge ?H1 //.
@@ -1035,37 +1045,38 @@ Qed.
 
 Lemma process_eval_rec4_draw_win_loss (res : estate) l :
   \smin_(i <- l) f1 i = loss ->
-   process_eval_rec4 f2 edraw ewin res l <= lossdraw.
+   drawwin <= process_eval_rec4 f2 edraw ewin res l.
 Proof.
 elim: l res => [|i l IH] res; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H.
 have [E1|E1] := leqP res (f2 _ _ _).
-  have [E2|E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    apply: leq_trans (le_process_eval_rec4 _ _ _ _ _) _.
+    apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+    rewrite (esflip_le lossdraw).
     apply: leq_trans E1 _.
-    by apply: Hdraw_win_loss.
-  rewrite smin_ler // in H; last by apply: ltnW.
+    by apply: H4draw_win_loss.
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E2|E2] := leqP ewin (f2 _ _ _).
-  have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
+  have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    have := Hdraw_win_loss H.
+    have := H4draw_win_loss H.
     by rewrite leqNgt (leq_trans _ E2).
-  rewrite smin_ler // in H; last by apply: ltnW.
+  rewrite smin_ler // in H.
   by apply: IH.
 have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H.
-  by case: f2 (Hdraw_win_loss H).
+  by case: f2 (H4draw_win_loss H).
 rewrite smin_ler // in H; last by apply: ltnW.
 have [E4|E4] := leqP (f2 _ _ _) edraw.
   have : lossdraw <= f2 edraw ewin i.
-    apply: Hdraw_win_ge.
+    apply: H4draw_win_ge.
     by move: E3; rewrite H; case: f1.
   case: f2 E4 => //=.
   by case: (l) H => //; rewrite big_nil.
 move: E3 E2; rewrite H.
-case: f1 (@Hdraw_win_draw i) (@Hdraw_win_win i) => //.
+case: f1 (@H4draw_win_draw i) (@H4draw_win_win i) => //.
   by move=> _ -> //.
 move=> /(_ (refl_equal _)).
 by rewrite [_ <= edraw]leqNgt E4 andbF.
@@ -1073,15 +1084,15 @@ Qed.
 
 (* loss win *)
 
-Hypothesis Hloss_win : forall i, f2 eloss ewin i = f1 i.
+Hypothesis H4loss_win : forall i, f2 eloss ewin i = f1 i.
 
 Lemma process_eval_rec4_loss_win_lt (a res : estate) l :
   a <= res ->
   a < \smin_(i <- l) f1 i -> 
-  a <= process_eval_rec4 f2 eloss ewin res l .
+  process_eval_rec4 f2 eloss ewin res l <= esflip a.
 Proof.
-elim: l res => [|i l IH] res aLr; first by rewrite big_nil.
-rewrite big_cons => /= aLs; rewrite Hloss_win.
+elim: l res => [|i l IH] res aLr; first by rewrite big_nil esflip_le.
+rewrite big_cons => /= aLs; rewrite H4loss_win.
 have [E1|E1] := leqP res _.
   apply: IH => //.
   by apply: leq_trans aLs (ge_sminr _ _).
@@ -1098,7 +1109,8 @@ have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   have H : f1 i = draw.
     by case: f1 E2 E3 aLs => //; case: (\smin_(_ <- _) _) => //; case: (a).
   rewrite H in E1 E3 aLs *.
-  apply: leq_trans (process_eval_rec4_loss_draw_ge _ _) =>//. 
+  apply: leq_trans (process_eval_rec4_loss_draw_le _ _) _ =>//. 
+  rewrite (esflip_le edraw).
   by apply: ltnW.
 rewrite smin_ler // in aLs *; last by apply: ltnW.
 suff -> : f1 i = win.
@@ -1106,23 +1118,22 @@ suff -> : f1 i = win.
 by case: f1 E3 aLs => //; case: (\smin_(_ <- _) _) => //; case: (a).
 Qed.
 
-
 Lemma process_eval_rec4_loss_win (res : estate) l :
   \smin_(i <- l) f1 i <= res ->
-  process_eval_rec4 f2 eloss ewin res l = \smin_(i <- l) f1 i.
+  process_eval_rec4 f2 eloss ewin res l = sflip (\smin_(i <- l) f1 i).
 Proof.
-elim: l res => [|i l IH] res; first by rewrite big_nil; apply: ge_ewinE.
+elim: l res => [|i l IH] res; first by rewrite big_nil /= => /ge_ewinE ->.
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H.
-rewrite Hloss_win !es2ns2esK.
+rewrite H4loss_win !es2ns2esK.
 have [E1|E1] := leqP res (f1 i).
   have [E2|E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
     rewrite smin_ler // in H *.
     by apply: IH.
   rewrite smin_lel // in H *; last by apply: ltnW.
-  apply: esle_antisym.
-    rewrite es2ns2esK.
-    apply: leq_trans E1.
-    by apply: le_process_eval_rec4.
+  apply: esle_antisym; last first.
+    apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
+    by rewrite es2ns2esK es2n_flip esflip_le es2ns2esK.
+  rewrite es2ns2esK es2n_flip.
   by apply: process_eval_rec4_loss_win_lt; rewrite es2ns2esK.
 rewrite ifN; last first.
   by rewrite -leqNgt -ltnS (leq_trans E1) // le_ewin.
@@ -1135,9 +1146,9 @@ have H3 : f1 i = draw.
 rewrite H3 in H E1 *.
 have [E3|E3] := leqP draw (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H *.
-  apply: esle_antisym.
-    by apply: le_process_eval_rec4.
-  by apply: process_eval_rec4_loss_draw_ge.
+  apply: esle_antisym; rewrite es2ns2esK es2n_flip.
+    by apply: process_eval_rec4_loss_draw_le.
+  by apply: ge_process_eval_rec4.
 suff H4 : \smin_(j <- l) f1 j = loss.
   rewrite H4.
   by apply: process_eval_rec4_loss_draw_loss.
@@ -1166,32 +1177,24 @@ elim: n t i => /= [|n IH] t i;
   case: ieval => //; try by case.
 repeat split => //.
 - rewrite -(sflipK loss) => /sflip_inj H.
-  rewrite -(esflipK eloss); congr esflip.
+  rewrite -(esflipK eloss).
   apply: process_eval_rec4_draw_win_win H => // i1.
   by case:  (IH (flip t) i1) => _ [].
 - rewrite -(sflipK draw) => /sflip_inj H.
-  rewrite -[3]/(es2n (esflip edraw)) -[4]/(es2n (esflip lossdraw)).
-  rewrite !esflip_le andbC.
   by apply: process_eval_rec4_draw_win_draw H _ => // i1;
      case:  (IH (flip t) i1) => _ [].
 - rewrite -(sflipK win) => /sflip_inj H.
-  rewrite -[3]/(es2n (esflip edraw)) !esflip_lt.
   by apply: process_eval_rec4_draw_win_loss H => // i1;
      case:  (IH (flip t) i1) => _ [].
 - rewrite -(sflipK win) => /sflip_inj H.
-  rewrite -[ewin]/(esflip eloss); congr esflip.
   by apply: process_eval_rec4_loss_draw_loss H => i1;
      case:  (IH (flip t) i1) => [] [].
 - rewrite -(sflipK draw) => /sflip_inj H.
-  rewrite -[1]/(es2n (esflip ewin)) -[3]/(es2n (esflip edraw)).
-  rewrite esflip_lt esflip_le andbC.
   by apply: process_eval_rec4_loss_draw_draw H _ => // i1;
      case:  (IH (flip t) i1) => [] [].
 - rewrite -(sflipK loss) => /sflip_inj H.
-  rewrite -[2]/(es2n (esflip drawwin)) esflip_le.
   by apply: process_eval_rec4_loss_draw_win H _ => // i1;
      case:  (IH (flip t) i1) => [] [].
-rewrite s2es_flip; congr esflip.
 apply: process_eval_rec4_loss_win => //.
 - by move=> i1; case: (IH (flip t) i1) => [] [].
 - by move=> i1; case: (IH (flip t) i1) => [] [].
