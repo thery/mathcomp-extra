@@ -796,6 +796,7 @@ have [E3|E3] := leqP _ alpha.
 by apply: leq_trans (IH _ _ _); rewrite esflip_le.
 Qed.
 
+
 Fixpoint eval_rec4 n t alpha beta b := 
   if ieval t b is some v then s2es v else
   if n is n1.+1 then 
@@ -807,7 +808,6 @@ Section ProcessEvalRec4.
 
 Variable f1 : board -> state.
 Variable f2 : estate -> estate -> board -> estate.
-
 
 (** loss draw                                                                 *)
 
@@ -1205,6 +1205,14 @@ apply: process_eval_rec4_loss_win => //.
 by rewrite -es2ns2esK; apply: le_ewin.
 Qed.
 
+Definition eval4 t b := eval_rec4 (depth b) t eloss ewin b.
+
+Lemma eval4_correct t b : eval4 t b = eval t b.
+Proof.
+rewrite /eval4.
+by have [_ _ [->]] := eval_rec4_correct (depth b) t b.
+Qed.
+
 (* Adding hash table *)
 
 Definition htable := turn -> board -> option estate.
@@ -1223,6 +1231,7 @@ Definition ht_valid ht :=
 Inductive pres : Type := Pres of htable & estate. 
 
 Coercion pres2state (p : pres ) := let (_, r) := p in r.
+Coercion pres2table (p : pres ) := let (h, _) := p in h.
 
 Lemma hput_correct ht t b e :
   ht_valid ht -> econtained (eval t b) e -> ht_valid (hput ht t b e).
@@ -1258,22 +1267,45 @@ End PR5.
 Lemma ge_process_eval_rec5 eval alpha beta res ht l : 
     esflip res <= process_eval_rec5 eval alpha beta ht res l.
 Proof.
-elim: l alpha beta res ht => /= [_ _ res |i l IH alpha beta res ht] //.
+elim: l beta res ht => /= [_ _ res |i l IH beta res ht] //.
 case E : eval => [ht1 res1].
 have [E1|E1] := leqP res _; first by apply: IH.
 have {}E1 : res1 <= res by apply: ltnW.
 have [E2|E2] := leqP beta _.
-  by apply: leq_trans (IH _ _ _ _); rewrite esflip_le.
+  by apply: leq_trans (IH _ _ _); rewrite esflip_le.
 have [E3|E3] := leqP _ alpha.
   by case: (res1) E1; case: res; case: (l).
-by apply: leq_trans (IH _ _ _ _); rewrite esflip_le.
+by apply: leq_trans (IH _ _ _); rewrite esflip_le.
 Qed.
+
+Inductive ares := Ares of bool & estate & estate & estate.
 
 Fixpoint eval_rec5 n t alpha beta ht b := 
   if ieval t b is some v then Pres ht (s2es v) else
+  let score := hget ht t b in 
+  let (flag, alpha1, beta1, res1) := 
+    if score  is Some res then
+      if is_state res then Ares true alpha beta res 
+      else
+        if res is drawwin then 
+          (* this is drawwin *)
+          if beta is edraw
+            then Ares true alpha beta res
+            else Ares false edraw beta res
+          else 
+          (* this is lossdraw *)
+          if alpha is edraw
+            then Ares true alpha beta res
+            else  Ares false alpha edraw res
+    else Ares false alpha beta ewin
+  in
+  if flag then Pres ht res1 else
   if n is n1.+1 then 
+    let (ht1, res2) :=
      process_eval_rec5 (eval_rec5 n1 (flip t)) 
-                (esflip beta) (esflip alpha) ht win (moves t b)
+                (esflip beta1) (esflip alpha1) ht win (moves t b) in
+    let res3 := if some (esflip res2) == score then edraw else res2 in
+    let ht2 := hput ht1 t b res3 in Pres ht2 res3
   else Pres ht edraw.
 
 Section ProcessEvalRec5.
@@ -1281,74 +1313,189 @@ Section ProcessEvalRec5.
 Variable f1 : board -> state.
 Variable f2 : estate -> estate -> htable -> board -> pres.
 
+Definition Hiv (l : seq board) :=  
+  [/\ 
+    [/\
+      forall i ht, i \in l -> ht_valid ht ->  ht_valid (f2 eloss edraw ht i),
+      forall i ht , i \in l -> ht_valid ht -> f1 i = loss -> 
+        f2 eloss edraw ht i = eloss :> estate,
+      forall i ht , i \in l -> ht_valid ht -> f1 i = draw -> 
+        edraw <= f2 eloss edraw ht i <= drawwin &
+      forall i ht, i \in l -> ht_valid ht ->  f1 i = win ->
+        drawwin <= f2 eloss edraw ht i],
+    [/\
+      forall i ht, i \in l -> ht_valid ht -> ht_valid (f2 edraw ewin ht i),
+      forall i ht, i \in l -> ht_valid ht -> 
+        f1 i = win -> f2 edraw ewin ht i = ewin :> estate,
+      forall i ht, i \in l -> ht_valid ht ->
+        f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= draw &
+      forall i ht, i \in l -> ht_valid ht ->
+        f1 i = loss -> f2 edraw ewin ht i <= lossdraw] &
+    ((forall i ht, i \in l -> 
+      ht_valid ht ->  ht_valid (f2 eloss ewin ht i)) /\
+     forall i ht, i \in l -> 
+      ht_valid ht -> f2 eloss ewin ht i = f1 i :> estate)].
+
+Lemma Hiv_cons i l : Hiv (i :: l) -> Hiv l.
+Proof.
+move=> [[H1 H2 H3 H4] [H5 H6 H7 H8] [H9 H10]].
+by  (repeat split) => i1 ht Hi1 *;
+     (apply H1 || apply H2 || apply H3 || apply H4 || apply H5 ||
+      apply H6 || apply H7 || apply H8 || apply H9 || apply H10) => //;
+     rewrite in_cons Hi1 orbT.
+Qed.
+
+Lemma Hiv_hd i l :
+  Hiv (i :: l) ->
+  [/\ 
+    [/\
+      forall ht, ht_valid ht -> ht_valid (f2 eloss edraw ht i),
+      forall ht,
+        ht_valid ht -> f1 i = loss -> f2 eloss edraw ht i = eloss :> estate,
+      forall ht,
+        ht_valid ht -> f1 i = draw -> edraw <= f2 eloss edraw ht i <= drawwin &
+      forall ht, 
+        ht_valid ht ->  f1 i = win -> drawwin <= f2 eloss edraw ht i],
+    [/\
+      forall ht, ht_valid ht -> ht_valid (f2 edraw ewin ht i),
+      forall ht, ht_valid ht -> 
+        f1 i = win -> f2 edraw ewin ht i = ewin :> estate,
+      forall ht, ht_valid ht ->
+        f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= draw &
+      forall ht, ht_valid ht ->
+        f1 i = loss -> f2 edraw ewin ht i <= lossdraw] &
+    ((forall ht, ht_valid ht ->  ht_valid (f2 eloss ewin ht i)) /\
+     forall ht, ht_valid ht -> f2 eloss ewin ht i = f1 i :> estate)].
+Proof.
+move=> [[H1 H2 H3 H4] [H5 H6 H7 H8] [H9 H10]].
+by (repeat split) => *;
+     (apply H1 || apply H2 || apply H3 || apply H4 || apply H5 ||
+      apply H6 || apply H7 || apply H8 || apply H9 || apply H10) => //;
+     rewrite in_cons eqxx.
+Qed.
+
 
 (** loss draw                                                                 *)
 
-Hypothesis H5loss_draw_loss : 
-  forall ht i, f1 i = loss -> f2 eloss edraw ht i = eloss :> estate.
-Hypothesis H5loss_draw_draw : 
-  forall ht i, f1 i = draw -> edraw <= f2 eloss edraw ht i <= drawwin.
-Hypothesis H5loss_draw_win : 
-  forall ht i, f1 i = win -> drawwin <= f2 eloss edraw ht i.
+Lemma H5loss_draw_table ht i l :
+  Hiv (i :: l) -> ht_valid ht -> ht_valid (f2 eloss edraw ht i).
+Proof. by move/Hiv_hd=> [] [H _ _ _] _ _; apply: H. Qed.
 
-Lemma H5loss_draw_ge ht i : draw <= f1 i -> edraw <= f2 eloss edraw ht i.
+Lemma H5loss_draw_loss ht i l :
+  Hiv (i :: l) -> 
+  ht_valid ht -> f1 i = loss -> f2 eloss edraw ht i = eloss :> estate.
+Proof. by move/Hiv_hd=> [] [_ H _ _] _ _; apply: H. Qed.
+
+Lemma H5loss_draw_draw ht i l : 
+  Hiv (i :: l) -> 
+  ht_valid ht -> f1 i = draw -> edraw <= f2 eloss edraw ht i <= drawwin.
+Proof. by move/Hiv_hd=> [] [_ _ H _] _ _; apply: H. Qed.
+
+Lemma H5loss_draw_win ht i l : 
+  Hiv (i :: l) -> 
+  ht_valid ht -> f1 i = win -> drawwin <= f2 eloss edraw ht i.
+Proof. by move/Hiv_hd=> [] [_ _ _ H] _ _; apply: H. Qed.
+
+Lemma H5loss_draw_ge ht i l :
+  Hiv (i :: l) -> 
+  ht_valid ht -> draw <= f1 i -> edraw <= f2 eloss edraw ht i.
 Proof.
-case: f1 (@H5loss_draw_draw ht i) (@H5loss_draw_win ht i) => //.
+move=> Hiv Hv.
+case: f1 (@H5loss_draw_draw ht i l Hiv Hv) 
+         (@H5loss_draw_win ht i l Hiv Hv) => //.
   by move=> _ /(_ (refl_equal _)) /(leq_trans _) H _; rewrite H.
 by move=> /(_ (refl_equal _)) /andP[].
 Qed.
 
-Lemma H5loss_draw_le ht i : f1 i <= draw -> f2 eloss edraw ht i <= drawwin.
+Lemma H5loss_draw_le ht i l :
+  Hiv (i :: l) -> 
+  ht_valid ht -> f1 i <= draw -> f2 eloss edraw ht i <= drawwin.
 Proof.
-case: f1 (@H5loss_draw_loss ht i) (@H5loss_draw_draw ht i) => //.
+move=> Hiv Hv.
+case: f1 (@H5loss_draw_loss ht i l Hiv Hv) 
+         (@H5loss_draw_draw ht i l Hiv Hv) => //.
   by move=> /(_ (refl_equal _))->.
 by move=> _ /(_ (refl_equal _)) /andP[].
 Qed.
 
+Lemma process_eval_rec5_loss_draw_valid ht (res : estate) l :
+  Hiv l -> ht_valid ht -> 
+  ht_valid (process_eval_rec5 f2 eloss edraw ht res l).
+Proof.
+elim: l ht res => // i l IH ht res HHiv Hv.
+have HHiv1 := Hiv_cons HHiv.
+rewrite [process_eval_rec5 _ _ _ _ _ _]/=.
+case E : f2 => [ht1 res1].
+have -> : res1 = f2 eloss edraw ht i by rewrite E.
+have -> : ht1 = f2 eloss edraw ht i by rewrite E.
+have [E1|E1] := leqP res (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
+have [E2|E2] := leqP edraw (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
+have [E3|E3] := leqP (f2 _ _ _ _) eloss.
+  case: pres2state => //=; try by apply: (H5loss_draw_table HHiv).
+  by case: (l) => *; apply: (H5loss_draw_table HHiv).
+case E4 : (f1 i).
+- rewrite ltnNge in E2; case/negP: E2.
+  by apply: leq_trans (H5loss_draw_win HHiv Hv E4).
+- by rewrite (H5loss_draw_loss HHiv) // ltnn in E3.
+rewrite ltnNge in E2; case/negP: E2.
+by have /andP[] := H5loss_draw_draw HHiv Hv E4.
+Qed.
+
 Lemma process_eval_rec5_loss_draw_le ht (res : estate) l :
+  Hiv l -> 
+  ht_valid ht ->
   draw <= res ->
   draw <= \smin_(i <- l) f1 i ->
   process_eval_rec5 f2 eloss edraw ht res l <= edraw.
 Proof.
-elim: l ht res => [|i l IH] ht res.
+elim: l ht res => [|i l IH] ht res HHiv Hv.
   by rewrite big_nil (esflip_le _ edraw).
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H1 H2.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss edraw ht i by rewrite E.
+have -> : ht1 = f2 eloss edraw ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
-  by apply: IH => //; apply: leq_trans H2 (ge_sminr _ _).
+  apply: IH => //; first by apply: (H5loss_draw_table HHiv).
+  by apply: leq_trans H2 (ge_sminr _ _).
 rewrite ifT; last first.
-  apply H5loss_draw_ge.
+  apply (H5loss_draw_ge HHiv) => //.
   apply: leq_trans H2 (ge_sminl _ _).
-apply: IH => //.
-  by apply: H5loss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
+apply: IH => //; first by apply: (H5loss_draw_table HHiv).
+  by apply: (H5loss_draw_ge HHiv) => //; apply: leq_trans H2 (ge_sminl _ _).
 by apply: leq_trans H2 (ge_sminr _ _).
 Qed.
 
 Lemma process_eval_rec5_loss_draw_ge ht (res : estate) l :
+  Hiv l -> 
+  ht_valid ht ->
   \smin_(i <- l) f1 i <= draw ->
    lossdraw <= process_eval_rec5 f2 eloss edraw ht res l.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil.
+elim: l ht res => [|i l IH] ht res HHiv Hv; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss edraw ht i by rewrite E.
+have -> : ht1 = f2 eloss edraw ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
   have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     rewrite (esflip_le drawwin).
-    by apply: leq_trans E1 (H5loss_draw_le _ _).
+    by apply: leq_trans E1 (H5loss_draw_le HHiv _ _).
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
 have [E2|E2] := leqP edraw (f2 _ _ _ _).
   have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     rewrite (esflip_le drawwin).
-    by apply: leq_trans _ (H5loss_draw_le _ _).
+    by apply: leq_trans _ (H5loss_draw_le HHiv _ _).
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
 have [E3|E3] := leqP (f2 eloss edraw ht i) eloss.
   by rewrite (le_elossE E3).
 apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
@@ -1357,52 +1504,64 @@ by apply: leq_trans (ltnW E2) _.
 Qed.
 
 Lemma process_eval_rec5_loss_draw_loss ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i = loss ->
    process_eval_rec5 f2 eloss edraw ht res l = ewin :> estate.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil.
+elim: l ht res => [|i l IH] ht res HHiv Hv; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss edraw ht i by rewrite E.
+have -> : ht1 = f2 eloss edraw ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
   have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     apply: ge_ewinE; rewrite -[ewin]/(esflip eloss).
-    have -> : res = eloss by apply: le_elossE; rewrite -(H5loss_draw_loss ht H).
+    have -> : res = eloss.
+      by apply: le_elossE => //; rewrite -(H5loss_draw_loss HHiv Hv H).
     by apply: ge_process_eval_rec5.
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
 have [E2|E2] := leqP _ (f2 _ _ _ _).
   have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    rewrite H5loss_draw_loss //.
+    rewrite (H5loss_draw_loss HHiv) //.
     apply: ge_ewinE; rewrite -[ewin]/(esflip eloss).
     by apply: ge_process_eval_rec5.
   rewrite smin_ler // in H.
-  by apply: IH.
-rewrite H5loss_draw_loss //=.
-by case: f1 (@H5loss_draw_draw ht i) (@H5loss_draw_win ht i) => // [_|];
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
+rewrite (H5loss_draw_loss HHiv) //=.
+by case: f1 (@H5loss_draw_draw ht i l HHiv Hv)
+            (@H5loss_draw_win ht i l HHiv Hv) => // [_|];
    move=> /(_ (refl_equal _)); case: f2 E2 => h; case.
 Qed.
 
 Lemma process_eval_rec5_loss_draw_draw ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i = draw -> draw <= res ->
    lossdraw <= process_eval_rec5 f2 eloss edraw ht res l <= draw.
 Proof.
-move=> H1 H2.
+move=> HHiv Hv H1 H2.
 rewrite process_eval_rec5_loss_draw_ge ?H1 //.
 by rewrite process_eval_rec5_loss_draw_le ?H1.
 Qed.
 
 Lemma process_eval_rec5_loss_draw_win ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i = win -> drawwin <= res ->
    process_eval_rec5 f2 eloss edraw ht res l <= lossdraw.
 Proof.
-elim: l ht res => [|i l IH] ht res.
+elim: l ht res => [|i l IH] ht res HHiv Hv.
   by rewrite big_nil /= (esflip_le _ drawwin).
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H1 H2.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss edraw ht i by rewrite E.
+have -> : ht1 = f2 eloss edraw ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
   have [E1|/ltnW E1] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H1 *; split => //.
@@ -1410,167 +1569,229 @@ have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
   rewrite smin_ler // in H1 *; split => //.
   by apply: ge_winE; rewrite -{1}H1.
 have [E1|E1] := leqP res (f2 _ _ _ _).
-  by apply: IH.
+  by apply: IH => //; apply: (H5loss_draw_table HHiv).
 have [E2|E2] := leqP _ (f2 _ _ _ _).
-  apply: IH => //.
-  by apply: H5loss_draw_win.
+  apply: IH => //; first by apply: (H5loss_draw_table HHiv).
+  by apply: (H5loss_draw_win HHiv).
 rewrite ifN.
   rewrite ltnNge in E2; case/negP: E2.
-  by apply: leq_trans (H5loss_draw_win _ _).
+  by apply: leq_trans (H5loss_draw_win HHiv _ _).
 rewrite -ltnNge.
-by apply: leq_trans (H5loss_draw_win _ _).
+by apply: leq_trans (H5loss_draw_win HHiv _ _).
 Qed.
 
 (** draw win *)
 
-Hypothesis H5draw_win_win : 
-  forall ht i, f1 i = win -> f2 edraw ewin ht i = ewin :> estate.
-Hypothesis H5draw_win_draw : 
-  forall ht i, f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= edraw.
-Hypothesis H5draw_win_loss: 
-  forall ht i, f1 i = loss -> f2 edraw ewin ht i <= lossdraw.
+Lemma H5draw_win_table ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> ht_valid (f2 edraw ewin ht i).
+Proof. by move/Hiv_hd=> [] _ [H _ _ _] _; apply: H. Qed.
 
-Lemma H5draw_win_le ht i : f1 i <= draw -> f2 edraw ewin ht i <= edraw.
+Lemma H5draw_win_win ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> 
+    f1 i = win -> f2 edraw ewin ht i = ewin :> estate.
+Proof. by move/Hiv_hd=> [] _ [_ H _ _] _; apply: H. Qed.
+
+Lemma H5draw_win_draw ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> 
+    f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= edraw.
+Proof. by move/Hiv_hd=> [] _ [_ _ H _] _; apply: H. Qed.
+
+Lemma H5draw_win_loss ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> 
+  f1 i = loss -> f2 edraw ewin ht i <= lossdraw.
+Proof. by move/Hiv_hd=> [] _ [_ _ _ H ] _; apply: H. Qed.
+
+Lemma H5draw_win_le ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> f1 i <= draw -> f2 edraw ewin ht i <= edraw.
 Proof.
-case: f1 (@H5draw_win_loss ht i) (@H5draw_win_draw ht i) => //.
+move=> HHiv Hv.
+case: f1 (@H5draw_win_loss ht i l HHiv Hv) 
+         (@H5draw_win_draw ht i l HHiv Hv) => //.
   by move=> /(_ (refl_equal _)) /leq_trans->.
 by move=>  _ /(_ (refl_equal _)) /andP[].
 Qed.
 
-Lemma H5draw_win_ge ht i : draw <= f1 i -> lossdraw <= f2 edraw ewin ht i.
+Lemma H5draw_win_ge ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> draw <= f1 i -> lossdraw <= f2 edraw ewin ht i.
 Proof.
-case: f1 (@H5draw_win_draw ht i) (@H5draw_win_win ht i) => //.
+move=> HHiv Hv.
+case: f1 (@H5draw_win_draw ht i l HHiv Hv) 
+         (@H5draw_win_win ht i l HHiv Hv) => //.
   by move=> _ /(_ (refl_equal _))->.
 by move=> /(_ (refl_equal _)) /andP[].
 Qed.
 
+Lemma process_eval_rec5_draw_win_valid ht (res : estate) l :
+  Hiv l -> ht_valid ht -> ht_valid (process_eval_rec5 f2 edraw ewin ht res l).
+Proof.
+elim: l ht res => // i l IH ht res HHiv Hv.
+rewrite [process_eval_rec5 _ _ _ _ _ _]/=.
+case E : f2 => [ht1 res1].
+have -> : res1 = f2 edraw ewin ht i by rewrite E.
+have -> : ht1 = f2 edraw ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
+have [E1|E1] := leqP res (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
+have [E2|E2] := leqP ewin (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
+have [E3|E3] := leqP (f2 _ _ _ _) edraw.
+  case: pres2state => //=; try by apply: (H5draw_win_table HHiv).
+  by case: (l) => *; apply: (H5draw_win_table HHiv).
+case E4 : (f1 i).
+- rewrite (H5draw_win_win HHiv) //.
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
+- rewrite ltnNge in E3; case/negP: E3.
+  by apply: (H5draw_win_le HHiv) => //; rewrite E4.
+rewrite ltnNge in E3; case/negP: E3.
+by apply: (H5draw_win_le HHiv) => //; rewrite E4.
+Qed.
+
 Lemma process_eval_rec5_draw_win_le ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i <= draw ->
   edraw <= process_eval_rec5 f2 edraw ewin ht res l.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil.
+elim: l ht res => [|i l IH] ht res HHiv Hv; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 edraw ewin ht i by rewrite E.
+have -> : ht1 = f2 edraw ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
   have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     rewrite (esflip_le edraw).
-    by apply: leq_trans E1 (H5draw_win_le _ _).
+    by apply: leq_trans E1 (H5draw_win_le HHiv _ _).
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
 have [E2|E2] := leqP ewin (f2 edraw ewin ht i).
   have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     rewrite leqNgt in E2; case/negP: E2.
-    by apply: leq_ltn_trans (H5draw_win_le _ _) _.
+    by apply: leq_ltn_trans (H5draw_win_le HHiv _ _) _.
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
 have [E3|E3] := leqP (f2 _ _ _ i) draw.
   by case: f2 E3 => // h; case; case: (l).
 have [E4|E4] := leqP (f1 i) draw.
   rewrite ltnNge in E3; case/negP: E3.
-  by apply: H5draw_win_le.
-rewrite H5draw_win_win // in E2.
+  by apply: (H5draw_win_le HHiv).
+rewrite (H5draw_win_win HHiv) // in E2.
 apply: ge_winE.
 by case: f1 E4.
 Qed.
 
 Lemma process_eval_rec5_draw_win_ge ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   lossdraw <= res ->
   draw <= \smin_(i <- l) f1 i ->
   process_eval_rec5 f2 edraw ewin ht res l <= drawwin.
 Proof.
-elim: l ht res => [|i l IH] ht res.
+elim: l ht res => [|i l IH] ht res HHiv Hv.
   by rewrite big_nil (esflip_le _ lossdraw).
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H1 H2.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 edraw ewin ht i by rewrite E.
+have -> : ht1 = f2 edraw ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
-  apply: IH => //.
+  apply: IH => //; first by apply: (H5draw_win_table HHiv).
   by apply: leq_trans H2 (ge_sminr _ _).
 have [E2|E2] := leqP ewin (f2 _ _ _ _).
-  apply: IH => //.
-    apply: H5draw_win_ge.
+  apply: IH => //; first by apply: (H5draw_win_table HHiv).
+    apply: (H5draw_win_ge HHiv) => //.
     by apply: leq_trans H2 (ge_sminl _ _).
   by apply: leq_trans H2 (ge_sminr _ _).
 have [E3|E3] := leqP (f2 edraw ewin ht i) edraw.
   have : lossdraw <= (f2 edraw ewin ht i).
-    apply: H5draw_win_ge (leq_trans H2 (ge_sminl _ _)).
-  by case: f2 => //= _; case; case: (l).
+    apply: (H5draw_win_ge HHiv) (leq_trans H2 (ge_sminl _ _)) => //.
+  by case: pres2state => //= _; case: (l).
 have [E4|E4] := leqP (f1 i) draw.
   rewrite ltnNge in E3; case/negP: E3.
-  by apply: H5draw_win_le.
-rewrite H5draw_win_win // in E2.
+  by apply: (H5draw_win_le HHiv).
+rewrite (H5draw_win_win HHiv) // in E2.
 apply: ge_winE.
 by case: f1 E4.
 Qed.
 
 Lemma process_eval_rec5_draw_win_win ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   res = win ->
   \smin_(i <- l) f1 i = win ->
    process_eval_rec5 f2 edraw ewin ht res l = eloss :> estate.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil => ->.
+elim: l ht res => [|i l IH] ht res HHiv Hv; first by rewrite big_nil => ->.
 rewrite big_cons [process_eval_rec5  _ _ _ _ _ _]/= => H1 H2.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 edraw ewin ht i by rewrite E.
+have -> : ht1 = f2 edraw ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [H3 H4] : f1 i = win /\ \smin_(j <- l) f1 j = win.
   have [E1|/ltnW E1] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H2; split => //.
     by apply: ge_winE; rewrite -{1}H2.
   rewrite smin_ler // in H2; split => //.
   by apply: ge_winE; rewrite -{1}H2.
-rewrite H5draw_win_win // H1 /=.
-by apply: IH.
+rewrite (H5draw_win_win HHiv) // H1 /=.
+by apply: IH => //; apply: (H5draw_win_table HHiv).
 Qed.
 
 Lemma process_eval_rec5_draw_win_draw ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i = draw -> lossdraw <= res ->
    edraw <= process_eval_rec5 f2 edraw ewin ht res l <= drawwin.
 Proof.
-move=> H1 H2.
+move=> HHiv Hv H1 H2.
 rewrite process_eval_rec5_draw_win_ge ?H1 //.
 by rewrite process_eval_rec5_draw_win_le ?H1.
 Qed.
 
 Lemma process_eval_rec5_draw_win_loss ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i = loss ->
    drawwin <= process_eval_rec5 f2 edraw ewin ht res l.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil.
+elim: l ht res => [|i l IH] ht res HHiv Hv; first by rewrite big_nil.
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 edraw ewin ht i by rewrite E.
+have -> : ht1 = f2 edraw ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
   have [E2|/ltnW E2] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     rewrite (esflip_le lossdraw).
     apply: leq_trans E1 _.
-    by apply: H5draw_win_loss.
+    by apply: (H5draw_win_loss HHiv).
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
 have [E2|E2] := leqP ewin (f2 _ _ _ _).
   have [E3|/ltnW E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite smin_lel // in H.
-    have := H5draw_win_loss ht H.
+    have := H5draw_win_loss HHiv Hv H.
     by rewrite leqNgt (leq_trans _ E2).
   rewrite smin_ler // in H.
-  by apply: IH.
+  by apply: IH => //; apply: (H5draw_win_table HHiv).
 have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H.
-  by case: pres2state (H5draw_win_loss ht H).
+  by case: pres2state (H5draw_win_loss HHiv Hv H).
 rewrite smin_ler // in H; last by apply: ltnW.
 have [E4|E4] := leqP (f2 _ _ _ _) edraw.
   have : lossdraw <= f2 edraw ewin ht i.
-    apply: H5draw_win_ge.
+    apply: (H5draw_win_ge HHiv) => //.
     by move: E3; rewrite H; case: f1.
   case: pres2state E4 => //=.
   by case: (l) H => //; rewrite big_nil.
 move: E3 E2; rewrite H.
-case: f1 (@H5draw_win_draw ht i) (@H5draw_win_win ht i) => //.
+case: f1 (@H5draw_win_draw ht i l HHiv Hv) 
+         (@H5draw_win_win ht i l HHiv Hv) => //.
   by move=> _ -> //.
 move=> /(_ (refl_equal _)).
 by rewrite [_ <= edraw]leqNgt E4 andbF.
@@ -1578,23 +1799,57 @@ Qed.
 
 (* loss win *)
 
-Hypothesis H5loss_win : forall ht i, f2 eloss ewin ht i = f1 i :> estate.
+Lemma H5loss_win_table ht i l : 
+  Hiv (i :: l) -> ht_valid ht -> ht_valid (f2 eloss ewin ht i).
+Proof. by move/Hiv_hd=> [] _ _ [H _]; apply: H. Qed.
+
+
+Lemma H5loss_win ht i l :
+  Hiv (i :: l) -> ht_valid ht -> f2 eloss ewin ht i = f1 i :> estate.
+Proof. by move/Hiv_hd=> [] _ _ [_ H]; apply: H. Qed.
+
+Lemma process_eval_rec5_loss_win_valid ht (res : estate) l :
+  Hiv l -> ht_valid ht -> ht_valid (process_eval_rec5 f2 eloss ewin ht res l).
+Proof.
+elim: l ht res => // i l IH ht res HHiv Hv.
+rewrite [process_eval_rec5 _ _ _ _ _ _]/=.
+case E : f2 => [ht1 res1].
+have -> : res1 = f2 eloss ewin ht i by rewrite E.
+have -> : ht1 = f2 eloss ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
+have [E1|E1] := leqP res (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5loss_win_table HHiv).
+have [E2|E2] := leqP ewin (f2 _ _ _ _).
+  by apply: IH => //; apply: (H5loss_win_table HHiv).
+have [E3|E3] := leqP (f2 _ _ _ _) eloss.
+  case: pres2state => //=; try by apply: (H5loss_win_table HHiv).
+  by case: (l) => *; apply: (H5loss_win_table HHiv).
+rewrite (H5loss_win HHiv) // in E E1 E2 E3 *.
+have -> : f1 i = draw by case: f1 E2 E3.
+apply: process_eval_rec5_loss_draw_valid => //.
+by apply: (H5loss_win_table HHiv).
+Qed.
 
 Lemma process_eval_rec5_loss_win_lt ht (a res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   a <= res ->
   a < \smin_(i <- l) f1 i -> 
   process_eval_rec5 f2 eloss ewin ht res l <= esflip a.
 Proof.
-elim: l ht res => [|i l IH] ht res aLr; first by rewrite big_nil esflip_le.
+elim: l ht res => [|i l IH] ht res HHiv Hv aLr.
+  by rewrite big_nil esflip_le.
 rewrite big_cons => /= aLs.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss ewin ht i by rewrite E.
-rewrite H5loss_win.
+have -> : ht1 = f2 eloss ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
+rewrite (H5loss_win HHiv) //.
 have [E1|E1] := leqP res _.
-  apply: IH => //.
+  apply: IH => //; first by apply: (H5loss_win_table HHiv).
   by apply: leq_trans aLs (ge_sminr _ _).
 have [E2|E2] := leqP ewin _.
-  apply: IH => //.
+  apply: IH => //; first by apply: (H5loss_win_table HHiv).
     by rewrite (ge_ewinE E2) // le_ewin.
   by apply: leq_trans aLs (ge_sminr _ _).
 rewrite ifN; last first.
@@ -1606,35 +1861,43 @@ have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   have H : f1 i = draw.
     by case: f1 E2 E3 aLs => //; case: (\smin_(_ <- _) _) => //; case: (a).
   rewrite H in E1 E3 aLs *.
-  apply: leq_trans (process_eval_rec5_loss_draw_le _ _ _) _ =>//. 
+  apply: leq_trans (process_eval_rec5_loss_draw_le HHiv1 _ _ _) _ => //.
+    by apply: (H5loss_win_table HHiv). 
   rewrite (esflip_le edraw).
   by apply: ltnW.
 rewrite smin_ler // in aLs *; last by apply: ltnW.
 suff -> : f1 i = win.
-  by apply: IH => //; apply: le_ewin.
+  apply: IH => //; first by apply: (H5loss_win_table HHiv).
+  by apply: le_ewin.
 by case: f1 E3 aLs => //; case: (\smin_(_ <- _) _) => //; case: (a).
 Qed.
 
 Lemma process_eval_rec5_loss_win ht (res : estate) l :
+  Hiv l ->
+  ht_valid ht ->
   \smin_(i <- l) f1 i <= res ->
   process_eval_rec5 f2 eloss ewin ht res l = 
     sflip (\smin_(i <- l) f1 i) :> estate.
 Proof.
-elim: l ht res => [|i l IH] ht res; first by rewrite big_nil /= => /ge_ewinE ->.
+elim: l ht res => [|i l IH] ht res HHiv Hv.
+   by rewrite big_nil /= => /ge_ewinE ->.
 rewrite big_cons [process_eval_rec5 _ _ _ _ _ _]/= => H.
 case E : f2 => [ht1 res1].
 have -> : res1 = f2 eloss ewin ht i by rewrite E.
-rewrite H5loss_win !es2ns2esK.
+have -> : ht1 = f2 eloss ewin ht i by rewrite E.
+have HHiv1 := Hiv_cons HHiv.
+rewrite (H5loss_win HHiv) // !es2ns2esK.
 have [E1|E1] := leqP res (f1 i).
   have [E2|E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
     rewrite smin_ler // in H *.
-    by apply: IH.
+    by apply: IH => //; apply: (H5loss_win_table HHiv).
   rewrite smin_lel // in H *; last by apply: ltnW.
   apply: esle_antisym; last first.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     by rewrite es2ns2esK es2n_flip esflip_le es2ns2esK.
   rewrite es2ns2esK es2n_flip.
-  by apply: process_eval_rec5_loss_win_lt; rewrite es2ns2esK.
+  apply: process_eval_rec5_loss_win_lt; rewrite ?es2ns2esK //.
+  by apply: (H5loss_win_table HHiv).
 rewrite ifN; last first.
   by rewrite -leqNgt -ltnS (leq_trans E1) // le_ewin.
 have [E2|E2] := leqP (f1 i) loss.
@@ -1647,11 +1910,13 @@ rewrite H3 in H E1 *.
 have [E3|E3] := leqP draw (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H *.
   apply: esle_antisym; rewrite es2ns2esK es2n_flip.
-    by apply: process_eval_rec5_loss_draw_le.
+    apply: process_eval_rec5_loss_draw_le => //.
+    by apply: (H5loss_win_table HHiv).
   by apply: ge_process_eval_rec5.
 suff H4 : \smin_(j <- l) f1 j = loss.
   rewrite H4.
-  by apply: process_eval_rec5_loss_draw_loss.
+  apply: process_eval_rec5_loss_draw_loss => //.
+  by apply: (H5loss_win_table HHiv).    
 apply: sle_antisym.
   by case: (\smin_(_ <- _) _) E3.
 by apply: ge_loss.
@@ -1659,52 +1924,286 @@ Qed.
 
 End ProcessEvalRec5.
 
+Lemma esflip_inj : injective esflip.
+Proof. by do 2 case. Qed.
+
 Lemma eval_rec5_correct n t ht i :
+  depth i <= n ->
   let f1 := eval_rec n t in
   let f2 := eval_rec5 n t in
   [/\ 
     [/\
-      f1 i = loss -> f2 eloss edraw ht i = eloss :> estate,
-      f1 i = draw -> edraw <= f2 eloss edraw ht i <= drawwin &
-      f1 i = win -> drawwin <= f2 eloss edraw ht i],
+      ht_valid ht -> ht_valid (f2 eloss edraw ht i),
+      ht_valid ht -> f1 i = loss -> f2 eloss edraw ht i = eloss :> estate,
+      ht_valid ht -> f1 i = draw -> edraw <= f2 eloss edraw ht i <= drawwin &
+      ht_valid ht ->  f1 i = win -> drawwin <= f2 eloss edraw ht i],
     [/\
-      f1 i = win -> f2 edraw ewin ht i = ewin :> estate,
-      f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= draw &
-      f1 i = loss -> f2 edraw ewin ht i <= lossdraw] &
-      f2 eloss ewin ht i = f1 i :> estate].
+      ht_valid ht -> ht_valid (f2 edraw ewin ht i),
+      ht_valid ht -> f1 i = win -> f2 edraw ewin ht i = ewin :> estate,
+      ht_valid ht -> f1 i = draw -> lossdraw <= f2 edraw ewin ht i <= draw &
+      ht_valid ht -> f1 i = loss -> f2 edraw ewin ht i <= lossdraw] &
+    ((ht_valid ht -> ht_valid (f2 eloss ewin ht i)) /\
+     (ht_valid ht -> f2 eloss ewin ht i = f1 i :> estate))].
 Proof.
-elim: n t ht i => /= [|n IH] t ht i;
-  case: ieval => //; try by case.
-repeat split => //.
-- rewrite -(sflipK loss) => /sflip_inj H.
-  rewrite -(esflipK eloss).
-  apply: process_eval_rec5_draw_win_win H => // ht1 i1.
-  by case:  (IH (flip t) ht1 i1) => _ [].
-- rewrite -(sflipK draw) => /sflip_inj H.
-  by apply: process_eval_rec5_draw_win_draw H _ => // ht1 i1;
-     case:  (IH (flip t) ht1 i1) => _ [].
-- rewrite -(sflipK win) => /sflip_inj H.
-  by apply: process_eval_rec5_draw_win_loss H => // ht1 i1;
-     case:  (IH (flip t) ht1 i1) => _ [].
-- rewrite -(sflipK win) => /sflip_inj H.
-  by apply: process_eval_rec5_loss_draw_loss H => ht1 i1;
-     case:  (IH (flip t) ht1 i1) => [] [].
-- rewrite -(sflipK draw) => /sflip_inj H.
-  by apply: process_eval_rec5_loss_draw_draw H _ => // ht1 i1;
-     case:  (IH (flip t) ht1 i1) => [] [].
-- rewrite -(sflipK loss) => /sflip_inj H.
-  by apply: process_eval_rec5_loss_draw_win H _ => // ht1 i1;
-     case:  (IH (flip t) ht1 i1) => [] [].
-apply: process_eval_rec5_loss_win => //.
-- by move=> ht1 i1; case: (IH (flip t) ht1 i1) => [] [].
-- by move=> ht1 i1; case: (IH (flip t) ht1 i1) => [] [].
-- by move=> ht1 i1; case: (IH (flip t) ht1 i1) => [] [].
-- by move=> ht1 i1; case: (IH (flip t) ht1 i1) => [] [].
-by rewrite -es2ns2esK; apply: le_ewin.
+elim: n t ht i => [/=|n IH] t ht i Hi.
+  case: ieval (depth_ieval t i); last by rewrite eqxx; case: depth Hi.
+  by case.
+have HHiv : Hiv (eval_rec n (flip t)) (eval_rec5 n (flip t)) (moves t i).
+  have F i1 : i1 \in moves t i -> depth i1 <= n.
+    move=> Hi1.
+    rewrite (moves_depth Hi1) -ltnS (leq_trans _ Hi) // prednK //.
+    have := depth_ieval t i; rewrite liveness.
+    by case: depth Hi1 => //; case: moves => //=.
+  by (repeat split) => // i1 ht1 Hi1 Hv1;
+   have [[H1 H2 H3 H4] [H5 H6 H7 H8] [H9 H10]] := IH (flip t) ht1 i1 (F _ Hi1);
+   (apply: H1 || apply: H2 ||apply: H3 ||apply: H4 ||apply: H5 ||
+    apply: H6 ||apply: H7 ||apply: H8 ||apply: H9 || apply: H10).
+have evalE : eval_rec n.+1 t i = eval t i.
+  by apply: eval_rec_stable; rewrite leqnn.
+repeat split => //=.
+- move=> Hv; case E1 : ieval => //.
+  rewrite /= E1 in evalE.
+  case: hget (Hv i t) => [|_]; last first.
+  case E2 : process_eval_rec5 => [ht1 res2] /=.
+    apply: hput_correct => //.
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+      by apply: (process_eval_rec5_draw_win_valid HHiv).
+    rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E2.
+    case E3 : (\smin_(_ <- _) _).
+    - by rewrite (process_eval_rec5_draw_win_win HHiv).
+    - have := process_eval_rec5_draw_win_loss win HHiv Hv E3.
+      by case: process_eval_rec5 => h [] //.
+    have := process_eval_rec5_draw_win_draw HHiv Hv E3 (isT : lossdraw <= ewin).
+    by case: process_eval_rec5 => h [] //.
+  move=> es /(_ es (refl_equal _)) Hes.
+  have [//|E2] := boolP (is_state es).
+  case: es Hes E1 E2 => //= He _ _.
+  case E : process_eval_rec5 => [ht1 res2] /=.
+  case: eqP => [[E1]| E1].
+    apply: hput_correct => //.
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E.
+      by apply: (process_eval_rec5_draw_win_valid HHiv) => //.
+    move: E1 He.
+    rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E.
+    case E3 : (\smin_(_ <- _) _) => //.
+    by rewrite (process_eval_rec5_draw_win_win HHiv).
+  apply: hput_correct => //.
+    rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E.
+    by apply: (process_eval_rec5_draw_win_valid HHiv) => //.
+  move: E1 He.
+  rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E.
+  case E3 : (\smin_(_ <- _) _) => //.
+    by rewrite (process_eval_rec5_draw_win_win HHiv).
+  have := process_eval_rec5_draw_win_draw HHiv Hv E3 (isT : lossdraw <= ewin).
+  by case: process_eval_rec5 => h [].
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ win) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by rewrite (process_eval_rec5_draw_win_win HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = loss by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  case: es Hes E1 => // Hes E1.
+    case E2 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E2.
+    by rewrite (process_eval_rec5_draw_win_win HHiv).
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ draw) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by rewrite (process_eval_rec5_draw_win_draw HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = draw by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  case: es Hes E1 => // _ _.
+  case E1 : process_eval_rec5 => [ht1 res2] /=.
+  rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+  have := process_eval_rec5_draw_win_draw HHiv Hv Hs (isT : lossdraw <= ewin).
+  by case: process_eval_rec5 => h []. 
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ loss) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by rewrite (process_eval_rec5_draw_win_loss win HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = win by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  by case: es Hes E1.
+- move=> Hv; case E1 : ieval => //.
+  rewrite /= E1 in evalE.
+  case: hget (Hv i t) => [|_]; last first.
+  case E2 : process_eval_rec5 => [ht1 res2] /=.
+    apply: hput_correct => //.
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+      by apply: (process_eval_rec5_loss_draw_valid HHiv).
+    rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E2.
+    case E3 : (\smin_(_ <- _) _).
+    - have := process_eval_rec5_loss_draw_win HHiv Hv E3 
+                (isT : drawwin <= ewin).
+      by case: process_eval_rec5 => h [] //.
+    - by rewrite (process_eval_rec5_loss_draw_loss ewin HHiv).
+    have := process_eval_rec5_loss_draw_draw HHiv Hv E3 (isT : draw <= ewin).
+    by case: process_eval_rec5 => h [] //.
+  move=> es /(_ es (refl_equal _)) Hes.
+  have [//|E2] := boolP (is_state es).
+  case: es Hes E1 E2 => //= He _ _.
+  case E : process_eval_rec5 => [ht1 res2] /=.
+  case: eqP => [[E1]| E1].
+    apply: hput_correct => //.
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E.
+      by apply: (process_eval_rec5_loss_draw_valid HHiv) => //.
+    move: E1 He.
+    rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E.
+    case E3 : (\smin_(_ <- _) _) => //.
+    by rewrite (process_eval_rec5_loss_draw_loss win HHiv).
+  apply: hput_correct => //.
+    rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E.
+    by apply: (process_eval_rec5_loss_draw_valid HHiv) => //.
+  move: E1 He.
+  rewrite -evalE -[res2]/(Pres ht1 res2 : estate) -E.
+  case E3 : (\smin_(_ <- _) _) => //.
+    by rewrite (process_eval_rec5_loss_draw_loss win HHiv).
+  have := process_eval_rec5_loss_draw_draw HHiv Hv E3 (isT : draw <= ewin).
+  by case: process_eval_rec5 => h [].
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ loss) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by apply: (process_eval_rec5_loss_draw_loss _ HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = win by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  case: es Hes E1 => // _ _.
+  case E1 : process_eval_rec5 => [ht1 res2] /=.
+  rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+  by rewrite (process_eval_rec5_loss_draw_loss _ HHiv).
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ draw) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by apply: (process_eval_rec5_loss_draw_draw HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = draw by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  case: es Hes E1 => // _ _.
+  case E1 : process_eval_rec5 => [ht1 res2] /=.
+  rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+  have := process_eval_rec5_loss_draw_draw HHiv Hv Hs (isT : draw <= ewin).
+  by case: process_eval_rec5 => h [].
+- move=> Hv; case E : ieval => [a|]; first by move=>->.
+  move=> /(@sflip_inj _ win) Hs.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+    by apply: (process_eval_rec5_loss_draw_win HHiv).
+  move=> es /(_ es (refl_equal _)) Hes.
+  have Hs1 : eval t i = loss by rewrite -evalE /= E Hs.
+  rewrite Hs1 in Hes.
+  have [//|E1] := boolP (is_state es); first by case: es Hes.
+  by case: es Hes E1.
+- move=> Hv; case E : ieval => //.
+  case: hget (Hv i t) => [|_ ]; last first.
+    case E1 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+      apply: hput_correct => //.
+        rewrite -[ht1]/(Pres ht1 res2 : htable) -E1.
+        by apply: (process_eval_rec5_loss_win_valid HHiv).
+      rewrite (process_eval_rec5_loss_win HHiv) //.
+      by rewrite -evalE /= E; case: sflip.
+    by apply: le_win.
+  move=> es /(_ es (refl_equal _)) Hes.
+  have [//|E1] := boolP (is_state es).
+  case: es Hes E1 => // Hes E1.
+    case E2 : process_eval_rec5 => [ht1 res2] /=.
+    rewrite -[res2]/(Pres ht1 res2 : estate) -E2.
+    case: eqP => [[E3]| E3].
+      apply: hput_correct => //.
+        rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+        by apply: (process_eval_rec5_draw_win_valid HHiv).
+      move: E3 Hes.
+      case E4 : eval => //.
+      move: E4; rewrite -evalE /= E => /(@sflip_inj _ win) E4.
+      by rewrite (process_eval_rec5_draw_win_win HHiv).
+    apply: hput_correct => //.  
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+      by apply: (process_eval_rec5_draw_win_valid HHiv).
+    case E4 : process_eval_rec5 => [ht2 res3] /=.
+    rewrite -[res3]/(Pres ht2 res3 : estate) -E4.
+    case E5 : eval Hes => //.
+      move: E5; rewrite -evalE /= E => /(@sflip_inj _ win) E5.
+      by rewrite (process_eval_rec5_draw_win_win HHiv).
+    move: E5; rewrite -evalE /= E => /(@sflip_inj _ draw) E5.
+    have := process_eval_rec5_draw_win_draw HHiv Hv E5 (isT: lossdraw <= ewin).
+    by case: process_eval_rec5 => h [].
+  case E2 : process_eval_rec5 => [ht1 res2] /=.
+  rewrite -[res2]/(Pres ht1 res2 : estate) -E2.
+  case: eqP => [[E3]| E3].
+    apply: hput_correct => //.
+      rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+      by apply: (process_eval_rec5_loss_draw_valid HHiv).
+    move: E3 Hes.
+    case E4 : eval => //.
+    move: E4; rewrite -evalE /= E => /(@sflip_inj _ loss) E4.
+    by rewrite (process_eval_rec5_loss_draw_loss win HHiv).
+  apply: hput_correct => //.  
+    rewrite -[ht_valid ht1]/(ht_valid (Pres ht1 res2)) -E2.
+    by apply: (process_eval_rec5_loss_draw_valid HHiv).
+  case E4 : process_eval_rec5 => [ht2 res3] /=.
+  rewrite -[res3]/(Pres ht2 res3 : estate) -E4.
+  case E5 : eval Hes => //.
+    move: E5; rewrite -evalE /= E => /(@sflip_inj _ loss) E5.
+    by rewrite (process_eval_rec5_loss_draw_loss win HHiv).
+  move: E5; rewrite -evalE /= E => /(@sflip_inj _ draw) E5.
+  have := process_eval_rec5_loss_draw_draw HHiv Hv E5 (isT: draw <= ewin).
+  by case: process_eval_rec5 => h [].
+move=> Hv; case E : ieval => [a|] //.
+case: hget (Hv i t) => [|_ ]; last first.
+  case E1 : process_eval_rec5 => [ht1 res2] /=.
+  rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
+  apply: (process_eval_rec5_loss_win HHiv) => //.
+  by apply: le_win.
+move=> es /(_ es (refl_equal _)) Hes.
+rewrite -evalE /= E in Hes.
+have [//|E1] := boolP (is_state es).
+  by case: es Hes => //=; case: sflip.
+case: es Hes E1 => //.
+  case E1 : (\smin_(i0 <- moves t i) eval_rec n (flip t) i0) => //= _ _.
+    case E2 : process_eval_rec5 => [ht1 res1] /=.
+    rewrite -[res1]/(Pres ht1 res1 : estate) -E2.
+    by rewrite (process_eval_rec5_draw_win_win HHiv) //.
+  case E2 : process_eval_rec5 => [ht1 res1] /=.
+  rewrite -[res1]/(Pres ht1 res1 : estate) -E2.
+  have := process_eval_rec5_draw_win_draw HHiv Hv E1 (isT : lossdraw <= ewin).
+  by case: process_eval_rec5 => h [].
+case E1 : (\smin_(i0 <- moves t i) eval_rec n (flip t) i0) => //= _ _.
+  case E2 : process_eval_rec5 => [ht1 res1] /=.
+  rewrite -[res1]/(Pres ht1 res1 : estate) -E2.
+  by rewrite (process_eval_rec5_loss_draw_loss win HHiv).
+case E2 : process_eval_rec5 => [ht1 res1] /=.
+rewrite -[res1]/(Pres ht1 res1 : estate) -E2.
+have := process_eval_rec5_loss_draw_draw HHiv Hv E1 (isT : draw <= ewin).
+by case: process_eval_rec5 => h [].
+Qed.
+
+Definition eval5 t b : estate := eval_rec5 (depth b) t eloss ewin 
+                                    (fun=>fun=> None) b.
+
+Lemma eval5_correct t b : eval5 t b = eval t b.
+Proof.
+rewrite /eval5.
+by have [_ _ [_ ->]] := eval_rec5_correct t  (fun=>fun=> None)
+                          (leqnn (depth b)).
 Qed.
 
 End Board.
-
-
-End Board.
-
