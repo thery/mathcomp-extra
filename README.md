@@ -27,6 +27,6 @@ Some extra material for mathcomp
  
  [The proof of Lucas theorem for binomial](./digitn.v)
 
- [A formalisation of 2-player games] (./tplayer.v) (in progress)
+ [A formalisation of 2-player games](./tplayer.v) (in progress)
 
- [A formalisation of Fast Fourier Transform] (./fft.v) (in progress)
+ [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
