@@ -12,11 +12,10 @@ Unset Printing Implicit Defensive.
 
 Import GRing.Theory.
 
-Section OddEven.
+Section FFT.
 
 Local Open Scope ring_scope.
 
-Section EvenOdd.
 
 (* Arbitrary ring *)
 Variable R : ringType.
@@ -85,29 +84,38 @@ rewrite comp_polyXn // coef_poly; case: leqP => // sLi.
 by rewrite nth_default ?if_same // leq_divRL.
 Qed.
 
+Lemma hornerMXn (p : {poly R}) n (x : R):
+  (p * 'X^n).[x] = p.[x] * x ^+ n.
+Proof.
+elim/poly_ind: p n => [n|p c IH n]; first by rewrite !(mul0r, horner0).
+rewrite mulrDl hornerD hornerCM hornerXn.
+by rewrite -mulrA -exprS IH hornerMXaddC mulrDl -mulrA -exprS.
+Qed.
+
+Lemma horner_comp_polyXn (p : {poly R}) n (x : R):
+  (p \Po 'X^n).[x] = p.[x ^+ n].
+Proof.
+elim/poly_ind: p => [|p c IH]; first by rewrite horner0 comp_poly0 horner0.
+by rewrite comp_poly_MXaddC !hornerD !hornerC hornerMX hornerMXn IH.
+Qed.
+
 (* Decomposiiton in odd and even part *)
 Lemma odd_even_polyE p :
-  p = (even_poly p \Po 'X^2) + 'X * (odd_poly p \Po 'X^2).
+  p = (even_poly p \Po 'X^2) + (odd_poly p \Po 'X^2) * 'X.
 Proof.
 apply/polyP=> i.
-rewrite coefD coefXM !coef_comp_polyXn // coef_even_poly coef_odd_poly.
+rewrite coefD coefMX !coef_comp_polyXn // coef_even_poly coef_odd_poly.
 rewrite !divn2 !dvdn2 -(odd_double_half i).
 case: (odd i); rewrite !(add1n, add0n, oddS, odd_double, doubleK, add0r) //=.
 by case: i => [|[|i]]; rewrite ?addr0 //= odd_double /= addr0.
 Qed.
-
-End EvenOdd.
-
-Section FFT.
-
-Variable R : comRingType.
 
 Fixpoint fft n w p : (2^n.+1).-tuple R := 
   if n is n1.+1 return (2^n.+1).-tuple R then
   let ev := fft n1 (w * w) (even_poly p) in
   let ov := fft n1 (w * w) (odd_poly p) in
   [tuple 
-    let j := (i %% 2^n1.+1)%nat in ev`_j + w ^+ i * ov`_ j 
+    let j := (i %% 2^n1.+1)%nat in ev`_j + ov`_ j * w ^+ i 
     | i < 2 ^ n1.+2]
   else [tuple p.[1]; p.[w]].
 
@@ -116,8 +124,6 @@ Proof.
 move/subnK <-; rewrite !uphalf_half oddD halfD !addnA.
 by do 2 case: odd => //=; apply: leq_addl.
 Qed.
-
-Implicit Type p : {poly R}.
 
 Lemma fft_correct n (w : R) p i : 
    (i < 2 ^ n.+1)%nat ->
@@ -132,7 +138,7 @@ have n2P_halfE : (2 ^ n.+1 = uphalf (2 ^ n.+2))%nat.
 rewrite (nth_map (Ordinal n2P)) /= ?size_enum_ord //=.
 rewrite (nth_ord_enum _ (Ordinal iL)) /= !IH //.
 - rewrite [p in RHS]odd_even_polyE.
-  rewrite !(hornerD, horner_comp, hornerM, hornerX).
+  rewrite !(hornerD, horner_comp_polyXn, hornerMX, hornerX).
   suff -> : (w * w) ^+ (i %% 2 ^ n.+1) = w ^+ i * w ^+ i by [].
   rewrite -!expr2 -!exprM.
   have [iLm|mLi] := leqP (2 ^ n.+1) i; last by rewrite modn_small // mulnC.
