@@ -110,14 +110,13 @@ case: (odd i); rewrite !(add1n, add0n, oddS, odd_double, doubleK, add0r) //=.
 by case: i => [|[|i]]; rewrite ?addr0 //= odd_double /= addr0.
 Qed.
 
-Fixpoint fft n w p : (2^n.+1).-tuple R := 
-  if n is n1.+1 return (2^n.+1).-tuple R then
+Fixpoint fft n w p : {poly R} := 
+  if n is n1.+1 then
   let ev := fft n1 (w * w) (even_poly p) in
   let ov := fft n1 (w * w) (odd_poly p) in
-  [tuple 
+  \poly_(i < 2 ^ n1.+2)
     let j := (i %% 2^n1.+1)%nat in ev`_j + ov`_ j * w ^+ i 
-    | i < 2 ^ n1.+2]
-  else [tuple p.[1]; p.[w]].
+  else \poly_(i < 2) (if i == 0%nat :> nat then p.[1] else p.[w]).
 
 Lemma uphalf_leq m n : (m <= n -> uphalf m <= uphalf n)%nat.
 Proof.
@@ -125,18 +124,20 @@ move/subnK <-; rewrite !uphalf_half oddD halfD !addnA.
 by do 2 case: odd => //=; apply: leq_addl.
 Qed.
 
+Lemma size_fft  n (w : R) p : (size (fft n w p) <= 2 ^ n.+1)%nat.
+Proof. by case: n => [|n]; apply: size_poly. Qed.
+
 Lemma fft_correct n (w : R) p i : 
    (i < 2 ^ n.+1)%nat ->
    (size p <= 2 ^ n.+1)%nat -> w ^+ (2 ^ n) = -1 -> 
    (fft n w p)`_ i = p.[w ^+ i].
 Proof.
-elim: n w p i =>  [w p [|[]] //=|n IH w p i iL sL wE /=].
+elim: n w p i =>  [w p [|[]] //=|n IH w p i iL sL wE /=]; rewrite coef_poly //.
 have imL : (i %% 2 ^ n.+1 < 2 ^ n.+1)%N by apply/ltn_pmod/expn_gt0.
 have n2P : (0 < 2 ^ n.+2)%nat by rewrite expn_gt0.
 have n2P_halfE : (2 ^ n.+1 = uphalf (2 ^ n.+2))%nat.
   by rewrite uphalf_half !expnS !mul2n doubleK odd_double add0n.
-rewrite (nth_map (Ordinal n2P)) /= ?size_enum_ord //=.
-rewrite (nth_ord_enum _ (Ordinal iL)) /= !IH //.
+rewrite iL !IH ?coef_poly //.
 - rewrite [p in RHS]odd_even_polyE.
   rewrite !(hornerD, horner_comp_polyXn, hornerMX, hornerX).
   suff -> : (w * w) ^+ (i %% 2 ^ n.+1) = w ^+ i * w ^+ i by [].
