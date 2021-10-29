@@ -1210,7 +1210,7 @@ Definition eval4 t b := eval_rec4 (depth b) t eloss ewin b.
 Lemma eval4_correct t b : eval4 t b = eval t b.
 Proof.
 rewrite /eval4.
-by have [_ _ [->]] := eval_rec4_correct (depth b) t b.
+by have [_ _  ->] := eval_rec4_correct (depth b) t b.
 Qed.
 
 (* Adding hash table *)

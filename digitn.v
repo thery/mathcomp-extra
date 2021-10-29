@@ -124,8 +124,9 @@ have H i :
 under eq_bigr do rewrite {}H.
 rewrite bigA_distr_bigA /= coef_sum.
 under eq_bigr do under eq_bigr do rewrite -exprM mulnC.
-under eq_bigr do rewrite prodr_natmul -expr_sum coefMn coefXn.
-pose f : {ffun 'I_k -> 'I_p} := [ffun i : 'I_k =>  Ordinal (ltn_pdigit n i (prime_gt0 Pp))].
+under eq_bigr do rewrite prodrMn -expr_sum coefMn coefXn.
+pose f : {ffun 'I_k -> 'I_p} := 
+  [ffun i : 'I_k =>  Ordinal (ltn_pdigit n i (prime_gt0 Pp))].
 rewrite (bigD1 f) //= [X in (_ %% X)%N]Fp_cast //= .
 rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [| i iDf].
   rewrite (_ : _ == _) ?mulr1n.

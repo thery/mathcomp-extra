@@ -83,8 +83,8 @@ Qed.
 
 Notation "\lcm_ ( i < n ) F" :=
  (\big[lcmn/1%N]_(i < n ) F%N) 
-  (at level 41, F at level 41, i, n at level 50,
-           format "'[' \lcm_ ( i  <  n  ) '/  '  F ']'") : nat_scope.
+   (at level 41, F at level 41, i, n at level 50,
+           format "'[' \lcm_ ( i  <  n )  F ']'") : nat_scope.
 
 Lemma leib_line n i k : lcmn 'L(n.+1, i) (\lcm_(j < k) 'L(n, i + j)) = 
                    \lcm_(j < k.+1) 'L(n.+1, i + j).

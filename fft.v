@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra.
+From mathcomp Require Import all_ssreflect all_algebra ssrnum.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -10,12 +10,11 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import GRing.Theory.
+Import GRing.Theory Num.Theory Order.POrderTheory Num.ExtraDef Num.
 
 Section FFT.
 
 Local Open Scope ring_scope.
-
 
 (* Arbitrary ring *)
 Variable R : ringType.
