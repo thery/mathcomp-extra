@@ -30,3 +30,5 @@ Some extra material for mathcomp
  [A formalisation of 2-player games](./tplayer.v) (in progress)
 
  [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
+
+[A formalisation of sorting network](./nsort.v) (in progress)
