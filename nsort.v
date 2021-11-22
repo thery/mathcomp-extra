@@ -379,6 +379,29 @@ rewrite dsorted_consF; apply: (iffP eqP) => [->|[[[|j] k]]] /=.
 by case.
 Qed.
 
+Section HalfCleaner.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Definition half_cleaner n := [seq (lshift n i, rshift n i) | i  <- enum 'I_n].
+
+Lemma nfun_half_cleaner n (t : (n + n).-tuple A) : 
+  nfun (half_cleaner n) t = 
+  [tuple
+    match split i with 
+    | inl x => min (tnth t i) (tnth t (rshift n x))  
+    | inr x => max (tnth t (lshift n x)) (tnth t i)
+    end | i < n + n].
+
+  nfun (half_cleaner n) .
+]) 4.
+Search (enum _) (ordinal _).
+
+Search concl: ('I_ _) (_ + _).
+Compute val (rshift 4 (ord0 : 'I_2)).
+Se
+Check insub.
 Lemma bitonic_boolP (l : seq bool) :
   reflect (exists t,
             let: (b,i,j,k) := t in l = nseq i b ++ nseq j (~~ b) ++ nseq k b)
