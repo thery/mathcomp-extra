@@ -393,15 +393,43 @@ Lemma nfun_half_cleaner n (t : (n + n).-tuple A) :
     | inl x => min (tnth t i) (tnth t (rshift n x))  
     | inr x => max (tnth t (lshift n x)) (tnth t i)
     end | i < n + n].
+Proof.
+apply: eq_from_tnth => i /=.
+rewrite /half_cleaner.
+pose i1 := match split i with inl x => x | inr x => x end.
+rewrite tnth_map /= tnth_ord_tuple.
+set v := LHS; set v1 := RHS.
+suff : if i1 \in (enum 'I_n) then v = v1 else v = tnth t i.
+  by rewrite mem_enum inE.
+rewrite {}/v1 {}/v {}/i1; elim: (enum _) (enum_uniq 'I_n) t => 
+     //= a l IH /andP[aNIl Ul] t.
+rewrite inE; case: eqP => [aE|/eqP aNE] /=.
+  have := IH Ul (nswap (lshift n a, rshift n a) t).
+  case: splitP aE aNIl => [j iE <- /negPf -> -> |j iE <- /negPf -> ->].
+    suff -> : lshift n j = i by apply: nswapE_min.
+    by apply/val_eqP; rewrite /= iE.
+  suff -> : rshift n j = i by apply: nswapE_max.
+  by apply/val_eqP; rewrite /= iE.
+have := IH Ul (nswap (lshift n a, rshift n a) t).
+case: splitP aNE aNIl => [j iE jDa aNIl |j iE jDa aNIl].
+  have njDa : n + j != a.
+    by rewrite neq_ltn (leq_trans (ltn_ord _)) ?orbT ?leq_addr.
+  have iDa : i != a :> nat by rewrite iE.
+  have iDna : i != n + a :> nat.
+    by rewrite neq_ltn iE (leq_trans (ltn_ord _)) ?leq_addr.
+  by have [jIl -> |jNIl ->] := boolP (j \in l);
+     rewrite !nswapE_neq //=; apply/eqP/val_eqP; rewrite /= ?eqn_add2l.
+have iDa : i != a :> nat.
+  by rewrite iE neq_ltn (leq_trans (ltn_ord _)) ?orbT ?leq_addr.
+have iDna : i != n + a :> nat by rewrite iE eqn_add2l.
+have jDna : j != n + a :> nat.
+  by rewrite neq_ltn (leq_trans (ltn_ord _)) ?leq_addr.
+by have [jIl -> |jNIl ->] := boolP (j \in l);
+   rewrite !nswapE_neq //=; apply/eqP/val_eqP.
+Qed.
 
-  nfun (half_cleaner n) .
-]) 4.
-Search (enum _) (ordinal _).
+End HalfCleaner.
 
-Search concl: ('I_ _) (_ + _).
-Compute val (rshift 4 (ord0 : 'I_2)).
-Se
-Check insub.
 Lemma bitonic_boolP (l : seq bool) :
   reflect (exists t,
             let: (b,i,j,k) := t in l = nseq i b ++ nseq j (~~ b) ++ nseq k b)
