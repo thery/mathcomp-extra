@@ -71,7 +71,23 @@ Qed.
 Lemma fun_of_network_empty : nfun nempty =1 id.
 Proof. by []. Qed.
 
+Lemma swap_const (a : A) i : nswap i [tuple of nseq m a] = [tuple of nseq m a].
+Proof.
+by rewrite /nswap !(tnth_nth a) /= !nth_nseq !ltn_ord lexx.
+Qed.
+
+Lemma nfun_const (a : A) n : nfun n [tuple of nseq m a] = [tuple of nseq m a].
+Proof.
+by elim: n => //= n p IH; rewrite swap_const IH.
+Qed.
+
 End Network.
+
+Definition nlshift m (n : network m) : network (m + m) := 
+    [seq (lshift m i.1, lshift m i.2) | i <- n].
+
+Definition nrshift m (n : network m) : network (m + m) := 
+    [seq (rshift m i.1, rshift m i.2) | i <- n].
 
 Section E2.
 
@@ -220,12 +236,26 @@ Lemma ttakeE (m1 m2 : nat) (t : (m1 + m2).-tuple A) :
   ttake t = take m1 t :> seq A.
 Proof. by rewrite val_tcast. Qed.
 
+Lemma ttakeK (m1 m2 : nat) (t1 : m1.-tuple A) (t2 : m2.-tuple A) : 
+  ttake [tuple of t1 ++ t2] = t1.
+Proof.
+apply/val_eqP => /=.
+by rewrite ttakeE take_cat size_tuple ltnn subnn /= take0 cats0.
+Qed.
+
 Definition tdrop (m1 m2 : nat) (t : (m1 + m2).-tuple A) :=
   tcast (tdrop_proof m1 m2) [tuple of drop m1 t].
 
 Lemma tdropE (m1 m2 : nat) (t : (m1 + m2).-tuple A) : 
   tdrop t = drop m1 t :> seq A.
 Proof. by rewrite val_tcast. Qed.
+
+Lemma tdropK (m1 m2 : nat) (t1 : m1.-tuple A) (t2 : m2.-tuple A) : 
+  tdrop [tuple of t1 ++ t2] = t2.
+Proof.
+apply/val_eqP => /=.
+by rewrite tdropE drop_cat size_tuple ltnn subnn /= drop0.
+Qed.
 
 Definition tsplit (m1 m2 : nat) (t : (m1 + m2).-tuple A) :=
   (ttake t, tdrop t).
@@ -276,6 +306,136 @@ rewrite (nth_map (x, x)) ?nth_zip /=.
 - by rewrite !(tnth_nth x) nth_enum_ord // !val_tcast.
 - by rewrite size_take size_drop size_tuple e2D2P addnK.
 by rewrite size_zip size_take size_drop size_tuple e2D2P addnK minnn.
+Qed.
+
+Lemma tperm_lshift m1 m2 (i1 i2 i : 'I_m2) :
+  tperm (lshift m1 i1) (lshift m1 i2) (lshift m1 i) = 
+  lshift m1 (tperm i1 i2 i).
+Proof.
+case: tpermP => [/val_eqP/=/val_eqP->|/val_eqP/=/val_eqP->|/eqP HD1 /eqP HD2].
+- by rewrite tpermL.
+- by rewrite tpermR.
+rewrite tpermD //; first by apply: contra HD1 => /eqP->. 
+by apply: contra HD2 => /eqP->.
+Qed. 
+
+Lemma tperm_rshift m1 m2 (i1 i2 i : 'I_m2) :
+  tperm (rshift m1 i1) (rshift m1 i2) (rshift m1 i) = 
+  rshift m1 (tperm i1 i2 i).
+Proof.
+case: tpermP => [/val_eqP/=|/val_eqP/=|].
+- by rewrite eqn_add2l => /val_eqP->; rewrite tpermL.
+- by rewrite eqn_add2l => /val_eqP->; rewrite tpermR.
+move/val_eqP; rewrite eqn_add2l => iDi1.
+move/val_eqP; rewrite eqn_add2l => iDi2.
+by rewrite tpermD 1?eq_sym.
+Qed.
+
+Lemma nfun_nlshift_take m (n : network m) t :
+  ttake (nfun (nlshift n) t) = nfun n (ttake t).
+Proof.
+elim: n t => //= [] [i1 i2] n IH t /=; rewrite IH /nswap /=; congr nfun.
+pose a := tnth t (lshift _ i1).
+have -> : tnth (ttake t) i1 = tnth t (lshift m i1).
+  by rewrite !(tnth_nth a) ttakeE /= nth_take.
+have -> : tnth (ttake t) i2 = tnth t (lshift m i2).
+  by rewrite !(tnth_nth a) ttakeE /= nth_take.
+case: leP => // _.
+apply: eq_from_tnth => i /=.
+rewrite !(tnth_nth a) !ttakeE nth_take //=.
+rewrite (nth_map i1); last by rewrite -enum_ord size_enum_ord.
+rewrite (nth_map (lshift _ i)) /=; last first.
+  by rewrite -enum_ord size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
+set u := nth _ _ _; have {u}-> : u = (lshift m i).
+rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord //.
+by apply: leq_trans (ltn_ord _) (leq_addr _ _).
+rewrite tperm_lshift.
+set u := nth _ _ _; have -> : u = i.
+  by rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord.
+by rewrite !(tnth_nth a) ttakeE nth_take.
+Qed.
+
+Lemma nfun_nlshift_drop m (n : network m) t :
+  tdrop (nfun (nlshift n) t) = tdrop t.
+Proof.
+elim: n t => //= [] [i1 i2] n IH t /=; rewrite IH /nswap /=.
+apply: eq_from_tnth => i /=.
+pose a := tnth t (lshift _ i1).
+rewrite !(tnth_nth a) !tdropE !nth_drop //=.
+case: leP => //_.
+rewrite (nth_map (lshift _ i)) /=; last first.
+  by rewrite -enum_ord size_enum_ord ltn_add2l.
+set u := nth _ _ _; have {u}-> : u = (rshift m i).
+  by rewrite /u -enum_ord; 
+     apply/val_eqP => /=; rewrite nth_enum_ord // ltn_add2l.
+rewrite tpermD ?(tnth_nth a) //.
+  apply/eqP/val_eqP=>/=.
+  by rewrite neq_ltn (leq_trans (ltn_ord i1)) ?leq_addr.
+apply/eqP/val_eqP=>/=.
+by rewrite neq_ltn (leq_trans (ltn_ord i2)) ?leq_addr.
+Qed.
+
+Lemma nfun_nlshift m (n : network m) t :
+  nfun (nlshift n) t = [tuple of nfun n (ttake t) ++ tdrop t].
+Proof.
+have -> : nfun (nlshift n) t = 
+          [tuple of ttake (nfun (nlshift n) t) ++ tdrop (nfun (nlshift n) t)].
+  by apply/val_eqP; rewrite /= ttakeE tdropE cat_take_drop.
+by rewrite nfun_nlshift_take nfun_nlshift_drop.
+Qed.
+
+Lemma nfun_nrshift_take m (n : network m) t :
+  ttake (nfun (nrshift n) t) = ttake t.
+Proof.
+elim: n t => //= [] [i1 i2] n IH t /=; rewrite IH /nswap /=.
+apply: eq_from_tnth => i /=.
+pose a := tnth t (lshift _ i1).
+rewrite !(tnth_nth a) !ttakeE !nth_take //=.
+case: leP => //_.
+rewrite (nth_map (lshift _ i)) /=; last first.
+  by rewrite -enum_ord size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
+set u := nth _ _ _; have {u}-> : u = (lshift m i).
+  rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord //.
+  by rewrite (leq_trans (ltn_ord _) (leq_addr _ _)).
+rewrite tpermD ?(tnth_nth a) //.
+  apply/eqP/val_eqP=>/=.
+  by rewrite neq_ltn (leq_trans (ltn_ord i)) ?leq_addr ?orbT.
+apply/eqP/val_eqP=>/=.
+by rewrite neq_ltn (leq_trans (ltn_ord i)) ?leq_addr ?orbT.
+Qed.
+
+Lemma nfun_nrshift_drop m (n : network m) t :
+  tdrop (nfun (nrshift n) t) = nfun n (tdrop t).
+Proof.
+elim: n t => //= [] [i1 i2] n IH t /=; rewrite IH /nswap /=; congr nfun.
+pose a := tnth t (lshift _ i1).
+have -> : tnth (tdrop t) i1 = tnth t (rshift m i1).
+  by rewrite !(tnth_nth a) tdropE /= nth_drop.
+have -> : tnth (tdrop t) i2 = tnth t (rshift m i2).
+  by rewrite !(tnth_nth a) tdropE /= nth_drop.
+case: leP => // _.
+apply: eq_from_tnth => i /=.
+rewrite !(tnth_nth a) !tdropE nth_drop //=.
+rewrite (nth_map i1); last by rewrite -enum_ord size_enum_ord.
+rewrite (nth_map (lshift _ i)) /=; last first.
+  by rewrite -enum_ord size_enum_ord ltn_add2l.
+set u := nth _ _ _; have {u}-> : u = (rshift m i).
+  rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord //.
+  by rewrite ltn_add2l.
+rewrite tperm_rshift.
+set u := nth _ _ _; have -> : u = i.
+  by rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord.
+by rewrite !(tnth_nth a) tdropE nth_drop.
+Qed.
+
+
+Lemma nfun_nrshift m (n : network m) t :
+  nfun (nrshift n) t = [tuple of ttake t ++ nfun n (tdrop t)].
+Proof.
+have -> : nfun (nrshift n) t = 
+          [tuple of ttake (nfun (nrshift n) t) ++ tdrop (nfun (nrshift n) t)].
+  by apply/val_eqP; rewrite /= ttakeE tdropE cat_take_drop.
+by rewrite nfun_nrshift_take nfun_nrshift_drop.
 Qed.
 
 Fixpoint bsort (m : nat) : forall (t : (e2 m).-tuple A), (e2 m).-tuple A := 
@@ -385,7 +545,8 @@ Section HalfCleaner.
 Variable d : unit.
 Variable A : orderType d.
 
-Definition half_cleaner n := [seq (lshift n i, rshift n i) | i  <- enum 'I_n].
+Definition half_cleaner n : network (n + n) := 
+  [seq (lshift n i, rshift n i) | i  <- enum 'I_n].
 
 Lemma nfun_half_cleaner n (t : (n + n).-tuple A) : 
   nfun (half_cleaner n) t = 
@@ -428,6 +589,12 @@ have jDna : j != n + a :> nat.
 by have [jIl -> |jNIl ->] := boolP (j \in l);
    rewrite !nswapE_neq //=; apply/eqP/val_eqP.
 Qed.
+
+Fixpoint half_cleaner_rec n : network (e2 n) :=
+  if n is n1.+1 then
+    let t := half_cleaner_rec n1 in 
+    half_cleaner (e2 n1) ++ nlshift t ++ nrshift t 
+  else [::].
 
 End HalfCleaner.
 
@@ -713,7 +880,7 @@ have [jLn|nLj]:= leqP j n.
 (*** 
        b b~b~b~b~b~b
       ~b~b~b~b~b b b
-  min  0 0~b~b~b 0 0 
+  min  0 0~b~b~bhalf_cleaner 0 0 
   max  1 1~b~b~b 1 1
 ***)
 have ttE : ttake t1 = nseq i false ++ nseq (j - n) (~~b)
@@ -752,3 +919,179 @@ rewrite tdE -!nseqD; apply/andP; split; first by apply/eqP; congr nseq; lia.
 by apply/bitonic_boolP; exists (false, i, j - n, k).
 Qed.
 
+Lemma sorted_bool_constl m (l : seq bool) :
+  sorted <=%O ((nseq m false) ++ l) =  sorted <=%O l.
+Proof.
+by elim: m => // [] n; rewrite [nseq _.+1 _ ++ _]/= isorted_consF.
+Qed.
+
+Lemma sorted_bool_constr m (l : seq bool) :
+  sorted <=%O (l ++ (nseq m true)) =  sorted <=%O l.
+Proof.
+elim: l => [|[] l IH].
+- by case: m => // m; rewrite [nseq _.+1 _]/= isorted_consT size_nseq eqxx.
+- rewrite [(_ :: _) ++ _]/= !isorted_consT size_cat nseqD size_nseq.
+  by rewrite eqseq_cat ?eqxx ?andbT ?size_nseq.
+by rewrite [(_ :: _) ++ _]/= !isorted_consF.
+Qed.
+
+Lemma half_cleaner__rec_bool m (t : (e2 m).-tuple bool) :
+  (t : seq _) \is bitonic -> 
+  sorted <=%O (nfun (half_cleaner_rec m) t).
+Proof.
+elim: m t => /= [|m IH t tB]; first by (do 2 case => //=) => x [].
+rewrite !nfun_cat.
+rewrite nfun_nlshift nfun_nrshift.
+rewrite ttakeK tdropK.
+have /orP[/andP[Ht Hd]|/andP[Ht Hd]] := half_cleaner_bool tB.
+  have -> : ttake (nfun (half_cleaner (e2 m)) t) = [tuple of nseq (e2 m) false].
+    by apply/val_eqP.
+  rewrite nfun_const sorted_bool_constl.
+  by apply: IH.
+have -> : tdrop (nfun (half_cleaner (e2 m)) t) = [tuple of nseq (e2 m) true].
+  by apply/val_eqP.
+rewrite nfun_const sorted_bool_constr.
+by apply: IH.
+Qed.
+
+Section RHalfCleaner.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Definition rhalf_cleaner n := 
+    [seq (lshift n i, rshift n (rev_ord i)) | i  <- enum 'I_n].
+
+Lemma nfun_rhalf_cleaner n (t : (n + n).-tuple A) : 
+  nfun (rhalf_cleaner n) t = 
+  [tuple
+    match split i with 
+    | inl x => min (tnth t i) (tnth t (rshift n (rev_ord x)))  
+    | inr x => max (tnth t (lshift n (rev_ord x))) (tnth t i)
+    end | i < n + n].
+Proof.
+apply: eq_from_tnth => i /=.
+rewrite /rhalf_cleaner.
+pose i1 := match split i with inl x => x | inr x => rev_ord x end.
+rewrite tnth_map /= tnth_ord_tuple.
+set v := LHS; set v1 := RHS.
+suff : if i1 \in (enum 'I_n) then v = v1 else v = tnth t i.
+  by rewrite mem_enum inE.
+rewrite {}/v1 {}/v {}/i1; elim: (enum _) (enum_uniq 'I_n) t => 
+     //= a l IH /andP[aNIl Ul] t.
+rewrite inE; case: eqP => [aE|/eqP aNE] /=.
+  have := IH Ul (nswap (lshift n a, rshift n (rev_ord a)) t).
+  case: splitP aE aNIl => [j iE <- /negPf -> -> |j iE <- /negPf -> ->].
+    suff -> : lshift n j = i by apply: nswapE_min.
+    by apply/val_eqP; rewrite /= iE.
+  rewrite rev_ordK.
+  have -> : rshift n j = i by apply/val_eqP; rewrite /= iE.
+  by apply: nswapE_max.
+have := IH Ul (nswap (lshift n a, rshift n (rev_ord a)) t).
+case: splitP aNE aNIl => [j iE jDa aNIl |j iE jDa aNIl].
+  have njDa : n + (rev_ord j) != a.
+    by rewrite neq_ltn (leq_trans (ltn_ord _)) ?orbT ?leq_addr.
+  have iDa : i != a :> nat by rewrite iE.
+  have iDna : i != n + (rev_ord a) :> nat.
+    by rewrite neq_ltn iE (leq_trans (ltn_ord _)) ?leq_addr.
+  have [jIl -> |jNIl ->] := boolP (j \in l); rewrite !nswapE_neq //=.
+  apply/eqP/val_eqP; have := ltn_ord j; rewrite /= -iE; have := ltn_ord a.
+  by lia.
+have iDa : i != a :> nat.
+  by rewrite iE neq_ltn (leq_trans (ltn_ord _)) ?orbT ?leq_addr.
+have iDna : i != n + rev_ord a :> nat.
+  rewrite iE eqn_add2l /=; apply: contra jDa => /eqP jE.
+  by apply/eqP/val_eqP; rewrite /= jE; have := ltn_ord a; lia.
+have rjDa : rev_ord j != n + rev_ord a :> nat.
+  rewrite neq_ltn /= (leq_trans (ltn_ord (rev_ord j))) //.
+  by apply: leq_addr.
+by have [jIl -> |jNIl ->] := boolP (rev_ord j \in l); rewrite !nswapE_neq.
+Qed.
+
+Lemma nfun_rhalf_cleaner_rev_take n (t : (n + n).-tuple A) : 
+  ttake (nfun (rhalf_cleaner n) t) =
+  ttake (nfun (half_cleaner n) [tuple of ttake t ++ rev (tdrop t)]).
+Proof.
+rewrite nfun_rhalf_cleaner nfun_half_cleaner.
+apply: eq_from_tnth => i /=.
+have st : size (ttake t) = n.
+  rewrite ttakeE size_take size_tuple.
+  by case: (n) => // n1; rewrite addSn ltnS addnS ltnS leq_addr.
+have sd : size (tdrop t) = n.
+  by rewrite tdropE size_drop size_tuple addnK.
+pose k : 'I_(n + n) := lshift _ i; pose a := tnth t k.
+rewrite !(tnth_nth a) !ttakeE !nth_take //=.
+rewrite !(nth_map k) //; last first.
+- by rewrite fintype.size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
+- by rewrite fintype.size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
+- by rewrite -fintype.enumT fintype.size_enum_ord (leq_trans (ltn_ord _)
+             (leq_addr _ _)).
+have -> : i = k :> nat by [].
+rewrite -fintype.enumT fintype.nth_ord_enum.
+case: splitP => [j kE|j kE]; last first.
+  by have := ltn_ord i; rewrite [i : nat]kE ltnNge leq_addr.
+congr min.
+  by rewrite !(tnth_nth a) nth_cat /= st ltn_ord ttakeE nth_take.
+rewrite !(tnth_nth a) nth_cat /= st ifN; last by rewrite -leqNgt leq_addr.
+rewrite nth_rev; last by rewrite sd addnC addnK.
+rewrite sd tdropE nth_drop //.
+by congr nth; lia.
+Qed.
+
+Lemma nfun_rhalf_cleaner_rev_drop n (t : (n + n).-tuple A) : 
+  tdrop (nfun (rhalf_cleaner n) t) =
+  trev
+  (tdrop (nfun (half_cleaner n) [tuple of ttake t ++ rev (tdrop t)])).
+Proof.
+rewrite nfun_rhalf_cleaner nfun_half_cleaner.
+apply: eq_from_tnth => i /=.
+have st : size (ttake t) = n.
+  rewrite ttakeE size_take size_tuple.
+  by case: (n) => // n1; rewrite addSn ltnS addnS ltnS leq_addr.
+have sd : size (tdrop t) = n.
+  by rewrite tdropE size_drop size_tuple addnK.
+pose k : 'I_(n + n) := rshift _ i; pose a := tnth t k.
+rewrite !(tnth_nth a) nth_rev; last first.
+  by rewrite tdropE size_drop size_tuple addnK.
+rewrite !tdropE !nth_drop !(nth_map k) //; last first.
+- by rewrite size_tuple ltn_add2l.
+- by rewrite -fintype.enumT fintype.size_enum_ord ltn_add2l.
+- by rewrite size_drop !size_tuple; have := ltn_ord i; lia.
+- rewrite size_drop !size_tuple -fintype.enumT fintype.size_enum_ord.
+  by have := ltn_ord i; lia.
+have -> : n + i = k :> nat by [].
+rewrite -fintype.enumT fintype.nth_ord_enum.
+case: splitP => [j kE|j kE].
+  by have := ltn_ord j; rewrite -kE /= ltnNge leq_addr.
+rewrite size_drop size_tuple addnK.
+have -> : n + (n - i.+1) = rshift n (rev_ord i) by [].
+rewrite fintype.nth_ord_enum.
+case: splitP => /= [l lE | l lE]; first by have := ltn_ord l; lia.
+congr max.
+  rewrite !(tnth_nth a) nth_cat /= st ltn_ord.
+  rewrite ttakeE nth_take //; congr nth.
+  have : n + i = n + j by rewrite -kE.
+  by have := ltn_ord i; lia.
+rewrite !(tnth_nth a) nth_cat /= st ifN; last by rewrite -leqNgt leq_addr.
+rewrite nth_rev; last by rewrite sd; have := ltn_ord i; lia.
+rewrite tdropE nth_drop //.
+congr nth.
+rewrite size_drop size_tuple.
+by have := ltn_ord i; lia.
+Qed.
+
+Lemma cat_ttake_tdrop n (t : (n + n).-tuple A) : 
+  t = [tuple of ttake t ++ tdrop t].
+Proof. by apply/val_eqP; rewrite /= ttakeE tdropE; rewrite cat_take_drop. Qed.
+
+Lemma nfun_rhalf_cleaner_rev n (t : (n + n).-tuple A) : 
+  let t1 :=  nfun (half_cleaner n) [tuple of ttake t ++ rev (tdrop t)] in
+  nfun (rhalf_cleaner n) t =
+  [tuple of ttake t1 ++ rev (tdrop t1)].
+Proof.
+rewrite /= [LHS]cat_ttake_tdrop; congr [tuple of _ ++ _].
+  by apply: nfun_rhalf_cleaner_rev_take.
+by apply: nfun_rhalf_cleaner_rev_drop.
+Qed.
+
+End RHalfCleaner.
