@@ -223,6 +223,51 @@ Definition bitonic := [qualify p |
   exists n : 'I_(size (p : seq A)).+1,
   let p1 := rot r p in sorted (<=%O) (take n p1) && sorted (>=%O) (drop n.-1 p1)]].
 
+Lemma bitonic_sorted (l : seq A) : sorted <=%O l -> l \is bitonic.
+Proof.
+move=> lS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
+apply/existsP; exists (inord (size l)); rewrite !inordK //.
+rewrite take_size lS /=.
+have : size (drop (size l).-1 l) <= 1.
+  by rewrite size_drop leq_subLR; case: size => //= n; rewrite addn1.
+by case: drop => //= a [|].
+Qed.
+
+Lemma bitonic_r_sorted (l : seq A) : sorted >=%O l -> l \is bitonic.
+Proof.
+move=> lS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
+by apply/existsP; exists (inord 0); rewrite !inordK // take0 drop0.
+Qed.
+
+Lemma bitonic_cat (l1 l2 : seq A) :  
+  sorted <=%O l1 -> sorted >=%O l2 -> (l1 ++ l2) \is bitonic.
+Proof.
+case: l1 => [/=_ l2S|a l1]; first by apply: bitonic_r_sorted.
+rewrite lastI.
+case: l2 => [al1S _|b l2 al1S bl2S].
+  by rewrite cats0; apply: bitonic_sorted.
+apply/existsP; exists (inord 0); rewrite inordK ?rot0 //=.
+apply/existsP; rewrite size_cat size_rcons /= !(addSn, addnS).
+have [al1Lb|bLal1] := leP (last a l1) b.
+  have sLs : (size (belast a l1)).+2 < (size (belast a l1) + size l2).+3.
+    by rewrite !ltnS leq_addr.
+  exists (Ordinal sLs) => /=.
+  rewrite take_cat size_rcons ltnNge /= ltnS leqnSn /=.
+  rewrite subSn // subnn /= take0 cats1.
+  have : sorted >=%O (rev (rcons (rcons (belast a l1) (last a l1)) b)).
+    rewrite !rev_rcons /= al1Lb.
+    have: sorted >=%O (rev (rcons (belast a l1) (last a l1))).
+      by rewrite rev_sorted.
+    by rewrite rev_rcons.
+  rewrite rev_sorted => -> /=.
+  by rewrite drop_cat size_rcons ltnn subnn.
+have sLs : (size (belast a l1)).+1 < (size (belast a l1) + size l2).+3.
+  by rewrite !ltnS -!addnS leq_addr.
+exists (Ordinal sLs) => /=.
+rewrite take_cat size_rcons ltnn subnn cats0 al1S /=.
+by rewrite drop_cat /= size_rcons ltnS leqnn drop_rcons // drop_size /= ltW.
+Qed.
+
 Lemma ttake_proof m1 m2 : minn m1 (m1 + m2) = m1.
 Proof. by rewrite minnC minnE [m1 + m2]addnC addnK [m2 + m1]addnC addnK. Qed.
 
@@ -427,7 +472,6 @@ set u := nth _ _ _; have -> : u = i.
   by rewrite /u -enum_ord; apply/val_eqP => /=; rewrite nth_enum_ord.
 by rewrite !(tnth_nth a) tdropE nth_drop.
 Qed.
-
 
 Lemma nfun_nrshift m (n : network m) t :
   nfun (nrshift n) t = [tuple of ttake t ++ nfun n (tdrop t)].
@@ -737,6 +781,17 @@ rewrite -leq_subRL; last by apply: ltnW.
 by rewrite -leq_subRL ltnW.
 Qed.
 
+(* This should be proved in general *)
+Lemma bitonic_bool_rev (l : seq bool) : (rev l \is  bitonic) = (l \is bitonic).
+Proof.
+suff {l}Hi (l : seq bool) : l \is  bitonic -> rev l \is  bitonic.
+  apply/idP/idP=> [H|]; last by apply: Hi.
+  by rewrite -[l]revK; apply: Hi.
+move=> /bitonic_boolP[[[[b i1] i2] i3] ->].
+rewrite !rev_cat !rev_nseq; apply/bitonic_boolP; exists (((b, i3), i2), i1).
+by rewrite catA.
+Qed.
+
 Lemma half_cleaner_bool n (t : (n + n).-tuple bool) :
   (t : seq _) \is bitonic -> 
   let t1 := nfun (half_cleaner n) t in 
@@ -935,7 +990,7 @@ elim: l => [|[] l IH].
 by rewrite [(_ :: _) ++ _]/= !isorted_consF.
 Qed.
 
-Lemma half_cleaner__rec_bool m (t : (e2 m).-tuple bool) :
+Lemma half_cleaner_rec_bool m (t : (e2 m).-tuple bool) :
   (t : seq _) \is bitonic -> 
   sorted <=%O (nfun (half_cleaner_rec m) t).
 Proof.
@@ -1094,4 +1149,62 @@ rewrite /= [LHS]cat_ttake_tdrop; congr [tuple of _ ++ _].
 by apply: nfun_rhalf_cleaner_rev_drop.
 Qed.
 
+Definition rhalf_cleaner_rec n : network (e2 n) :=
+  if n is n1.+1 then
+    let t := half_cleaner_rec n1 in 
+    rhalf_cleaner (e2 n1) ++ nlshift t ++ nrshift t 
+  else [::].
+
 End RHalfCleaner.
+
+Lemma rhalf_cleaner_rec_bool m (t : (e2 m.+1).-tuple bool) :
+  sorted <=%O (ttake t : seq _) -> sorted <=%O (tdrop t : seq _) ->
+  sorted <=%O (nfun (rhalf_cleaner_rec m.+1) t).
+Proof.        
+rewrite /rhalf_cleaner_rec !nfun_cat => Hst Hsd.
+rewrite nfun_nlshift nfun_nrshift ttakeK tdropK.
+rewrite nfun_rhalf_cleaner_rev_drop -/e2 nfun_rhalf_cleaner_rev_take -/e2.
+set u : (e2 m.+1).-tuple _ := [tuple of _ ++ rev _].
+have uB : (u : seq _) \is bitonic.
+  apply: bitonic_cat => //.
+  by rewrite rev_sorted.
+have := half_cleaner_bool uB; rewrite -/e2 => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
+  have -> : ttake (nfun (half_cleaner (e2 m)) u) = [tuple of nseq (e2 m) false].
+    by apply/val_eqP.
+  rewrite nfun_const sorted_bool_constl.
+  apply: half_cleaner_rec_bool.
+  by rewrite bitonic_bool_rev.
+have -> : trev (tdrop (nfun (half_cleaner (e2 m)) u)) = 
+            [tuple of nseq (e2 m) true].
+  by apply/val_eqP; rewrite /= (eqP Ht) rev_nseq.
+rewrite nfun_const sorted_bool_constr.
+by apply: half_cleaner_rec_bool.
+Qed.
+
+Section BitonicSort.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Fixpoint bitonic_sort m : network (e2 m) :=
+  if m is m1.+1 then
+    let t := bitonic_sort m1 in 
+    nlshift t ++ nrshift t ++ rhalf_cleaner_rec m1.+1 
+  else [::].
+
+Arguments sorting{m}.
+
+Lemma sorting1 (n : network 1) : n \is sorting.
+Proof. by apply/forallP => /= t; case: nfun => /= [] [] // a []. Qed.
+
+Lemma sorting_bitonic_sorting m : bitonic_sort m \is sorting.
+Proof.
+elim: m => [|m IH]; first by apply: sorting1.
+apply/forallP => t.
+rewrite /bitonic_sort -/bitonic_sort 2!nfun_cat.
+apply: rhalf_cleaner_rec_bool.
+  rewrite nfun_nrshift_take nfun_nlshift ttakeK.
+  by apply: (forallP IH).
+rewrite nfun_nrshift_drop.
+by apply: (forallP IH).
+Qed.
