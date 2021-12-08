@@ -3,6 +3,44 @@ From mathcomp Require Import zify.
 
 Import Order POrderTheory TotalTheory.
 
+(******************************************************************************)
+(*  Definition of some network sorting algorithms                             *)
+(*                                                                            *)
+(*          e2 m == 2 ^ n so that e2 m.+1 = e2 m + e2 m is true by reduction  *)
+(*       ttake t == take the left part of a (m + n).-tuple                    *)
+(*       tdrop t == take the right part of a (m + n).-tuple                   *)
+(*      tmap f t == apply f to the tuple t                                    *)
+(*        trev t == get the reverse of a tuple                                *)
+(* l \is bitonic == a sequence is bitonic if one of its rotation is increasing*)
+(*                  then decreasing                                           *)
+(*   connector m == a connector links independent pairs of wires              *)
+(*  cmerge c1 c2 == do the merge of two connectors : if c1 is a m1 connector  *)
+(*                  c2 a m2 connector, we get an (m1 + m2) connector          *)
+(*     cswap i j == the connector that link the wire i and the wire j         *)
+(*       cdup c  == duplicate a connector : if c is a m connector  we get an  *)
+(*                 (m1 + m2) connector                                        *)
+(*  half_cleaner == an (m + m) connector where wire i is linked to wire i + m *)
+(* rhalf_cleaner == an m connector where wire i is linked to wire m - i       *)
+(*    cfun c t   == apply the connector c to some wire state t. States are    *)
+(*                  represented as the tuple. If two wires i, j are linked,   *)
+(*                  min(i,j) receives the minimal value, and max(i, j) the    *)
+(*                  maximal one                                               *)
+(*   network m   == a network is a sequence of connectors for m wires         *)
+(*    nempty m   == the empty network                                         *)
+(* nmerge c1 c2  == do the merge of two networks                              *)
+(*      ndup c   == duplicate a network                                       *)
+(*    nfun n t   == apply the network n to some wire state t                  *)
+(*   rhalf_cleaner_rec m                                                      *)
+(*               == the (e2 m) network composed of the recursive duplication  *)
+(*                  of an half_cleaner                                        *)
+(*   rhalf_cleaner_rec m                                                      *)
+(*               == the (e2 m) network composed of a rhalf_cleaner and then   *)
+(*                  the duplication of a half_cleaner_rec                     *)
+(*       bsort m == the (e2 m) network that implements the bitonic sort       *)
+(* n \is sorting == the network n is a sorting network, i.e it always returns *)
+(*                  a sorted tuple                                            *)
+(******************************************************************************)
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -10,12 +48,15 @@ Unset Printing Implicit Defensive.
 
 Section E2.
 
-Fixpoint e2 n := if n is n1.+1 then e2 n1 + e2 n1 else 1.
+(* We define an explicte function e2 n = 2 ^ n so that e2 n.+1 reduces        *)
+(* to e2 m + e2 m                                                             *)
 
-Lemma e2E n : e2 n = 2 ^ n.
-Proof. by elim: n => //= n ->; rewrite expnS mul2n addnn. Qed. 
+Fixpoint e2 m := if m is m1.+1 then e2 m1 + e2 m1 else 1.
 
-Lemma e2S n : e2 n.+1 = e2 n + e2 n.
+Lemma e2E m : e2 m = 2 ^ m.
+Proof. by elim: m => //= m ->; rewrite expnS mul2n addnn. Qed. 
+
+Lemma e2S m : e2 m.+1 = e2 m + e2 m.
 Proof. by []. Qed.
 
 End E2.
@@ -61,9 +102,6 @@ Qed.
 Lemma cat_ttake_tdrop n (t : (n + n).-tuple A) : 
   t = [tuple of ttake t ++ tdrop t].
 Proof. by apply/val_eqP; rewrite /= ttakeE tdropE; rewrite cat_take_drop. Qed.
-
-Definition tsplit (m1 m2 : nat) (t : (m1 + m2).-tuple A) :=
-  (ttake t, tdrop t).
 
 Definition trev m (t : m.-tuple A) := [tuple of rev t].
 
@@ -357,7 +395,7 @@ Lemma sortedPn (l : seq A) :
     (~~ sorted <=%O l).
 Proof.
 elim: l => [|a [|b l] IH].
-- by apply: (iffP idP) => // [[[x1 [[|x x21] x22] []]]].
+- by apply: (iffP idP) => // [[[x1 [[|x x21] x22]]]].
 - by apply: (iffP idP) => // [[[x1 [[|x [| y x21]] x22] []]]].
 rewrite /= negb_and; case: leP => [aLb | bLa] /=; last first.
   by apply: (iffP idP) => // _; exists ((a, b), ([::], l)).
@@ -430,16 +468,13 @@ Variable A : orderType d.
 Definition bitonic := [qualify p | 
  [exists r : 'I_(size (p : seq A)).+1, 
   exists n : 'I_(size (p : seq A)).+1,
-  let p1 := rot r p in sorted (<=%O) (take n p1) && sorted (>=%O) (drop n.-1 p1)]].
+  let p1 := rot r p in sorted (<=%O) (take n p1) && sorted (>=%O) (drop n p1)]].
 
 Lemma bitonic_sorted (l : seq A) : sorted <=%O l -> l \is bitonic.
 Proof.
 move=> lS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
 apply/existsP; exists (inord (size l)); rewrite !inordK //.
-rewrite take_size lS /=.
-have : size (drop (size l).-1 l) <= 1.
-  by rewrite size_drop leq_subLR; case: size => //= n; rewrite addn1.
-by case: drop => //= a [|].
+by rewrite take_size lS /= drop_size.
 Qed.
 
 Lemma bitonic_r_sorted (l : seq A) : sorted >=%O l -> l \is bitonic.
@@ -451,152 +486,28 @@ Qed.
 Lemma bitonic_cat (l1 l2 : seq A) :  
   sorted <=%O l1 -> sorted >=%O l2 -> (l1 ++ l2) \is bitonic.
 Proof.
-case: l1 => [/=_ l2S|a l1]; first by apply: bitonic_r_sorted.
-rewrite lastI.
-case: l2 => [al1S _|b l2 al1S bl2S].
-  by rewrite cats0; apply: bitonic_sorted.
+move=> l1S l2S.
 apply/existsP; exists (inord 0); rewrite inordK ?rot0 //=.
-apply/existsP; rewrite size_cat size_rcons /= !(addSn, addnS).
-have [al1Lb|bLal1] := leP (last a l1) b.
-  have sLs : (size (belast a l1)).+2 < (size (belast a l1) + size l2).+3.
-    by rewrite !ltnS leq_addr.
-  exists (Ordinal sLs) => /=.
-  rewrite take_cat size_rcons ltnNge /= ltnS leqnSn /=.
-  rewrite subSn // subnn /= take0 cats1.
-  have : sorted >=%O (rev (rcons (rcons (belast a l1) (last a l1)) b)).
-    rewrite !rev_rcons /= al1Lb.
-    have: sorted >=%O (rev (rcons (belast a l1) (last a l1))).
-      by rewrite rev_sorted.
-    by rewrite rev_rcons.
-  rewrite rev_sorted => -> /=.
-  by rewrite drop_cat size_rcons ltnn subnn.
-have sLs : (size (belast a l1)).+1 < (size (belast a l1) + size l2).+3.
-  by rewrite !ltnS -!addnS leq_addr.
+apply/existsP; rewrite size_cat /=.
+have sLs : size l1 < (size l1 + size l2).+1 by rewrite ltnS leq_addr.
 exists (Ordinal sLs) => /=.
-rewrite take_cat size_rcons ltnn subnn cats0 al1S /=.
-by rewrite drop_cat /= size_rcons ltnS leqnn drop_rcons // drop_size /= ltW.
+rewrite take_cat ltnn subnn take0 cats0 l1S /=.
+by rewrite drop_cat ltnn subnn drop0.
 Qed.
 
-
-Fixpoint tmerge (m : nat) : forall t  : (e2 m).-tuple A, (e2 m).-tuple A := 
-  if m is m1.+1 then fun t =>
-  let t1 := ttake t in
-  let t2 := tdrop t in
-  let t3 := [tuple min (tnth t1 i) (tnth t2 i) | i < e2 m1] in 
-  let t4 := [tuple max (tnth t1 i) (tnth t2 i) | i < e2 m1] in
-  [tuple of tmerge t3 ++ tmerge t4]
-  else fun t => t.
-
-Fixpoint lmerge (m : nat) (l : seq A) := 
-  if m is m1.+1 then
-  let n := e2 m1 in
-  let l1 := take n l in
-  let l2 := drop n l in
-  let l3 := [seq min i.1 i.2 | i <- zip l1 l2] in
-  let l4 := [seq max i.1 i.2 | i <- zip l1 l2] in
-  lmerge m1 l3 ++ lmerge m1 l4
-  else l.
-
-Lemma tmergeE m (t : (e2 m).-tuple A) : tmerge t = lmerge m t :> seq A.
+Lemma bitonic_rev (l : seq A) : (rev l \is  bitonic) = (l \is bitonic).
 Proof.
-elim: m t => //= m IH t.
-have e2P : 0 < e2 m by rewrite e2E expn_gt0.
-have e2DP : 0 < e2 m + e2 m by rewrite addn_gt0 e2P.
-have e2D2P : e2 m < e2 m + e2 m by rewrite -addn1 leq_add2l.
-pose x := tnth t (Ordinal e2DP).
-rewrite !IH; congr (lmerge _ _ ++ lmerge _ _); apply: (@eq_from_nth _ x) => //=.
-- rewrite !size_map size_zip size_take size_drop size_tuple addnK.
-- by rewrite -fintype.enumT -enum_ord size_enum_ord e2D2P minnn.
-- move=> i; rewrite size_map -fintype.cardT /= card_ord => iLe2.
-  rewrite -enum_ord (nth_map (Ordinal e2P)) ?size_enum_ord //.
-  rewrite (nth_map (x, x)) ?nth_zip /=.
-  - by rewrite !(tnth_nth x) nth_enum_ord // !val_tcast.
-  - by rewrite size_take size_drop size_tuple e2D2P addnK.
-  by rewrite size_zip size_take size_drop size_tuple e2D2P addnK minnn.
-  - rewrite !size_map size_zip.
-  rewrite -fintype.enumT -enum_ord size_enum_ord.
-  by rewrite size_take size_drop size_tuple e2D2P addnK minnn.
-move=> i; rewrite size_map -fintype.cardT /= card_ord => iLe2.
-rewrite -enum_ord (nth_map (Ordinal e2P)) ?size_enum_ord //.
-rewrite (nth_map (x, x)) ?nth_zip /=.
-- by rewrite !(tnth_nth x) nth_enum_ord // !val_tcast.
-- by rewrite size_take size_drop size_tuple e2D2P addnK.
-by rewrite size_zip size_take size_drop size_tuple e2D2P addnK minnn.
-Qed.
-
-Lemma tperm_lshift m1 m2 (i1 i2 i : 'I_m2) :
-  tperm (lshift m1 i1) (lshift m1 i2) (lshift m1 i) = 
-  lshift m1 (tperm i1 i2 i).
-Proof.
-case: tpermP => [/val_eqP/=/val_eqP->|/val_eqP/=/val_eqP->|/eqP HD1 /eqP HD2].
-- by rewrite tpermL.
-- by rewrite tpermR.
-rewrite tpermD //; first by apply: contra HD1 => /eqP->. 
-by apply: contra HD2 => /eqP->.
-Qed. 
-
-Lemma tperm_rshift m1 m2 (i1 i2 i : 'I_m2) :
-  tperm (rshift m1 i1) (rshift m1 i2) (rshift m1 i) = 
-  rshift m1 (tperm i1 i2 i).
-Proof.
-case: tpermP => [/val_eqP/=|/val_eqP/=|].
-- by rewrite eqn_add2l => /val_eqP->; rewrite tpermL.
-- by rewrite eqn_add2l => /val_eqP->; rewrite tpermR.
-move/val_eqP; rewrite eqn_add2l => iDi1.
-move/val_eqP; rewrite eqn_add2l => iDi2.
-by rewrite tpermD 1?eq_sym.
-Qed.
-
-Fixpoint bsort (m : nat) : forall (t : (e2 m).-tuple A), (e2 m).-tuple A := 
-  if m is m1.+1 then fun t =>
-  let t1 := bsort (ttake t) in
-  let t2 := trev (bsort (tdrop t)) in
-  tmerge ([tuple of t1 ++  t2] : (e2 m1.+1).-tuple A)
-  else fun t => t.
-
-Fixpoint lsort (m : nat) (l : seq A) := 
-  if m is m1.+1 then
-  let n := e2 m1 in 
-  let t1 := lsort m1 (take n l) in
-  let t2 := rev (lsort m1 (drop n l)) in
-  lmerge m1.+1 (t1 ++  t2)
-  else l.
-
-Lemma bsortE m (t : (e2 m).-tuple A) : bsort t = lsort m t :> seq A.
-Proof.
-elim: m t => //= m IH t.
-have e2P : 0 < e2 m by rewrite e2E expn_gt0.
-have e2DP : 0 < e2 m + e2 m by rewrite addn_gt0 e2P.
-have e2D2P : e2 m < e2 m + e2 m by rewrite -addn1 leq_add2l.
-pose x := tnth t (Ordinal e2DP).
-rewrite !tmergeE.
-congr (lmerge _ _ ++ lmerge _ _); apply: (@eq_from_nth _ x) => //=.
-- rewrite !size_map size_zip size_take size_drop size_cat size_rev.
-  rewrite -ttakeE -tdropE -!IH !size_tuple e2D2P addnK minnn.
-  by rewrite -fintype.enumT -enum_ord size_enum_ord.
-- move=> i.
-  rewrite size_map -?fintype.cardT /= ?card_ord => iLe2.
-  rewrite -enum_ord (nth_map (Ordinal e2P)) ?size_enum_ord //.
-  rewrite (nth_map (x, x)) ?nth_zip /=.
-  - by rewrite !(tnth_nth x) nth_enum_ord // !val_tcast /= -/e2 !IH
-               ttakeE tdropE.
-  - by rewrite size_take size_drop size_cat size_rev -ttakeE -tdropE -!IH 
-               !size_tuple e2D2P addnK.
-  by rewrite size_zip size_take size_drop size_cat size_rev -ttakeE -tdropE -!IH 
-               !size_tuple e2D2P addnK minnn.
-  rewrite !size_map size_zip size_take size_drop size_cat size_rev.
-  rewrite -ttakeE -tdropE -!IH !size_tuple e2D2P addnK minnn.
-  by rewrite -fintype.enumT -enum_ord size_enum_ord.
-move=> i.
-rewrite size_map -?fintype.cardT /= ?card_ord => iLe2.
-rewrite -enum_ord (nth_map (Ordinal e2P)) ?size_enum_ord //.
-rewrite (nth_map (x, x)) ?nth_zip /=.
-- by rewrite !(tnth_nth x) nth_enum_ord // !val_tcast /= -/e2 !IH
-              ttakeE tdropE.
-- by rewrite size_take size_drop size_cat size_rev -ttakeE -tdropE -!IH 
-             !size_tuple e2D2P addnK.
-by rewrite size_zip size_take size_drop size_cat size_rev -ttakeE -tdropE -!IH 
-           !size_tuple e2D2P addnK minnn.
+suff {l}Hi (l : seq A) : l \is  bitonic -> rev l \is  bitonic.
+  apply/idP/idP=> [H|]; last by apply: Hi.
+  by rewrite -[l]revK; apply: Hi.
+move=> /existsP[/= r /existsP[n /andP[tS dS]]].
+apply/existsP; rewrite size_rev.
+have xO : size l - r < (size l).+1 by rewrite ltnS leq_subr.
+exists (Ordinal xO) => /=.
+have yO : size l - n < (size l).+1 by rewrite ltnS leq_subr.
+apply/existsP; exists (Ordinal yO) => /=.
+rewrite -rev_rotr take_rev drop_rev !rev_sorted size_rotr /rotr.
+by rewrite !subnA ?subnn -1?ltnS // dS.
 Qed.
 
 End Bitonic.
@@ -632,6 +543,12 @@ case: j => /= [|j [->]]; first by case: k.
 by exists (j, k).
 Qed.
 
+Lemma isorted_bool_nseq (b : bool) k : (sorted <=%O (nseq k b)).
+Proof.
+case: b; apply/isorted_boolP; first by exists (0, k).
+by exists (k, 0); rewrite cats0.
+Qed.
+
 Lemma dsorted_boolP (l : seq bool) :
   reflect (exists t,
             let: (j,k) := t in l = nseq j true ++ nseq k false) 
@@ -647,6 +564,12 @@ rewrite dsorted_consF; apply: (iffP eqP) => [->|[[[|j] k]]] /=.
 - by exists (0, (size l).+1).
 - by case: k => [|k /= [->]]; rewrite ?size_nseq.
 by case.
+Qed.
+
+Lemma dsorted_bool_nseq (b : bool) k : (sorted >=%O (nseq k b)).
+Proof.
+case: b; apply/dsorted_boolP; first by exists (k, 0); rewrite cats0.
+by exists (0, k).
 Qed.
 
 Section HalfCleaner.
@@ -702,106 +625,22 @@ apply: (iffP existsP) => /= [[x /existsP[n /andP[isort dsort]]]|
                              [[[[b i] j] k] ->]]; last first.
   rewrite !size_cat !size_nseq.
   case: b => /=.
-    have iL : i < (i + (j + k)).+1 by rewrite ltnS leq_addr.
-    have ijkL : i + (j + k)  < (i + (j + k)).+1 by [].
-    exists (Ordinal iL); apply/existsP; exists (Ordinal ijkL) => /=.
+    have iL : i < (i + (j + k)).+1 by lia.
+    have jL : j  < (i + (j + k)).+1 by lia.
+    exists (Ordinal iL); apply/existsP; exists (Ordinal jL) => /=.
     rewrite -[X in rot X](size_nseq i true) rot_size_cat.
-    rewrite take_oversize; last by rewrite ?(size_cat, size_nseq) addnC.
-    apply/andP; split.
-      by apply/isorted_boolP; exists (j, k + i); rewrite nseqD catA.
-    set l1 := drop _ _; suff : size l1 <= 1 by case: l1 => // a [].
-    rewrite size_drop !size_cat !size_nseq addnC.
-    by case: (_ + _) => //= n; rewrite subSnn.
-  have ijL : i + j < (i + (j + k)).+1 by rewrite ltnS addnA leq_addr.
-  have ijkL : i + (j + k)  < (i + (j + k)).+1 by [].
-  exists (Ordinal ijL); apply/existsP; exists (Ordinal ijkL) => /=.
-  have -> : (i + j) = size (nseq i false ++ nseq j true).
-    by rewrite size_cat !size_nseq.
-  rewrite catA rot_size_cat.
-  rewrite take_oversize; last by rewrite ?(size_cat, size_nseq) addnC addnA.
-  apply/andP; split.
-    by apply/isorted_boolP; exists (k + i, j); rewrite nseqD catA.
-  set l1 := drop _ _; suff : size l1 <= 1 by case: l1 => // a [].
-  rewrite size_drop !size_cat !size_nseq addnC addnA.
-  by case: (_ + _) => //= n; rewrite subSnn.
-case: (val n) isort dsort => [|n1] /= isort dsort /=.
-  rewrite drop0 in dsort.
-  have /dsorted_boolP[[j2 k2] Hrot] := dsort.
-  have -> : l = rotr x (nseq j2 true ++ nseq k2 false).
-    by apply: (@rot_inj x); rewrite rotrK.
-  rewrite /rotr !size_cat !size_nseq.
-  set i2 := j2 + k2 - x.
-  have [i2Lj2|j2Li2] := leqP i2 j2.
-    rewrite -(subnK i2Lj2) addnC nseqD -catA.
-    rewrite -{1}[i2](size_nseq i2 true) rot_size_cat.
-    by exists (true, j2 - i2, k2, i2); rewrite !catA.
-  have [i2j2Lk2|k2Li2j2] := leqP (i2 - j2) k2.
-    rewrite -(subnK i2j2Lk2) addnC nseqD catA.
-    have {1}-> : i2 = size (nseq j2 true ++ nseq (i2 - j2) false).
-      by rewrite size_cat !size_nseq addnC subnK // ltnW.
-    rewrite rot_size_cat.
-    by exists (false, k2 - (i2 - j2), j2, i2 - j2); rewrite !catA.
-  rewrite rot_oversize.
-    by exists (true, j2, k2, 0); rewrite !catA cats0.
-  rewrite size_cat !size_nseq.
-  by rewrite -leq_subRL ltnW.
+    rewrite -catA take_cat size_nseq ltnn subnn take0 cats0.
+    rewrite isorted_bool_nseq /= drop_cat size_nseq ltnn subnn drop0.
+    by rewrite -nseqD dsorted_bool_nseq.
+  have iL : i < (i + (j + k)).+1 by lia.
+  exists (Ordinal iL); apply/existsP; exists ord0 => /=.
+  rewrite take0 drop0 /= -[X in rot X](size_nseq i false) rot_size_cat.
+  by rewrite -catA -nseqD; apply/dsorted_boolP; exists (j, k + i).
 have /isorted_boolP[[j1 k1] Hirot] := isort.
-have /dsorted_boolP[[[|j2] /= k2] Hdrot] := dsort.
-  case: k2 Hdrot => [|k2] /= Hdrot.
-    have -> : l = rotr x (nseq j1 false ++ nseq k1 true).
-      apply: (@rot_inj x); rewrite rotrK.
-      rewrite -[LHS](cat_take_drop n1.+1) Hirot.
-      suff -> : drop n1.+1 (rot x l) = [::] by rewrite cats0.
-      by rewrite -[n1.+1]add1n -drop_drop Hdrot.
-    rewrite /rotr !size_cat !size_nseq.
-    set i1 := j1 + k1 - x.
-    have [i1Lj1|j1Li1] := leqP i1 j1.
-      rewrite -(subnK i1Lj1) addnC nseqD -catA.
-      rewrite -{1}[i1](size_nseq i1 false) rot_size_cat.
-      by exists (false, j1 - i1, k1, i1); rewrite !catA.
-    have [i1j1Lk1|k1Li1j1] := leqP (i1 - j1) k1.
-      rewrite -(subnK i1j1Lk1) addnC nseqD catA.
-      have {1}-> : i1 = size (nseq j1 false ++ nseq (i1 - j1) true).
-        by rewrite size_cat !size_nseq addnC subnK // ltnW.
-      rewrite rot_size_cat.
-      by exists (true, k1 - (i1 - j1), j1, i1 - j1); rewrite !catA.
-    rewrite rot_oversize.
-      by exists (false, j1, k1, 0); rewrite !catA cats0.
-    rewrite size_cat !size_nseq.
-    by rewrite -leq_subRL ltnW.
-  have -> : l = rotr x (nseq j1 false ++ nseq k1 true ++ nseq k2 false).
-    apply: (@rot_inj x); rewrite rotrK.
-    rewrite -[LHS](cat_take_drop n1.+1) Hirot.
-    by rewrite -[n1.+1]add1n -drop_drop Hdrot /= drop0 !catA.
-  rewrite /rotr !size_cat !size_nseq.
-  set i1 := j1 + (k1 + k2) - x.
-  have [i1Lj1|j1Li1] := leqP i1 j1.
-    rewrite -(subnK i1Lj1) addnC nseqD -catA.
-    rewrite -{1}[i1](size_nseq i1 false) rot_size_cat.
-    by exists (false, j1 - i1, k1, k2 + i1); rewrite nseqD !catA.
-  have [i1j1Lk1|k1Li1j1] := leqP (i1 - j1) k1.
-    rewrite -(subnK i1j1Lk1) addnC nseqD -!catA catA.
-    have {1}-> : i1 = size (nseq j1 false ++ nseq (i1 - j1) true).
-      by rewrite size_cat !size_nseq addnC subnK // ltnW.
-    rewrite rot_size_cat.
-    by exists (true, k1 - (i1 - j1), k2 + j1, i1 - j1); rewrite nseqD !catA.
-  have [i1j1k1Lk2|k2Li1j1k1] := leqP (i1 - j1 - k1) k2.
-    rewrite -(subnK i1j1k1Lk2) addnC nseqD.
-    have {1}-> : i1 = size (nseq j1 false ++ nseq k1 true ++
-                            nseq (i1 - j1 - k1) false ).
-      rewrite !size_cat !size_nseq [k1 + _]addnC subnK 1?ltnW //.
-      by rewrite addnC subnK // ltnW.
-    rewrite !catA -catA rot_size_cat.
-    exists (false, k2 - (i1 - j1 - k1) + j1, k1, (i1 - j1 - k1)).
-    by rewrite nseqD !catA.
-  rewrite rot_oversize.
-    by exists (false, j1, k1, k2); rewrite !catA.
-  rewrite !size_cat !size_nseq.
-  by rewrite -!leq_subRL ltnW.
+have /dsorted_boolP[[j2 k2] Hdrot] := dsort.
 have -> : l = rotr x (nseq j1 false ++ nseq (k1 + j2) true ++ nseq k2 false).
   apply: (@rot_inj x); rewrite rotrK.
-  rewrite -[LHS](cat_take_drop n1.+1) Hirot.
-  by rewrite -[n1.+1]add1n -drop_drop Hdrot /= drop0 nseqD !catA.
+  by rewrite -[LHS](cat_take_drop n) Hirot Hdrot nseqD !catA.
 rewrite /rotr !size_cat !size_nseq.
 set i1 := j1 + (k1 + j2 +  k2) - x.
 have [i1Lj1|j1Li1] := leqP i1 j1.
@@ -830,17 +669,6 @@ by exists (false, j1, k1 + j2, k2); rewrite !catA.
 rewrite !size_cat !size_nseq.
 rewrite -leq_subRL; last by apply: ltnW.
 by rewrite -leq_subRL ltnW.
-Qed.
-
-(* This should be proved in general *)
-Lemma bitonic_bool_rev (l : seq bool) : (rev l \is  bitonic) = (l \is bitonic).
-Proof.
-suff {l}Hi (l : seq bool) : l \is  bitonic -> rev l \is  bitonic.
-  apply/idP/idP=> [H|]; last by apply: Hi.
-  by rewrite -[l]revK; apply: Hi.
-move=> /bitonic_boolP[[[[b i1] i2] i3] ->].
-rewrite !rev_cat !rev_nseq; apply/bitonic_boolP; exists (((b, i3), i2), i1).
-by rewrite catA.
 Qed.
 
 Lemma half_cleaner_bool n (t : (n + n).-tuple bool) :
@@ -1195,7 +1023,7 @@ have := half_cleaner_bool uB; rewrite -/e2 => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
     by apply/val_eqP.
   rewrite nfun_const sorted_bool_constl.
   apply: half_cleaner_rec_bool.
-  by rewrite bitonic_bool_rev.
+  by rewrite bitonic_rev.
 have -> : trev (tdrop (cfun (half_cleaner (e2 m)) u)) = 
             [tuple of nseq (e2 m) true].
   by apply/val_eqP; rewrite /= (eqP Ht) rev_nseq.
@@ -1208,15 +1036,15 @@ Section BitonicSort.
 Variable d : unit.
 Variable A : orderType d.
 
-Fixpoint bitonic_sort m : network (e2 m) :=
-  if m is m1.+1 then ndup (bitonic_sort m1) ++ rhalf_cleaner_rec m1.+1 
+Fixpoint bsort m : network (e2 m) :=
+  if m is m1.+1 then ndup (bsort m1) ++ rhalf_cleaner_rec m1.+1 
   else [::].
 
-Lemma sorting_bitonic_sorting m : bitonic_sort m \is sorting.
+Lemma sorting_bsort m : bsort m \is sorting.
 Proof.
 elim: m => [|m IH]; first by apply: sorting1.
 apply/forallP => t.
-rewrite /bitonic_sort -/bitonic_sort nfun_cat.
+rewrite /bsort -/bsort nfun_cat.
 apply: rhalf_cleaner_rec_bool; first by rewrite nfun_dup ttakeK (forallP IH).
 by rewrite nfun_dup tdropK (forallP IH).
 Qed.
