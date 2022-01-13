@@ -31,4 +31,6 @@ Some extra material for mathcomp
 
  [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
 
-[A formalisation of sorting network (bitonic sort)](./nsort.v) (in progress)
+ [A formalisation of sorting network (bitonic sort)](./nsort.v) (in progress)
+
+ [A fun puzzle about a tricky integer function ](./puzzleFF.v)

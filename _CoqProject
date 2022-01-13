@@ -17,3 +17,4 @@ digitn.v
 tplayer.v
 fft.v
 nsort.v
+puzzleFF.v
