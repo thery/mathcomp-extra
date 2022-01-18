@@ -6,7 +6,8 @@ Import Order POrderTheory TotalTheory.
 (******************************************************************************)
 (*  Definition of some network sorting algorithms                             *)
 (*                                                                            *)
-(*          e2 m == 2 ^ n so that e2 m.+1 = e2 m + e2 m is true by reduction  *)
+(*         `2^ m == 2 ^ n so that                                             *)
+(*                  `2^ m.+1 = `2^ m + `2^ m is true by reduction             *)
 (*       ttake t == take the left part of a (m + n).-tuple                    *)
 (*       tdrop t == take the right part of a (m + n).-tuple                   *)
 (*      tmap f t == apply f to the tuple t                                    *)
@@ -31,12 +32,12 @@ Import Order POrderTheory TotalTheory.
 (*      ndup c   == duplicate a network                                       *)
 (*    nfun n t   == apply the network n to some wire state t                  *)
 (*   rhalf_cleaner_rec m                                                      *)
-(*               == the (e2 m) network composed of the recursive duplication  *)
+(*               == the (`2^ m) network composed of the recursive duplication  *)
 (*                  of an half_cleaner                                        *)
 (*   rhalf_cleaner_rec m                                                      *)
-(*               == the (e2 m) network composed of a rhalf_cleaner and then   *)
+(*               == the (`2^ m) network composed of a rhalf_cleaner and then   *)
 (*                  the duplication of a half_cleaner_rec                     *)
-(*       bsort m == the (e2 m) network that implements the bitonic sort       *)
+(*       bsort m == the (`2^ m) network that implements the bitonic sort       *)
 (* n \is sorting == the network n is a sorting network, i.e it always returns *)
 (*                  a sorted tuple                                            *)
 (******************************************************************************)
@@ -48,18 +49,22 @@ Unset Printing Implicit Defensive.
 
 Section E2.
 
-(* We define an explicte function e2 n = 2 ^ n so that e2 n.+1 reduces        *)
-(* to e2 m + e2 m                                                             *)
+(* We define an explicte function `2^ n = 2 ^ n so that `2^ n.+1 reduces        *)
+(* to `2^ m + `2^ m                                                             *)
 
-Fixpoint e2 m := if m is m1.+1 then e2 m1 + e2 m1 else 1.
+Fixpoint e2n m := if m is m1.+1 then e2n m1 + e2n m1 else 1.
 
-Lemma e2E m : e2 m = 2 ^ m.
-Proof. by elim: m => //= m ->; rewrite expnS mul2n addnn. Qed. 
+Notation "`2^ n" := (e2n n) (at level 40).
 
-Lemma e2S m : e2 m.+1 = e2 m + e2 m.
+Lemma e2nE m : `2^ m = 2 ^ m.
+Proof. by elim: m => //= m ->; rewrite expnS mul2n addnn. Qed.
+
+Lemma e2Sn m : `2^ m.+1 = `2^ m + `2^ m.
 Proof. by []. Qed.
 
 End E2.
+
+Notation "`2^ n" := (e2n n) (at level 40).
 
 Section Tuple.
 
@@ -610,8 +615,8 @@ rewrite ifN 1?maxC //=.
 by rewrite -ltnNge (leq_trans (ltn_ord _) _) // iE leq_addr.
 Qed.
 
-Fixpoint half_cleaner_rec n : network (e2 n) :=
-  if n is n1.+1 then half_cleaner (e2 n1) :: ndup (half_cleaner_rec n1)
+Fixpoint half_cleaner_rec n : network (`2^ n) :=
+  if n is n1.+1 then half_cleaner (`2^ n1) :: ndup (half_cleaner_rec n1)
   else [::].
 
 End HalfCleaner.
@@ -869,18 +874,18 @@ elim: l => [|[] l IH].
 by rewrite [(_ :: _) ++ _]/= !isorted_consF.
 Qed.
 
-Lemma half_cleaner_rec_bool m (t : (e2 m).-tuple bool) :
+Lemma half_cleaner_rec_bool m (t : (`2^ m).-tuple bool) :
   (t : seq _) \is bitonic -> 
   sorted <=%O (nfun (half_cleaner_rec m) t).
 Proof.
 elim: m t => /= [|m IH t tB]; first by (do 2 case => //=) => x [].
 rewrite nfun_dup.
 have /orP[/andP[Ht Hd]|/andP[Ht Hd]] := half_cleaner_bool tB.
-  have -> : ttake (cfun (half_cleaner (e2 m)) t) = [tuple of nseq (e2 m) false].
+  have -> : ttake (cfun (half_cleaner (`2^ m)) t) = [tuple of nseq (`2^ m) false].
     by apply/val_eqP.
   rewrite nfun_const sorted_bool_constl.
   by apply: IH.
-have -> : tdrop (cfun (half_cleaner (e2 m)) t) = [tuple of nseq (e2 m) true].
+have -> : tdrop (cfun (half_cleaner (`2^ m)) t) = [tuple of nseq (`2^ m) true].
   by apply/val_eqP.
 rewrite nfun_const sorted_bool_constr.
 by apply: IH.
@@ -1000,32 +1005,32 @@ rewrite /= [LHS]cat_ttake_tdrop; congr [tuple of _ ++ _].
 by apply: cfun_rhalf_cleaner_rev_drop.
 Qed.
 
-Definition rhalf_cleaner_rec n : network (e2 n) :=
+Definition rhalf_cleaner_rec n : network (`2^ n) :=
   if n is n1.+1 then
-    rhalf_cleaner (e2 n1) :: ndup (half_cleaner_rec n1)
+    rhalf_cleaner (`2^ n1) :: ndup (half_cleaner_rec n1)
   else [::].
 
 End RHalfCleaner.
 
-Lemma rhalf_cleaner_rec_bool m (t : (e2 m.+1).-tuple bool) :
+Lemma rhalf_cleaner_rec_bool m (t : (`2^ m.+1).-tuple bool) :
   sorted <=%O (ttake t : seq _) -> sorted <=%O (tdrop t : seq _) ->
   sorted <=%O (nfun (rhalf_cleaner_rec m.+1) t).
 Proof.        
 rewrite /rhalf_cleaner_rec /= => Hst Hsd.
 rewrite nfun_dup.
-rewrite cfun_rhalf_cleaner_rev_drop -/e2 cfun_rhalf_cleaner_rev_take -/e2.
-set u : (e2 m.+1).-tuple _ := [tuple of _ ++ rev _].
+rewrite cfun_rhalf_cleaner_rev_drop -/e2n cfun_rhalf_cleaner_rev_take -/e2n.
+set u : (`2^ m.+1).-tuple _ := [tuple of _ ++ rev _].
 have uB : (u : seq _) \is bitonic.
   apply: bitonic_cat => //.
   by rewrite rev_sorted.
-have := half_cleaner_bool uB; rewrite -/e2 => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
-  have -> : ttake (cfun (half_cleaner (e2 m)) u) = [tuple of nseq (e2 m) false].
+have := half_cleaner_bool uB; rewrite -/e2n => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
+  have -> : ttake (cfun (half_cleaner (`2^ m)) u) = [tuple of nseq (`2^ m) false].
     by apply/val_eqP.
   rewrite nfun_const sorted_bool_constl.
   apply: half_cleaner_rec_bool.
   by rewrite bitonic_rev.
-have -> : trev (tdrop (cfun (half_cleaner (e2 m)) u)) = 
-            [tuple of nseq (e2 m) true].
+have -> : trev (tdrop (cfun (half_cleaner (`2^ m)) u)) = 
+            [tuple of nseq (`2^ m) true].
   by apply/val_eqP; rewrite /= (eqP Ht) rev_nseq.
 rewrite nfun_const sorted_bool_constr.
 by apply: half_cleaner_rec_bool.
@@ -1036,7 +1041,7 @@ Section BitonicSort.
 Variable d : unit.
 Variable A : orderType d.
 
-Fixpoint bsort m : network (e2 m) :=
+Fixpoint bsort m : network (`2^ m) :=
   if m is m1.+1 then ndup (bsort m1) ++ rhalf_cleaner_rec m1.+1 
   else [::].
 
