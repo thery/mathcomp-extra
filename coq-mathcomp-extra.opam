@@ -1,0 +1,66 @@
+# This file was generated from `meta.yml`, please do not edit manually.
+# Follow the instructions on https://github.com/coq-community/templates to regenerate.
+
+opam-version: "2.0"
+maintainer: "thery@sophia.inria.fr"
+version: "dev"
+
+homepage: "https://github.com/thery/mathcomp-extra"
+dev-repo: "git+https://github.com/thery/mathcomp-extra.git"
+bug-reports: "https://github.com/thery/mathcomp-extra/issues"
+license: "MIT"
+
+synopsis: "Some extra material for mathcomp"
+description: """
+
+Some extra material for mathcomp
+
+  [Fibonacci and Lucas numbers](./fib.v)
+
+  [Lower bound of lcm(1, 2, ..., n)](./lcm_lbound.v)
+
+  [Definitions and some properties of matroids](./matroid.v)
+
+  [Rsa algorithm](./rsa.v)
+
+  [More lemmas about polynomials](./more_thm.v)
+
+  [Polynomials modulo](./divpoly.v)
+
+  [Binary gcd](./bgcdn.v)
+
+  [Nth root for natural number](./rootn.v)
+
+  [The aks algorithm](./aks_algo.v)  the algorithm as in Hing Lun Chan's PhD thesis
+
+  [The aks correctness proof](./aks.v)  a transcription of Hing Lun Chan's proof
+
+  [The proof of Lucas theorem for binomial](./digitn.v)
+
+  [A formalisation of 2-player games](./tplayer.v) (in progress)
+
+  [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
+
+  [A formalisation of sorting network (bitonic sort)](./nsort.v) (in progress)
+
+  [A fun puzzle about a tricky integer function ](./puzzleFF.v)"""
+
+build: [make "-j%{jobs}%"]
+install: [make "install"]
+depends: [
+  "coq" {(>= "8.15")}
+  "coq-mathcomp-ssreflect" {(>= "1.14.0")}
+  "coq-mathcomp-ssreflect" {(>= "1.14.0")}
+  "coq-mathcomp-fingroup" {(>= "1.14.0")}
+  "coq-mathcomp-algebra" {(>= "1.14.0")}
+  "coq-mathcomp-field" {(>= "1.14.0")}
+  "coq-mathcomp-zify" {(>= "1.2.0")}
+]
+
+tags: [
+  "keyword:mathcomp extra"
+  "logpath:mathcomp-extra"
+]
+authors: [
+  "Laurent Théry"
+]
