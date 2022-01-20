@@ -6,65 +6,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Definition log2n n := 
-  let v := trunc_log 2 n in if n <= 2 ^ v then v else v.+1.
-
-Lemma log2n9 : log2n 0 = 0.
-Proof. by []. Qed.
-
-Lemma log2n1 : log2n 1 = 0.
-Proof. by []. Qed.
-
-Lemma log2n_eq0 n : (log2n n == 0) = (n <= 1).
-Proof.
-case: n => [|[|n]]; rewrite /log2n //.
-have /= := trunc_log_bounds (isT : 1 < 2) (isT : 0 < n.+2).
-by case: (leqP (2 ^ trunc_log 2 n.+2) n.+1).
-Qed.
-
-Lemma log2n_gt0 n : (0 < log2n n) = (1 < n).
-Proof. by rewrite ltnNge leqn0 log2n_eq0 ltnNge. Qed.
-
-Lemma log2n_bounds n :
-   1 < n -> let k := log2n n in 2 ^ k.-1 < n <= 2 ^ k.
-Proof.
-move=> /= n_gt1.
-have n_gt0 : 0 < n by apply: leq_trans n_gt1.
-rewrite /log2n.
-have /= := trunc_log_bounds (isT : 1 < 2) n_gt0.
-case: (leqP n (2 ^ trunc_log 2 n)) => [] H1 /andP[H2 H3].
-  rewrite H1 (leq_trans _ H2) // ltn_exp2l // prednK ?leqnn //.
-  by case: trunc_log (leq_trans n_gt1 H1).
-by rewrite H1 ltnW.
-Qed.
-
-Lemma log2nP n : n <= 2 ^ log2n n.
-Proof.
-case: n => [|[|n]] //.
-by have /andP[] := log2n_bounds (isT: 1 < n.+2).
-Qed.
-
-Lemma log2n_ltn n : 1 < n ->  2 ^ (log2n n).-1 < n.
-Proof.
-case: n => [|[|n]] _ //.
-by have /andP[] := log2n_bounds (isT: 1 < n.+2).
-Qed.
-
-Lemma log2n_max k j : k <= 2 ^ j -> log2n k <= j.
-Proof.
-case: k => [|[|k]] // kLj.
-rewrite -[log2n _]prednK ?log2n_gt0 // -(@ltn_exp2l 2) //.
-by apply: leq_trans (log2n_ltn (isT : 1 < k.+2)) _.
-Qed.
-
-Lemma leq_log2n m n : m <= n -> log2n m <= log2n n.
-Proof. by move=> mLn; apply/log2n_max/(leq_trans _ (log2nP _)). Qed.
-
-Lemma exp2nK n : log2n (2 ^ n) = n.
-Proof.
-apply/eqP; rewrite eqn_leq.
-by rewrite log2n_max //= -(@leq_exp2l 2) log2nP.
-Qed.
 
 Import GRing.Theory.
 Import Pdiv.CommonRing.
@@ -744,8 +685,8 @@ by case: (m) m_gt0.
 Qed.
 
 (* To be a power of 2 *)
-Definition is_2power n := n == 2 ^ log2n n.
-Definition isnot_2power n := n != 2 ^ log2n n.
+Definition is_2power n := n == 2 ^ (up_log 2 n).
+Definition isnot_2power n := n != 2 ^ (up_log 2 n).
 
 (* To be a power *)
 

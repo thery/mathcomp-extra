@@ -601,21 +601,21 @@ Qed.
 Lemma exp_Mk_upper_bound (R : comRingType) k s n a (M : {set 'Z_k}) :
    Mk_spec R s M -> 1 < #|M| ->
   1 < k -> 1 < n -> isnot_2power n ->
-  a = (log2n n) ^ 2 -> a <= order_modn k n ->
-  s = (sqrtn (totient k) * log2n n)%N ->   
+  a = up_log 2 n ^ 2 -> a <= order_modn k n ->
+  s = (sqrtn (totient k) * (up_log 2 n))%N ->   
   is_iexp R k s n ->
    n ^ (sqrtn #|M|) < 2 ^ (minn s #|M|).
 Proof.
 move=> HMk Mk_gt1 k_gt1 m_g1 nNP aE aLo sE nIN.
 set j := order_modn k n in aLo.
-set m := log2n n in aE sE.
+set m := up_log 2 n in aE sE.
 have F1 : j <= #|M| by apply: is_iexpm_order.
 have F2 : #|M| <= totient k by apply: is_iexpm_totient.
 have F3 : m ^ 2 <= j by  move: aLo; rewrite aE.
 apply: leq_trans (_ : (2 ^ m) ^ sqrtn (#|M|) <= _).
   rewrite ltn_exp2r; last first.
     by rewrite sqrtn_gt0 (leq_trans _ (_ : 2 <= _)).
-  by have := log2nP n; rewrite leq_eqVlt (negPf nNP).
+  by have := up_logP n (isT : 1 < 2); rewrite leq_eqVlt (negPf nNP).
 case: (leqP s #|M|) => [sLM|MLs].
   by rewrite -expnM leq_exp2l // sE mulnC leq_mul2r // orbC leq_sqrtn.
 rewrite -expnM leq_exp2l //.
@@ -722,8 +722,8 @@ Definition poly_intro_range (R : ringType) k n s :=
 Definition aks_criteria (R : ringType) n k :=
  [/\ 0 < n, 0 < k, 
   (forall p, p \in [char R] -> [/\ 1 < order_modn k p, (p %| n)%N & k < p]),
-   log2n n ^ 2 <= order_modn k n &
-   poly_intro_range R k n (sqrtn (totient k) * log2n n)
+    up_log 2 n ^ 2 <= order_modn k n &
+   poly_intro_range R k n (sqrtn (totient k) * up_log 2 n)
  ].
 
 Lemma card_Nbar p q m : prime p -> 1 < q -> ~ is_power q p -> 
@@ -884,7 +884,7 @@ Lemma main_aks p n k (F := [finRingType of 'F_p]) :
 Proof.
 move=> pP; have p_gt1 := prime_gt1 pP.
 have pC : p \in [char F] by apply: char_Fp.
-pose a := log2n n ^ 2; pose s := (sqrtn (totient k) * log2n n)%N.
+pose a := (up_log 2 n) ^ 2; pose s := (sqrtn (totient k) * up_log 2 n)%N.
 move => [n_gt0 k_gt0 /(_ p pC) [pO_gt1 pDn kLp lnLnO Hr]].
 have k_gt1 : 1 < k by apply: order_modn_gt1 pO_gt1.
 have := dvdn_leq n_gt0 pDn.
@@ -902,7 +902,7 @@ have kCn : coprime k n.
   apply: order_modn_coprime.
   apply: leq_trans lnLnO.
   rewrite (@ltn_exp2r 1 _ 2) //.
-  by apply: (@leq_log2n 3).
+  by apply: (@leq_up_log 2 3).
 have kCp : coprime k p by apply: order_modn_coprime.
 have nI : is_iexp [ringType of 'F_p] k s n.
   split => [|c cB]; first by rewrite coprime_sym.
@@ -927,12 +927,12 @@ have nLst : n ^ sqrtn t < 2 ^ minn s t.
 have stLQ : 2 ^ minn s t <= #|Q|.
   apply: (@lower_bound_card_Qh _ _ _ _ p) => //; first by rewrite -dvdpE.
   rewrite muln_gt0 sqrtn_gt0 totient_gt0 k_gt0.
-  rewrite (@leq_log2n 2) //=.
+  rewrite (@leq_up_log 2 2) //=.
   apply: leq_trans (kLp).
   rewrite ltnS.
   apply: leq_trans (totient_leq _).
   have /andP[/(leq_trans _)->//] := sqrtn_bound (totient k).
-  rewrite expnS expn1 leq_mul2l -(sqrnK (log2n n)).
+  rewrite expnS expn1 leq_mul2l -(sqrnK (up_log 2 n)).
   rewrite leq_sqrtn ?orbT //.
   by apply: leq_trans (leq_order_totient n _).
 pose q := (n %/ p)%N.
@@ -986,13 +986,13 @@ Lemma power_freeSS n k :
   power_free n k.+2 = if is_rootn k.+2 n then false else power_free n k.+1.
 Proof. by []. Qed.
 
-Compute (fun n => power_free n (log2n n)) 128.
+Compute (fun n => power_free n (up_log 2 n)) 128.
 
 Lemma power_freePn n :
-  ~~ power_free n (log2n n) -> 
+  ~~ power_free n (up_log 2 n) -> 
   exists m, exists2 k, 1 < k & n = m ^ k.
 Proof.
-elim: log2n => [|[|k] IH].
+elim: up_log => [|[|k] IH].
 - case: n => [|[|n]] //= _; first by exists 0%N; exists 2%N.
   by exists 1%N; exists 2%N.
 - case: {IH}n => [|[|n]] //= _; first by exists 0%N; exists 2%N.
@@ -1004,10 +1004,10 @@ by case: k IH.
 Qed.
 
 Lemma power_freeP n m k :
-  power_free n (log2n n) -> n = m ^ k -> k = 1%N.
+  power_free n (up_log 2 n) -> n = m ^ k -> k = 1%N.
 Proof.
 move=> pH nE.
-have: k <= log2n n.
+have: k <= up_log 2 n.
   case: m pH nE => [|[|m]] //.
   - by case: k => // k; rewrite exp0n; case: n.
   - by rewrite exp1n; case: n => [|[|]].
@@ -1015,10 +1015,10 @@ have: k <= log2n n.
   have m_gt1 : 1 < m.+2 by [].
   rewrite -(leq_exp2l _ _ m_gt1).
   rewrite -nE.
-  apply: leq_trans (log2nP _) _.
-  rewrite leq_exp2r // log2n_gt0.
+  apply: leq_trans (up_logP _ (isT : 1 < 2)) _.
+  rewrite leq_exp2r // up_log_gt0.
   by case: (n) pH => [|[|]].
-elim: log2n pH => [|[|k1] IH].
+elim: up_log pH => [|[|k1] IH].
 - by case: k nE => //=; case: n => [|[|]].
 - by case: {IH}k nE => [|[|k]] //=; case: n => [|[|]].
 rewrite power_freeSS; case E: is_rootn => // pH.
@@ -1105,26 +1105,26 @@ Definition aks_param n l :=
 
 (* This summarizes 63 64 66 *)
 Lemma aks_paramP n :
-  if aks_param n (log2n n) is good k then
+  if aks_param n (up_log 2 n) is good k then
   [/\ 1 < k < n,
       forall j, 1 < j <= k -> ~~ (j %| n)%nat,
-      k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
-      coprime k n & log2n n ^ 2 <= order_modn k n]
-  else if aks_param n (log2n n) is nice k then
+      k <= (up_log 2 n * (up_log 2 n ^ 2) ^ 2)./2.+1,
+      coprime k n & (up_log 2 n) ^ 2 <= order_modn k n]
+  else if aks_param n (up_log 2 n) is nice k then
   1 < n ->
   [/\ 1 < k, if n == 2 then k == 2 
-             else k <= (log2n n * (log2n n ^ 2) ^ 2)./2.+1,
+             else k <= (up_log 2 n * (up_log 2 n ^ 2) ^ 2)./2.+1,
       (k %| n)%N & forall j, 1 < j < k -> ~~ (j %| n)%N]
   else False.
 Proof.
-rewrite /aks_param; case: (leqP (log2n n) 1) => [l_gt1 | l_gt1].
+rewrite /aks_param; case: (leqP (up_log 2 n) 1) => [l_gt1 | l_gt1].
   rewrite leq_eqVlt => /orP[/eqP<-|n_gt2].
     by split => // [] [|[|]].
   move: l_gt1; rewrite leqNgt => /negP[].
-  rewrite  -[2]/(log2n 3).
-  by apply: leq_log2n.
+  rewrite  -[2]/(up_log 2 3).
+  by apply: leq_up_log.
 have n_gt1 : 1 < n by case: n l_gt1 => [|[|]].
-set a := log2n n ^ 2.
+set a := up_log 2 n ^ 2.
 have a_gt1 : 1 < a by rewrite (ltn_sqr 1).
 case E : aks_param_search => [k||k] //.
 - move=> _.
@@ -1137,7 +1137,7 @@ case E : aks_param_search => [k||k] //.
     by case: (k) => [|[|[|]]].
   move: H2.
   by rewrite addSn ltnS add1n.
-- pose k := (log2n n * (a ^ 2))./2.+1.
+- pose k := (up_log 2 n * (a ^ 2))./2.+1.
   have k_gt1 : 1 < k.
     rewrite ltnS half_gt0 -[1%N]/(1 * 1)%N.
     apply: ltn_mul => //.
@@ -1171,9 +1171,9 @@ case E : aks_param_search => [k||k] //.
       rewrite mem_index_iota oLl.
       by have [] := (order_modnP i1_gt1 i1Cn); case: order_modn.
     by apply/dvdn_mulr/order_modn_dvd.
-  have prodLprod : \prod_(1 <= i < a) (n ^ i).-1 < 2 ^ (log2n n * 'C(a,2)).
+  have prodLprod : \prod_(1 <= i < a) (n ^ i).-1 < 2 ^ (up_log 2 n * 'C(a,2)).
     rewrite expnM; apply: leq_trans (_ : n ^ 'C(a, 2) <= _); last first.
-      rewrite leq_exp2r; first by apply: log2nP.
+      rewrite leq_exp2r; first by apply: up_logP.
       by rewrite bin_gt0.
     rewrite -textbook_triangular_sum. 
     elim: (a) a_gt1 => // a1 IH.
@@ -1690,7 +1690,7 @@ Qed.
 (******************************************************************************)
 
 Definition aks n := 
-  let l := log2n n in
+  let l := up_log 2 n in
   if power_free n l then
     let v := aks_param n l in
     if v is nice k then n == k else
@@ -1701,7 +1701,7 @@ Lemma aksP n : aks n = prime n.
 Proof.
 case: n => //; case => // m.
 have : 1 < m.+2 by []; move: m.+2 => {m}n n_gt1; 
-rewrite /aks; set l := log2n n.
+rewrite /aks; set l := up_log 2 n.
 case: power_free (@power_freeP n) (@power_freePn n)
       => [H _ | _ /(_ isT) [m [k k_gt1 ->]]]; last first.
   have k_gt0 : 0 < k by apply: ltnW.
@@ -1728,8 +1728,8 @@ case: fpoly_intro_range (fpoly_intro_rangeP l k_gt1 n_gt1); last first.
 case: (boolP (prime n)) => // /negP nNP.
 have pkn_gt1 : 1 < order_modn k n.
   apply: leq_trans lLo.
-  apply: leq_trans (_ : log2n 4 ^ 2 <= _) => //.
-  rewrite leq_exp2r // leq_log2n //.
+  apply: leq_trans (_ : up_log 2 4 ^ 2 <= _) => //.
+  rewrite leq_exp2r // leq_up_log //.
   by case: (n) n_gt1 nNP => // [] [|[|[|]]].
 have [p [pDn pP pO]] := order_gt1_prime n_gt1 pkn_gt1. 
 move/(inZpm_poly_intro_range n_gt1 pP pDn (ltnW k_gt1)) => Hp.
