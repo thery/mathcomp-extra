@@ -15,8 +15,7 @@ Unset Printing Implicit Defensive.
 (*     Base 2 logarithm                                                       *)
 (******************************************************************************)
 
-Definition log2n n := 
-  let v := trunc_log 2 n in if n <= 2 ^ v then v else v.+1.
+Definition log2n n := up_log 2 n.
 
 (******************************************************************************)
 (*  Fancy nth root algorithm due to Yves Bertot, we could move to a           *)
