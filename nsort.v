@@ -1055,3 +1055,174 @@ by rewrite nfun_dup tdropK (forallP IH).
 Qed.
 
 End BitonicSort.
+
+Section Transposition.
+
+Definition ctransp {m} (c : connector m) := 
+  [forall i, (clink c i != i) ==>
+            ((clink c i == i.+1 :> nat) || (clink c i == i.-1 :> nat))]. 
+
+Lemma ctranspP {m} (c : connector m) :
+  reflect 
+    (forall i, (clink c i != i) ->
+            ((clink c i = i.+1 :> nat) \/ (clink c i = i.-1 :> nat)))
+    (ctransp c).
+Proof.
+apply: (iffP forallP) => H i; have := H i.
+  by case: eqP => //= _ /orP[] /eqP-> _; [left | right].
+by case: eqP => //= _ [] // ->; rewrite eqxx // orbT.
+Qed.
+
+Definition ntransp m (n : network m) := all ctransp n.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Definition leqc m (t1 t2 : m.-tuple A) :=
+  [forall a : 'I_m, forall b : 'I_m, 
+    (a <= b) ==> (tnth t1 a <= tnth t1 b)%O ==> (tnth t2 a <= tnth t2 b)%O].
+
+Lemma leqcP m (t1 t2 : m.-tuple A) :
+  reflect 
+  (forall a b : 'I_m, a <= b ->
+                (tnth t1 a <= tnth t1 b)%O -> (tnth t2 a <= tnth t2 b)%O)
+  (leqc t1 t2).
+Proof.
+apply: (iffP forallP) => [H a b aLb t1aLt1b|H a].
+  by have /forallP/(_ b) := H a; rewrite aLb t1aLt1b.
+by apply/forallP=> b; case: leqP => //= aLb; apply/implyP/H.
+Qed.
+
+Lemma leqcc m : reflexive (@leqc m).
+Proof. by move=>t; apply/leqcP. Qed.
+
+Lemma leqc_trans m : transitive (@leqc m).
+Proof.
+move=>t2 t1 t3 /leqcP Ht1t2 /leqcP Ht2t3.
+apply/leqcP => a b aLb t2aLt2b.
+by apply: Ht2t3 => //; apply: Ht1t2.
+Qed.
+
+Lemma leqc_sorted m (t1 t2 : m.-tuple A) : sorted (>%O) t1 -> leqc t1 t2.
+Proof.
+move=> sS; apply/leqcP => a b.
+rewrite leq_eqVlt => /orP[/val_eqP->//|aLb].
+pose v := tnth t1 a; rewrite leNgt !(tnth_nth v).
+by rewrite -DualPOrder.ltEdual lt_sorted_ltn_nth ?(aLb, inE, size_tuple).
+Qed.
+
+Lemma leqc_cfun m (c : connector m) : 
+  ctransp c -> {homo cfun c : i j / leqc i j}.
+Proof.
+(* This proof is slightly more complicate in our setting because 
+   a connector can contain simultaneous transposition *)
+move=> /ctranspP cT t1 t2 /leqcP t1Lt2; apply/leqcP => a b.
+rewrite leq_eqVlt => /orP[/val_eqP<-//|aLb].
+have b_gt0 : 0 < b by case: (nat_of_ord b) aLb.
+have aLLb : a <= b by apply: ltnW.
+rewrite !tnth_map !tnth_ord_tuple //.
+have [->|/eqP cD] := clink c a =P a; last case: (cT _ cD) => cE.
+- rewrite leqnn !minxx.
+  have [->|/eqP /cT[] cE] := clink c b =P b.
+  - by rewrite leqnn !minxx; apply/t1Lt2.
+  - rewrite cE leqnSn.
+    have aLc : a <= clink c b by rewrite cE -ltnS (leq_trans aLb) // ltnW.
+    case: (ltP (tnth t1 b)) => C1.
+      rewrite min_l; first by apply/t1Lt2/ltnW.
+      apply/t1Lt2; last by apply: ltW.
+      by rewrite cE leqnSn.
+    move=> t1aLt1c.
+    rewrite le_minr !t1Lt2 => //; try by apply: ltnW.
+    by apply: le_trans C1.
+  have cLb : clink c b < b.
+    by rewrite cE /=; case: (nat_of_ord b) aLb.
+  have aLc : a <= clink c b.
+    by rewrite -ltnS cE prednK.
+  rewrite (leqNgt b) cLb /=.
+  case: (ltP (tnth t1 b)) => C1.
+    by rewrite le_maxr=>/(t1Lt2 _ _ aLc) ->; rewrite orbT.
+  by rewrite le_maxr=>/(t1Lt2 _ _ (ltnW aLb)) ->.
+- rewrite cE leqnSn /=.
+  have [->|/eqP /cT[] c1E] := clink c b =P b.
+  - rewrite leqnn !minxx.
+    case: (ltP (tnth t1 a)); rewrite le_minl.
+      by move=> _ /t1Lt2-> //; apply: ltnW.
+    move=> _ /t1Lt2-> //; first by rewrite orbT.
+    by rewrite cE.
+  - rewrite c1E leqnSn.
+    case: (ltP (tnth t1 a)); rewrite !le_minr.
+      move=> t1aLt1c; rewrite min_l.
+        move/andP => [] /t1Lt2-> // /t1Lt2 -> //.
+        by rewrite c1E (leq_trans aLLb).
+      apply: t1Lt2; first by rewrite cE.
+      by apply: ltW.
+    rewrite !le_minl => H /andP[] /t1Lt2 -> //; last by rewrite cE.
+    move=> /t1Lt2 ->; rewrite ?orbT //.
+    by rewrite cE c1E ltnS.
+  have /negPf-> : ~~ (b <= clink c b).
+    by rewrite c1E; case: (nat_of_ord b) aLb => //= n; rewrite ltnn.
+  have [<-|/eqP aD] := a =P clink c b.
+    by rewrite !(le_minl, le_maxr) !lexx !orbT.
+  have aLb1 : a <= b.-1 by 
+    by rewrite -ltnS prednK //; case: (nat_of_ord b) aLb.
+  rewrite !(le_minl, le_maxr) -orbA => /or4P[] /t1Lt2->//; 
+      rewrite ?(orbT, cE, c1E) //.  
+  by rewrite ltn_neqAle -c1E aD c1E.
+rewrite leqNgt ltn_neqAle cD cE leq_pred /=.
+have [->|/eqP /cT[] c1E] := clink c b =P b.
+- rewrite leqnn !minxx.
+  case: (ltP (tnth t1 a)); rewrite le_maxl.
+    move=> t1aLt1c t1cLtb; rewrite !t1Lt2 //.
+      by rewrite cE (leq_trans (leq_pred _)).
+    by apply: le_trans (ltW t1aLt1c) _.
+  move=> t1aLt1c t1cLtb.
+  have t2aLt2b : (tnth t2 a <= tnth t2 b)%O by apply: t1Lt2.
+  rewrite t2aLt2b (le_trans _ t2aLt2b) // t1Lt2 //.
+  by rewrite cE leq_pred.
+- rewrite c1E leqnSn !le_maxl !le_minr -!andbA => 
+     /and4P[t1aLtb t1aLt1c t1cLtb t1cLt1c].
+  by rewrite !t1Lt2 ?(cE, c1E, (leq_trans (leq_pred _))) // ltnW.
+have /negPf-> : ~~ (b <= clink c b).
+  by rewrite c1E; case: (nat_of_ord b) aLb => //= n; rewrite ltnn.
+rewrite !(le_maxl, le_maxr) => /andP[] /orP[] /t1Lt2-> //=; last first.
+- by rewrite c1E -ltnS prednK.
+- rewrite !orbT /=; case/orP => /t1Lt2-> //; rewrite ?orbT //.
+    by rewrite cE (leq_trans (leq_pred _)).
+  by rewrite cE c1E (leq_trans (leq_pred _)) // -ltnS prednK.
+case/orP => /t1Lt2-> //; rewrite ?orbT //.
+  by rewrite cE (leq_trans (leq_pred _)).
+rewrite cE c1E -ltnS !prednK //.
+move/eqP/val_eqP: cD => /=.
+by rewrite /= cE; case: nat_of_ord.
+Qed.
+
+Lemma leqc_nfun m (n : network m) : 
+  ntransp n -> {homo nfun n : i j / leqc i j}.
+Proof.
+elim: n => /= [_| c n IH /andP[cT nT]] t1 t2 t1Lt2 //=.
+by apply: IH => //; apply: leqc_cfun.
+Qed.
+
+Lemma leqc_nsorted m (x1 x2 : A) (t : m.-tuple A) (n : network m) : 
+  x1 != x2 -> ntransp n -> 
+  sorted (>%O) t -> sorted (<=%O) (nfun n t) -> n \is sorting.
+Proof.
+move=> x1Dx2 nT tS tS1; apply: sorted_sorting x1Dx2 _ => t1.
+suff : forall a b,
+   a <= b < size (nfun n t1) ->
+  (nth x1 (nfun n t1) a <= nth x1 (nfun n t1) b)%O.
+  elim: tval => // y1 [|y2 l] // IH H.
+  rewrite /= (H 0 1) //=.
+  apply: IH => a b /= /andP[aLb bLs].
+  by apply: (H a.+1 b.+1); rewrite /= !ltnS //= aLb -ltnS.
+rewrite size_tuple => a b /andP[aLb bLs].
+have aLs : a < m by apply: leq_ltn_trans aLb _.
+pose a1 := Ordinal aLs; pose b1 := Ordinal bLs.
+have /leqcP/(_ a1 b1 aLb) : leqc (nfun n t) (nfun n t1).
+  apply: leqc_nfun => //.
+  by apply: leqc_sorted.
+rewrite !(tnth_nth x1); apply.
+by apply: (sorted_leq_nth le_trans le_refl x1 tS1); rewrite ?(inE, size_tuple).
+Qed.
+
+End Transposition.
