@@ -62,6 +62,9 @@ Proof. by elim: m => //= m ->; rewrite expnS mul2n addnn. Qed.
 Lemma e2Sn m : `2^ m.+1 = `2^ m + `2^ m.
 Proof. by []. Qed.
 
+Lemma e2n_gt0 m : 0 < `2^ m.
+Proof. by rewrite e2nE expn_gt0. Qed.
+
 End E2.
 
 Notation "`2^ n" := (e2n n) (at level 40).
@@ -109,6 +112,66 @@ Lemma cat_ttake_tdrop n (t : (n + n).-tuple A) :
 Proof. by apply/val_eqP; rewrite /= ttakeE tdropE; rewrite cat_take_drop. Qed.
 
 Definition trev m (t : m.-tuple A) := [tuple of rev t].
+
+Fixpoint etake (l : seq A) :=
+  if l is a :: l1 then a :: (if l1 is _ :: l2 then etake l2 else [::])
+  else [::].
+
+Definition otake l := if l is _ :: l1 then etake l1 else [::].
+
+Lemma etake_cons a (l : seq A) : etake (a :: l) = a :: otake l.
+Proof. by []. Qed.
+
+Lemma otake_cons a (l : seq A) : otake (a :: l) = etake l.
+Proof. by []. Qed.
+
+Lemma size_etake l : size (etake l) = (size l).+1./2.
+Proof.
+have [n leMn] := ubnP (size l); elim: n l leMn => // n IH [|a [|bl]] //= l.
+rewrite !ltnS => slLn.
+by rewrite IH //= (leq_trans _ slLn).
+Qed.
+
+Lemma etake_tupleP m (t : (m + m).-tuple A) : size (etake t) == m.
+Proof. by rewrite size_etake size_tuple /= addnn uphalf_double. Qed.
+Canonical etake_tuple m (t : (m + m).-tuple A) := Tuple (etake_tupleP t).
+
+Lemma size_otake l : size (otake l) = (size l)./2.
+Proof. by case: l => //= a l; rewrite size_etake. Qed.
+
+Lemma otake_tupleP m (t : (m + m).-tuple A) : size (otake t) == m.
+Proof. by rewrite size_otake size_tuple addnn doubleK. Qed.
+Canonical otake_tuple m (t : (m + m).-tuple A) := Tuple (otake_tupleP t).
+
+Definition tetake (m : nat) (t : (m + m).-tuple A) := [tuple of etake t].
+Definition totake (m : nat) (t : (m + m).-tuple A) := [tuple of otake t].
+
+Lemma tetakeE (m : nat) (t : (m + m).-tuple A) : tetake t = etake t :> seq A.
+Proof. by []. Qed.
+
+Lemma totakeE (m : nat) (t : (m + m).-tuple A) : totake t = otake t :> seq A.
+Proof. by []. Qed.
+
+Fixpoint eocat (l1 l2 : seq A) :=
+  if l1 is a :: l3 then a :: head a l2 :: eocat l3 (behead l2) else [::].
+
+Lemma size_eocat l1 l2 : size (eocat l1 l2) = (size l1 + size l1).
+Proof. by elim: l1 l2 => //= a l1 IH l2; rewrite IH addnS. Qed.
+
+Lemma eocatK n l : size l = n + n -> eocat (etake l) (otake l) = l.
+Proof.
+elim: n l =>[[]// | n IH [//|a [|b l]]]; rewrite !addnS //.
+by rewrite !(etake_cons, otake_cons) /= => [] [H]; rewrite IH.
+Qed.
+
+Lemma etakeK l1 l2 : etake (eocat l1 l2) = l1.
+Proof. by elim: l1 l2 => //= a l IH l2; rewrite IH. Qed.
+
+Lemma otakeK l1 l2 : size l1 = size l2 -> otake (eocat l1 l2) = l2.
+Proof.
+elim: l1 l2 => [[]//|a l1 IH [|b l2] //].
+by rewrite [eocat _ _]/= otake_cons etake_cons /= => [] [/IH->].
+Qed.
 
 End Tuple.
 
@@ -1226,3 +1289,4 @@ by apply: (sorted_leq_nth le_trans le_refl x1 tS1); rewrite ?(inE, size_tuple).
 Qed.
 
 End Transposition.
+
