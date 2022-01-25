@@ -125,6 +125,22 @@ Proof. by []. Qed.
 Lemma otake_cons a (l : seq A) : otake (a :: l) = etake l.
 Proof. by []. Qed.
 
+Lemma nth_etake a (l : seq A) n : nth a (etake l) n = nth a l n.*2.
+Proof.
+have [m leMm] := ubnP (size l);
+    elim: m l leMm n => [[]//|m IH [|b [|c l]]] HS n.
+- by rewrite /= !nth_nil.
+- by case: n => [|n]; rewrite //= nth_nil.
+rewrite etake_cons otake_cons; case: n => //= n.
+rewrite ltnS in HS.
+by apply: IH; apply: leq_trans HS => /=.
+Qed.
+
+Lemma nth_otake a (l : seq A) n : nth a (otake l) n = nth a l n.*2.+1.
+Proof.
+by case: l; rewrite //= ?nth_nil // => _ l; rewrite nth_etake.
+Qed.
+
 Lemma size_etake l : size (etake l) = (size l).+1./2.
 Proof.
 have [n leMn] := ubnP (size l); elim: n l leMn => // n IH [|a [|bl]] //= l.
@@ -157,6 +173,15 @@ Fixpoint eocat (l1 l2 : seq A) :=
 
 Lemma size_eocat l1 l2 : size (eocat l1 l2) = (size l1 + size l1).
 Proof. by elim: l1 l2 => //= a l1 IH l2; rewrite IH addnS. Qed.
+
+Lemma nth_eocat a (l1 l2 : seq A) n : 
+  size l1 = size l2 ->
+  nth a (eocat l1 l2) n = nth a (if odd n then l2 else l1) n./2.
+Proof.
+elim: l1 l2 n => /= [[]//= n|b l1 IH [//= n|c l2 [|[|n]] //= [Hs]/=]].
+  by rewrite if_same !nth_nil.
+by rewrite negbK IH; case: odd.
+Qed.
 
 Lemma eocatK n l : size l = n + n -> eocat (etake l) (otake l) = l.
 Proof.
