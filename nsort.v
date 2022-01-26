@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect perm.
+From mathcomp Require Import all_ssreflect perm algebra.zmodp.
 From mathcomp Require Import zify.
 
 Import Order POrderTheory TotalTheory.
@@ -64,6 +64,9 @@ Proof. by []. Qed.
 
 Lemma e2n_gt0 m : 0 < `2^ m.
 Proof. by rewrite e2nE expn_gt0. Qed.
+
+Lemma odd_e2 m : odd (`2^ m) = (m == 0).
+Proof. by case: m => //= m; rewrite addnn odd_double. Qed.
 
 End E2.
 
@@ -159,6 +162,27 @@ Lemma otake_tupleP m (t : (m + m).-tuple A) : size (otake t) == m.
 Proof. by rewrite size_otake size_tuple addnn doubleK. Qed.
 Canonical otake_tuple m (t : (m + m).-tuple A) := Tuple (otake_tupleP t).
 
+Lemma etake_nseq i (a : A) : etake (nseq i a) = nseq (uphalf i) a.
+Proof.
+have [n leMi] := ubnP i; elim: n i leMi => // n IH [|[|i]] //= iLn.
+by rewrite IH // -ltnS (leq_trans _ iLn).
+Qed.
+
+Lemma otake_nseq i (a : A) : otake (nseq i a) = nseq i./2 a.
+Proof. by case: i => //= i; exact: etake_nseq. Qed.
+
+Lemma etake_cat (l1 l2 : seq A) : 
+  etake (l1 ++ l2) = etake l1 ++ if odd (size l1) then otake l2 else etake l2.
+Proof.
+have [n leMl1] := ubnP (size l1).
+elim: n l1 leMl1 => // n IH [|a[|b l1]] //= slLn.
+by rewrite negbK IH // -ltnS (leq_trans _ slLn).
+Qed.
+
+Lemma otake_cat (l1 l2 : seq A) : 
+  otake (l1 ++ l2) = otake l1 ++ if odd (size l1) then etake l2 else otake l2.
+Proof. by case: l1 => // a l; rewrite /= if_neg etake_cat. Qed.
+
 Definition tetake (m : nat) (t : (m + m).-tuple A) := [tuple of etake t].
 Definition totake (m : nat) (t : (m + m).-tuple A) := [tuple of otake t].
 
@@ -183,7 +207,7 @@ elim: l1 l2 n => /= [[]//= n|b l1 IH [//= n|c l2 [|[|n]] //= [Hs]/=]].
 by rewrite negbK IH; case: odd.
 Qed.
 
-Lemma eocatK n l : size l = n + n -> eocat (etake l) (otake l) = l.
+Lemma eocat_etake_otake n l : size l = n + n -> eocat (etake l) (otake l) = l.
 Proof.
 elim: n l =>[[]// | n IH [//|a [|b l]]]; rewrite !addnS //.
 by rewrite !(etake_cons, otake_cons) /= => [] [H]; rewrite IH.
@@ -196,6 +220,45 @@ Lemma otakeK l1 l2 : size l1 = size l2 -> otake (eocat l1 l2) = l2.
 Proof.
 elim: l1 l2 => [[]//|a l1 IH [|b l2] //].
 by rewrite [eocat _ _]/= otake_cons etake_cons /= => [] [/IH->].
+Qed.
+
+Lemma etake_eocat (l1 l2 : seq A) :  etake (eocat l1 l2) = l1.
+Proof.
+have [n leMl1] := ubnP (size l1).
+elim: n l1 leMl1 l2 => // n IH [|a[|b l1]] //= slLn l2.
+by rewrite IH // -ltnS (leq_trans _ slLn).
+Qed.
+
+Lemma otake_eocat (l1 l2 : seq A) :
+  size l1 = size l2 -> otake (eocat l1 l2) = l2.
+Proof.
+elim: l1 l2 => [|a l1 IH] l2; first by case: l2.
+case: l2 => [//|b l2].
+by rewrite [eocat _ _]/= otake_cons etake_cons => [] [/IH->].
+Qed.
+
+Lemma eocat_tupleP m1 m2 (t1 : m1.-tuple A) (t2 : m2.-tuple A) :
+  size (eocat t1 t2) == m1 + m1.
+Proof. by rewrite size_eocat size_tuple. Qed.
+Canonical eocat_tuple m1 m2 (t1 : m1.-tuple A) (t2 : m2.-tuple A) :=
+  Tuple (eocat_tupleP t1 t2).
+
+Lemma eocat_tetake_totake n (t : (n + n).-tuple A) : 
+  t = [tuple of eocat (tetake t) (totake t)].
+Proof. 
+by apply/val_eqP; rewrite /= (@eocat_etake_otake n) // size_tuple.
+Qed.
+
+Lemma tetakeK (m : nat) (t1 t2 : m.-tuple A) : 
+  tetake [tuple of eocat t1 t2] = t1.
+Proof.
+by apply/val_eqP; rewrite /= tetakeE /= etake_eocat.
+Qed.
+
+Lemma totakeK (m : nat) (t1 t2 : m.-tuple A) : 
+  totake [tuple of eocat t1 t2] = t2.
+Proof.
+by apply/val_eqP; rewrite /= totakeE /= otake_eocat // !size_tuple.
 Qed.
 
 End Tuple.
@@ -251,6 +314,81 @@ Definition cmerge m1 m2 (c1 : connector m1) (c2 : connector m2) :=
   connector_of (clink_merge_proof c1 c2).
 
 Definition cdup m (c : connector m) := cmerge c c.
+
+Definition elift m : 'I_m -> 'I_(m + m) := 
+  if m is m1.+1 then fun i => inZp (i.*2) else fun i => i.
+
+Lemma elift_val m (i : 'I_m) : elift i = i.*2 :> nat.
+Proof.
+case: m i => [[]//|m i].
+by rewrite -[LHS]/(i.*2 %% (m.+1 + m.+1)) modn_small // addnn ltn_double.
+Qed.
+
+Definition olift m : 'I_m -> 'I_(m + m) := 
+  if m is m1.+1 then fun i => inZp (i.*2.+1) else fun i => i.
+
+Lemma olift_val m (i : 'I_m) : olift i = i.*2.+1 :> nat.
+Proof.
+case: m i => [[]//|m i].
+rewrite -[LHS]/(i.*2.+1 %% (m.+1 + m.+1)) modn_small //.
+by rewrite addnS addSn !ltnS addnn leq_double -ltnS.
+Qed.
+
+Definition idiv2 m : 'I_(m + m) -> 'I_m := 
+  if m is m1.+1 then fun i => inZp (i./2) else fun i => i.
+
+Lemma idiv2_val m (i : 'I_(m + m)) : idiv2 i = i./2 :> nat.
+Proof.
+case: m i => [[]//|n i /=].
+rewrite modn_small // -ltn_double -[X in _ < X]addnn.
+rewrite (leq_ltn_trans _ (ltn_ord i)) //.
+by rewrite -[X in _ <= X]odd_double_half leq_addl.
+Qed.
+
+Lemma oliftK m (i : 'I_m) : idiv2 (olift i) = i.
+Proof.
+apply/val_eqP; rewrite /= idiv2_val /= olift_val.
+by rewrite -divn2 -muln2 -addn1 divnMDl // addn0.
+Qed.
+
+Lemma idiv2K_odd m (i : 'I_(m + m)) : odd i -> olift (idiv2 i) = i.
+Proof.
+move=> iO.
+apply/val_eqP; rewrite /= olift_val /= idiv2_val.
+by rewrite -[X in _ == X]odd_double_half iO.
+Qed.
+
+Lemma idiv2K_even m (i : 'I_(m + m)) : ~~ odd i -> elift (idiv2 i) = i.
+Proof.
+move=> iO.
+apply/val_eqP; rewrite /= elift_val /= idiv2_val.
+by rewrite -[X in _ == X]odd_double_half (negPf iO).
+Qed.
+
+Lemma eliftK m (i : 'I_m) : idiv2 (elift i) = i.
+Proof.
+by apply/val_eqP; rewrite /= idiv2_val /= elift_val doubleK.
+Qed.
+
+Definition clink_eomerge m (c1 : connector m) (c2 : connector m) :=
+  [ffun i : 'I_ _ => 
+    if odd i then olift (clink c2 (idiv2 i)) else elift (clink c1 (idiv2 i))].
+  
+Lemma clink_eomerge_proof m (c1 : connector m) (c2 : connector m) :
+  [forall i, (clink_eomerge c1 c2 (clink_eomerge c1 c2 i)) == i].
+Proof.
+apply/forallP=> i /=.
+rewrite !ffunE /=; have [iO|iE] := boolP (odd i).
+  rewrite oliftK olift_val /= odd_double /= (eqP (forallP (cfinv c2) _)).
+  by rewrite idiv2K_odd.
+rewrite eliftK elift_val /= odd_double /= (eqP (forallP (cfinv c1) _)).
+by rewrite idiv2K_even.
+Qed.
+
+Definition ceomerge m (c1 : connector m) (c2 : connector m) := 
+  connector_of (clink_eomerge_proof c1 c2).
+
+Definition ceodup m (c : connector m) := ceomerge c c.
 
 End Connector.
 
@@ -1315,3 +1453,152 @@ Qed.
 
 End Transposition.
 
+Section EOMerge.
+
+Variable m : nat.
+Variable d : unit.
+Variable A : orderType d.
+
+Implicit Types t : m.-tuple A.
+Implicit Types c : connector m.
+Implicit Types n : network m.
+
+Lemma cfun_eomerge (c1 : connector m) (c2 : connector m) 
+                   (t : (m + m).-tuple A) : 
+  cfun (ceomerge c1 c2) t = [tuple of eocat (cfun c1 (tetake t)) 
+                                            (cfun c2 (totake t))].
+Proof.
+apply: eq_from_tnth => i.
+have iLm : i < m + m by apply: ltn_ord.
+have i2Lm : i./2 < m by have := ltn_ord (idiv2 i); rewrite idiv2_val.
+pose a := tnth t i.
+rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=; last 2 first.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+- by rewrite -enum_ord size_enum_ord.
+set u := nth i _ _; have -> : u = i.
+  by apply/val_eqP; rewrite /= /u -fintype.enumT -enum_ord /= nth_enum_ord.
+rewrite !ffunE {u}nth_eocat; last by rewrite !size_map.
+have [iO|iE] := boolP (odd i).
+  rewrite !(nth_map (idiv2 i)); last 2 first.
+  - by rewrite -fintype.enumT -enum_ord size_enum_ord.
+  - by rewrite -enum_ord size_enum_ord.
+  set u := nth _ _ _; have -> : u = idiv2 i.
+    apply/val_eqP; rewrite /= /u.
+    by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?idiv2_val.
+  rewrite !(tnth_nth a) /= !nth_otake /= olift_val /= idiv2_val.
+  have F : i = i./2.*2.+1 :> nat by rewrite -[LHS]odd_double_half iO.
+  by rewrite -F {1}F ltnS leq_double.
+rewrite !(nth_map (idiv2 i)); last 2 first.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+- by rewrite -enum_ord size_enum_ord.
+set u := nth _ _ _; have -> : u = idiv2 i.
+  apply/val_eqP; rewrite /= /u.
+  by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?idiv2_val.
+rewrite !(tnth_nth a) /= !nth_etake /= elift_val /= idiv2_val.
+have F : i = i./2.*2 :> nat by rewrite -[LHS]odd_double_half (negPf iE).
+by rewrite -F {1}F leq_double.
+Qed.
+
+Lemma cfun_eodup (c : connector m) (t : (m + m).-tuple A) :
+  cfun (ceodup c) t = [tuple of eocat (cfun c (tetake t)) (cfun c (totake t))].
+Proof. by apply: cfun_eomerge. Qed.
+
+Definition neomerge m (n1 : network m) (n2 : network m) := 
+    [seq ceomerge i.1 i.2 | i <- zip n1 n2].
+
+Definition neodup m (n : network m) : network (m + m) := neomerge n n.
+
+Lemma nfun_eodup (n : network m) (t : (m + m).-tuple A) : 
+  nfun (neodup n) t = [tuple of eocat (nfun n (tetake t)) (nfun n (totake t))].
+Proof.
+elim: n t => /= [t|c n IH t]; first by rewrite -eocat_tetake_totake.
+by rewrite IH !cfun_eodup tetakeK totakeK.
+Qed.
+
+End EOMerge.
+
+Section Bakker.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Lemma etake_cat_nseq i j (a b : A) : 
+  etake (nseq i a ++ nseq j b) =
+  nseq (uphalf i) a ++ nseq ((~~ odd i + j)./2) b.
+Proof.
+by rewrite etake_cat !(etake_nseq, otake_nseq) size_nseq; case: odd.
+Qed.
+
+Lemma otake_cat_nseq i j (a b : A) : 
+  otake (nseq i a ++ nseq j b) =
+  nseq i./2 a ++ nseq ((odd i + j)./2) b.
+Proof.
+by rewrite otake_cat !(etake_nseq, otake_nseq) size_nseq; case: odd.
+Qed.
+
+Definition inext m : 'I_m -> 'I_m := 
+  if m is m1.+1 then fun i => inZp (if i == m1 :> nat then i : nat else i.+1)
+  else fun i => i.
+
+Lemma inext_val m (i : 'I_m) : 
+  inext i = if i == m.-1 :> nat then i : nat else i.+1 :> nat.
+Proof.
+case: m i => [[]//|n i /=].
+have:= (ltn_ord i); rewrite ltnS leq_eqVlt.
+by case: eqP => [->|_] /= iLn; rewrite modn_small.
+Qed.
+
+Definition ipred m : 'I_m -> 'I_m := 
+  if m is m1.+1 then fun i => inZp (i.-1) else fun i => i.
+
+Lemma ipred_val m (i : 'I_m) : ipred i = i.-1 :> nat.
+Proof.
+case: m i => [[]//|n i /=].
+by rewrite modn_small // (leq_ltn_trans (leq_pred _) (ltn_ord i)).
+Qed.
+
+Definition clink_baker_merge m : {ffun 'I_m -> 'I_m} :=
+  [ffun i : 'I_ _ => if odd i then inext i else ipred i].
+
+Lemma clink_baker_merge_proof m : 
+  [forall i : 'I_(m + m), clink_baker_merge _ (clink_baker_merge _ i) == i].
+Proof.
+apply/forallP => i /=; apply/eqP/val_eqP; rewrite !ffunE.
+have mmE : ~~ (odd (m + m)) by rewrite addnn odd_double.
+have mm_gt0 : 0 < m + m by apply: leq_ltn_trans (ltn_ord i).
+have [iO|iE] := boolP (odd i); rewrite /= !(ipred_val, inext_val).
+  case:  ((i : nat) =P (m + m).-1) => [/eqP iEm | /eqP iDm].
+    by rewrite iO !inext_val /= !iEm.
+  by rewrite /= iO /= ipred_val inext_val (negPf iDm).
+have [i1O|i1E] := boolP (odd i.-1); rewrite /= !(ipred_val, inext_val).
+  have i_gt0 : 0 < i by case: (i : nat) iE i1O.
+  by rewrite prednK // ifN // -eqSS !prednK // neq_ltn ltn_ord.
+by case: (i : nat) iE i1E => //= n; case: odd.
+Qed.
+  
+Definition baker_merge {m} := connector_of (clink_baker_merge_proof m).
+
+Lemma cfun_baker_merge n (t : (n + n).-tuple A) : 
+  cfun baker_merge t = 
+  [tuple
+    if odd i then min (tnth t i) (tnth t (inext i))
+    else max (tnth t i) (tnth t (ipred i)) | i < n + n].
+Proof.
+apply: eq_from_tnth => i /=.
+rewrite /baker_merge /cfun /=.
+rewrite !tnth_map /= !tnth_ord_tuple ffunE.
+have [iO|iE] := boolP (odd i).
+  by rewrite ifT // inext_val; case: eqP.
+case: leqP => [iLip|] //.
+suff -> : ipred i = i by rewrite maxxx minxx.
+apply/val_eqP =>> /=; move: iLip; rewrite !ipred_val /=.
+by case: (i : nat) => //= i1; rewrite ltnn.
+Qed.
+
+Fixpoint baker m : network (`2^ m) :=
+  if m is m1.+1 then 
+    let n1 := baker m1 in
+    ndup n1 ++ rcons (neodup n1) baker_merge
+  else [::].
+
+End Bakker.
