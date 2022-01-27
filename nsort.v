@@ -1517,7 +1517,7 @@ Qed.
 
 End EOMerge.
 
-Section Bakker.
+Section Batcher.
 
 Variable d : unit.
 Variable A : orderType d.
@@ -1557,11 +1557,11 @@ case: m i => [[]//|n i /=].
 by rewrite modn_small // (leq_ltn_trans (leq_pred _) (ltn_ord i)).
 Qed.
 
-Definition clink_baker_merge m : {ffun 'I_m -> 'I_m} :=
+Definition clink_Batcherr_merge m : {ffun 'I_m -> 'I_m} :=
   [ffun i : 'I_ _ => if odd i then inext i else ipred i].
 
-Lemma clink_baker_merge_proof m : 
-  [forall i : 'I_(m + m), clink_baker_merge _ (clink_baker_merge _ i) == i].
+Lemma clink_Batcherr_merge_proof m : 
+  [forall i : 'I_(m + m), clink_Batcherr_merge _ (clink_Batcherr_merge _ i) == i].
 Proof.
 apply/forallP => i /=; apply/eqP/val_eqP; rewrite !ffunE.
 have mmE : ~~ (odd (m + m)) by rewrite addnn odd_double.
@@ -1576,16 +1576,16 @@ have [i1O|i1E] := boolP (odd i.-1); rewrite /= !(ipred_val, inext_val).
 by case: (i : nat) iE i1E => //= n; case: odd.
 Qed.
   
-Definition baker_merge {m} := connector_of (clink_baker_merge_proof m).
+Definition Batcherr_merge {m} := connector_of (clink_Batcherr_merge_proof m).
 
-Lemma cfun_baker_merge n (t : (n + n).-tuple A) : 
-  cfun baker_merge t = 
+Lemma cfun_Batcherr_merge n (t : (n + n).-tuple A) : 
+  cfun Batcherr_merge t = 
   [tuple
     if odd i then min (tnth t i) (tnth t (inext i))
     else max (tnth t i) (tnth t (ipred i)) | i < n + n].
 Proof.
 apply: eq_from_tnth => i /=.
-rewrite /baker_merge /cfun /=.
+rewrite /Batcherr_merge /cfun /=.
 rewrite !tnth_map /= !tnth_ord_tuple ffunE.
 have [iO|iE] := boolP (odd i).
   by rewrite ifT // inext_val; case: eqP.
@@ -1595,10 +1595,10 @@ apply/val_eqP =>> /=; move: iLip; rewrite !ipred_val /=.
 by case: (i : nat) => //= i1; rewrite ltnn.
 Qed.
 
-Fixpoint baker m : network (`2^ m) :=
+Fixpoint Batcherr m : network (`2^ m) :=
   if m is m1.+1 then 
-    let n1 := baker m1 in
-    ndup n1 ++ rcons (neodup n1) baker_merge
+    let n1 := Batcherr m1 in
+    ndup n1 ++ rcons (neodup n1) Batcherr_merge
   else [::].
 
-End Bakker.
+End Batcher.
