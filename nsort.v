@@ -183,6 +183,24 @@ Lemma otake_cat (l1 l2 : seq A) :
   otake (l1 ++ l2) = otake l1 ++ if odd (size l1) then etake l2 else otake l2.
 Proof. by case: l1 => // a l; rewrite /= if_neg etake_cat. Qed.
 
+Lemma uphalfE n : uphalf n = n.+1./2.
+Proof. by []. Qed.
+
+Lemma etake_cat_nseq (l1 l2 : seq A) (a1 a2 : A) m1 m2 : 
+  etake (nseq m1 a1 ++ nseq m2 a2) = 
+  nseq (uphalf m1) a1 ++ nseq (~~odd m1 + m2)./2 a2.
+Proof.
+by rewrite etake_cat !etake_nseq otake_nseq size_nseq; case: (odd m1).
+Qed.
+
+Lemma otake_cat_nseq (l1 l2 : seq A) (a1 a2 : A) m1 m2 : 
+  otake (nseq m1 a1 ++ nseq m2 a2) = 
+  nseq m1./2 a1 ++ nseq (odd m1 + m2)./2 a2.
+Proof.
+by rewrite otake_cat !otake_nseq etake_nseq size_nseq; case: (odd m1).
+Qed.
+
+
 Definition tetake (m : nat) (t : (m + m).-tuple A) := [tuple of etake t].
 Definition totake (m : nat) (t : (m + m).-tuple A) := [tuple of otake t].
 
@@ -1522,19 +1540,6 @@ Section Batcher.
 Variable d : unit.
 Variable A : orderType d.
 
-Lemma etake_cat_nseq i j (a b : A) : 
-  etake (nseq i a ++ nseq j b) =
-  nseq (uphalf i) a ++ nseq ((~~ odd i + j)./2) b.
-Proof.
-by rewrite etake_cat !(etake_nseq, otake_nseq) size_nseq; case: odd.
-Qed.
-
-Lemma otake_cat_nseq i j (a b : A) : 
-  otake (nseq i a ++ nseq j b) =
-  nseq i./2 a ++ nseq ((odd i + j)./2) b.
-Proof.
-by rewrite otake_cat !(etake_nseq, otake_nseq) size_nseq; case: odd.
-Qed.
 
 Definition inext m : 'I_m -> 'I_m := 
   if m is m1.+1 then fun i => inZp (if i == m1 :> nat then i : nat else i.+1)
@@ -1595,10 +1600,202 @@ apply/val_eqP =>> /=; move: iLip; rewrite !ipred_val /=.
 by case: (i : nat) => //= i1; rewrite ltnn.
 Qed.
 
+Fixpoint Batcher_merge_rec_aux m : network (`2^ m.+1) :=
+  if m is m1.+1 then rcons (neodup (Batcher_merge_rec_aux m1)) Batcher_merge
+  else [:: cswap ord0 ord_max].
+
+Definition Batcher_merge_rec m := 
+  if m is m1.+1 then Batcher_merge_rec_aux m1 else [::].
+
 Fixpoint Batcher m : network (`2^ m) :=
-  if m is m1.+1 then 
-    let n1 := Batcher m1 in
-    ndup n1 ++ rcons (neodup n1) Batcher_merge
+  if m is m1.+1 then ndup (Batcher m1) ++ Batcher_merge_rec m1.+1
   else [::].
 
 End Batcher.
+
+
+Lemma aabbEabab a b : (a + a) + (b + b) = (a + b) + (a + b).
+Proof. by rewrite [RHS]addnAC !addnA. Qed.
+
+Lemma minFb x : min false x = false.
+Proof. by case: x. Qed.
+
+Lemma minbF x : min x false = false.
+Proof. by case: x. Qed.
+
+Lemma maxFb x : max false x = x.
+Proof. by case: x. Qed.
+
+Lemma maxbF x : max x false = x.
+Proof. by case: x. Qed.
+
+Lemma minTb x : min true x = x.
+Proof. by case: x. Qed.
+
+Lemma minbT x : min x true = x.
+Proof. by case: x. Qed.
+
+Lemma maxTb x : max true x = true.
+Proof. by case: x. Qed.
+
+Lemma maxbT x : max x true = true.
+Proof. by case: x. Qed.
+
+
+Lemma cfun_Batcher_merge_case1 a b c (H : a + b = c + c) : 
+  let t1 := tcast H [tuple of nseq a false ++ nseq b true] in
+  cfun Batcher_merge t1 = t1. 
+Proof.
+move=> t1.
+rewrite cfun_Batcher_merge.
+apply: eq_from_tnth => i.
+have cc_gt0 : 0 < c + c by apply: leq_ltn_trans (ltn_ord i).
+rewrite !tcastE !(tnth_nth false) /= nth_cat !nth_nseq /= ?size_nseq.
+rewrite !if_same -enum_ord !(nth_map i) ?size_enum_ord //.
+rewrite !tcastE  nth_ord_enum !(tnth_nth false) /=.
+rewrite !nth_cat !nth_nseq /= ?size_nseq inext_val ipred_val.
+rewrite !if_same.
+have [iLa|aLi] := ltnP i.
+  by rewrite minFb (_ : i.-1 < a) ?if_same // (leq_ltn_trans (leq_pred _) iLa).
+rewrite ltn_subLR // H ltn_ord /= maxTb minTb.
+case: eqP => [->|/eqP iDcc].
+  have aLcc : a <= (c + c).-1.
+    by rewrite -ltnS prednK // (leq_ltn_trans aLi).
+  rewrite ltnNge aLcc /= ltn_subLR // H.
+  by case: (c + c) cc_gt0 => //= c1; rewrite leqnn if_same.
+have aLi1 : a <= i.+1 by apply: leq_trans aLi _.
+rewrite ltnNge aLi1 /= ltn_subLR // H.
+rewrite -[odd i]negbK -oddS.
+move: (ltn_ord i); rewrite leq_eqVlt => /orP[/eqP HH|->].
+  by rewrite -[in X in _ != X]HH eqxx in iDcc.
+by rewrite if_same.
+Qed.
+
+Lemma cfun_Batcher_merge_case12 a b c 
+  (H1 : a + b.+2 = c + c) (H2 : a.+1 + b.+1 = c + c) : 
+  odd a ->
+  let t1 := tcast H1 [tuple of nseq a false ++ true :: false :: nseq b true] in
+  let t2 := tcast H2 [tuple of nseq a.+1 false ++ nseq b.+1 true] in
+  cfun Batcher_merge t1 = t2. 
+Proof.
+move=> aO t1 t2.
+have bO : odd b.
+  have : ~~ odd (c + c) by rewrite addnn odd_double.
+  by rewrite -H2 oddD /= aO /= negbK.
+rewrite cfun_Batcher_merge.
+apply: eq_from_tnth => i.
+have cc_gt0 : 0 < c + c by apply: leq_ltn_trans (ltn_ord i).
+rewrite !tcastE /= !(tnth_nth false) /= !(nth_map i); last 2 first.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+- by rewrite -enum_ord size_enum_ord.
+rewrite -fintype.enumT -enum_ord !nth_enum_ord // !nth_ord_enum.
+rewrite !tcastE /= (tnth_nth false) /= /t1 /=.
+rewrite !nth_cat !nth_nseq /= ?size_nseq /=.
+rewrite !(tnth_nth false) /=.
+rewrite !nth_cat !nth_nseq /= ?size_nseq inext_val ipred_val.
+have [iLa|aLi] := ltnP i.
+  rewrite minFb maxFb (_ : i.-1 < a) ?if_same; last first.
+    by rewrite (leq_ltn_trans (leq_pred _) iLa).
+  rewrite (nth_cat _ (nseq _.+1 _)) ?size_nseq /= ltnS ltnW //.
+  by rewrite (nth_nseq _ _.+1) if_same.
+rewrite (nth_cat _ (nseq _.+1 _)) ?size_nseq ltnS.
+rewrite if_same.
+move: aLi; rewrite leq_eqVlt => /orP[/eqP<-|aLi].
+  rewrite subnn /= leqnn (nth_nseq _ _.+1) leqnn.
+  rewrite minTb maxTb.
+  case: eqP (H2) => [->/eqP|/eqP iDcc _].
+    by rewrite prednK // -[X in _ == X -> _]addn0 eqn_add2l.
+  by rewrite aO ltnNge leqnSn /= subSn // subnn.
+have i_gt0 : 0 < i by apply: leq_ltn_trans aLi.
+rewrite prednK // [i <= a]leqNgt aLi /=.
+rewrite (nth_nseq _ _.+1) ltn_subLR // H2 ltn_ord /=.
+have i1La : a <= i.+1 by rewrite -ltnS (leq_trans aLi) // ltnW.
+move: aLi; rewrite leq_eqVlt => /orP[/eqP<-|aLi].
+  by rewrite subSn // subnn /= aO.
+have iaE : i - a = (i - a).-2.+2.
+  have iLa : a < i by apply: ltn_trans aLi.
+  by rewrite !prednK ?subn_gt0 // -ltnS prednK // ltn_subRL ?addn1 // addn0.
+rewrite iaE /= nth_nseq.
+have ia2Lb : (i - a).-2 < b.
+  rewrite -subn2 ltn_subLR ?add2n; last by rewrite iaE.
+  rewrite ltn_subLR; last by apply: leq_trans (ltnW aLi).
+  by rewrite -addSnnS [X in i < X]H2 ltn_ord.
+rewrite ia2Lb minTb maxTb.
+case: eqP => [|/eqP iDcc].
+  by rewrite iaE /= nth_nseq ia2Lb ltnNge (leq_trans _ (ltnW aLi)) //= if_same.
+rewrite [i.+1 < a]ltnNge i1La /=.
+have i1aE : i.+1 - a = (i.+1 - a).-2.+2.
+  rewrite subSn /=.
+    by rewrite prednK /= // subn_gt0 (ltn_trans _ aLi).
+  by apply: leq_trans (ltnW aLi).
+rewrite i1aE /= nth_nseq.
+move: aLi; rewrite leq_eqVlt => /orP[/eqP HH|aLi].
+  rewrite -HH /= aO /= -add3n addnK /=.
+  have := ltn_ord i.
+  rewrite -[X in _ < X]H2 -HH -addSnnS -addn1 leq_add2l.
+  rewrite leq_eqVlt => /orP[/eqP bE|->//].
+  by have := iDcc; rewrite -HH -H2 -addSnnS -bE addn1 eqxx.
+suff -> : (i.+1 - a).-2 < b by rewrite if_same.
+rewrite -subn2 !ltn_subLR //; last by rewrite i1aE.
+rewrite add2n -addSnnS [X in _ < X]H2.
+have := ltn_ord i; rewrite leq_eqVlt => /orP[/eqP HH|//].
+by case/eqP: iDcc; rewrite -[in RHS]HH.
+Qed.
+
+
+Lemma halfDlt i a : (i./2 < a) = (i < a + a).
+Proof.
+apply/idP/idP => [|iLaa]; last first.
+  rewrite -ltn_double -!addnn (leq_ltn_trans _ iLaa) //.
+  by rewrite addnn -[X in _ <= X]odd_double_half leq_addl.
+rewrite -leq_double -addnn addnS addnn => /(leq_ltn_trans _)-> //.
+rewrite addSn -add1n -[X in X <= _]odd_double_half addnn leq_add2r.
+by case: odd.
+Qed.
+
+Lemma halfDle i a : (a <= i./2) = (a + a <= i).
+Proof. by rewrite leqNgt halfDlt -leqNgt. Qed.
+
+Lemma eocat_nseq_nseq (A : eqType) (v : A) a b :
+  eocat (nseq a v) (nseq b v) = nseq (a + a) v.
+Proof.
+by elim: a b => // n IH [|b]; rewrite addnS /= ?IH // (IH 0).
+Qed.
+
+Lemma eocat_nseq_cat_id (A : eqType) (v1 v2 : A) a b c :
+  eocat (nseq a v1 ++ nseq b v2) (nseq a v1 ++ nseq c v2) = 
+        (nseq (a + a) v1 ++ nseq (b + b) v2).
+Proof.
+elim: a b c => // [b c | n IH b c]; first by rewrite eocat_nseq_nseq.
+by rewrite addnS /= IH.
+Qed.
+
+Lemma nseqS (A : eqType) a (b : A) : nseq a.+1 b = b :: nseq a b.
+Proof. by []. Qed.
+
+Lemma eocat_cons (A : eqType) (a b : A) l1 l2 :
+  eocat (a :: l1) (b :: l2) = a :: b :: eocat l1 l2.
+Proof. by []. Qed.
+
+Lemma cat_cons (A : eqType) (a : A) l1 l2 :
+  (a :: l1) ++ l2 = a :: (l1 ++ l2).
+Proof. by []. Qed.
+
+Lemma eocat_nseq_catS (A : eqType) (v1 v2 : A) a b :
+  eocat (nseq a.+1 v1 ++ nseq b v2) (nseq a v1 ++ nseq b.+1 v2) = 
+        (nseq (a + a).+1 v1 ++ nseq (b + b).+1 v2).
+Proof.
+elim: a b => // [b | a IH b].
+  by case: b => //= b; rewrite eocat_nseq_nseq [(_ + _)%Nrec]addnS.
+by rewrite addnS (nseqS a) (nseqS a.+1) 2!(cat_cons v1) eocat_cons IH.
+Qed.
+
+Lemma eocat_nseq_catSS (A : eqType) (v1 v2 : A) a b :
+  eocat (nseq a.+2 v1 ++ nseq b v2) (nseq a v1 ++ nseq b.+2 v2) = 
+        (nseq (a + a).+1 v1 ++ v2 :: v1 :: nseq (b + b).+1 v2).
+Proof.
+elim: a b => // [b | a IH b].
+  by case: b => //= b; rewrite eocat_nseq_nseq [(_ + _)%Nrec]addnS.
+by rewrite addnS (nseqS a) (nseqS a.+2) 2!(cat_cons v1) eocat_cons IH.
+Qed.
+
