@@ -225,8 +225,8 @@ case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
       rewrite /= !(count_cat, count_nseq) /= !(count_cat, count_nseq) /=.
       rewrite !mul1n !mul0n !(addn0, add0n) !add1n !(addSn, addnS).
       rewrite !(mem_cat, inE, mem_nseq, eqxx, orbT, orTb, orFb, orbF, 
-                andbF, andbT) => HH -> //; split=> //.
-      by case: (b1) HH => [|x] //; (do 2 case (_./2) => [|?]) => // ->.
+                andbF, andbT) => Hb1 -> //; split=> //.
+      by case: (b1) Hb1 => [|x] //; (do 2 case (_./2) => [|?]) => // ->.
     have [/eqP Ea2 /eqP Eb2] : a2 == a3./2 + a4./2 /\ b2 == (b3./2 + b4./2).+2.
       move/allP/(_ false) : (Hperm2); move/allP/(_ true) : (Hperm2).
       rewrite /= !(count_cat, count_nseq) /= !(count_cat, count_nseq) /=.
@@ -266,8 +266,8 @@ case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
     rewrite /= !(count_cat, count_nseq) /= .
     rewrite !mul1n !mul0n !(addn0, add0n) !add1n /=.
     rewrite !(mem_cat, inE, mem_nseq, eqxx, orbT, orTb, orFb, orbF, 
-              andbF, andbT) /= => HH ->; split=> //.
-    by case: (b1) HH => [|x]; (do 2 case (_./2) => [|?]) => // ->.
+              andbF, andbT) /= => Hb1 ->; split=> //.
+    by case: (b1) Hb1 => [|x]; (do 2 case (_./2) => [|?]) => // ->.
   have [/eqP Ea2 /eqP Eb2] : a2 == a3./2 + a4./2 /\ b2 == (b3./2 + b4./2).+1.
     move/allP/(_ false) : (Hperm2); move/allP/(_ true) : (Hperm2).
     rewrite /= !(count_cat, count_nseq) /= !(count_cat, count_nseq) /=.
@@ -306,15 +306,15 @@ case: (boolP (odd a4)) b4O => [a4O /negP/negP b4O|/negPf a4E b4E].
     rewrite /= !(count_cat, count_nseq) /= !(count_cat, count_nseq) /=.
     rewrite !mul1n !mul0n !(addn0, add0n) !add1n !(addSn, addnS).
     rewrite !(mem_cat, inE, mem_nseq, eqxx, orbT, orTb, orFb, orbF, 
-              andbF, andbT) => HH -> //; split => //.
-    by case: (b1) HH => [|x]; (do 2 case (_./2) => [|?]) => // ->.
+              andbF, andbT) => Hb1 -> //; split => //.
+    by case: (b1) Hb1 => [|x]; (do 2 case (_./2) => [|?]) => // ->.
   have [/eqP Ea2 /eqP Eb2] : a2 == a3./2 + a4./2 /\ b2 == (b3./2 + b4./2).+1.
     move/allP/(_ false) : (Hperm2); move/allP/(_ true) : (Hperm2).
     rewrite /= !(count_cat, count_nseq) /= !(count_cat, count_nseq) /=.
     rewrite !mul1n !mul0n !(addn0, add0n, add1n, addSn, addnS).
     rewrite !(mem_cat, mem_nseq, inE, eqxx, orTb, andTb, andbT, orbT,
-               andbF, orFb, orbF) => -> // HH; split => //.
-    by case: (a2) HH => [|?]//; (do 2 (case: (_./2) => [|?]//)) => ->.
+               andbF, orFb, orbF) => -> // Hb1; split => //.
+    by case: (a2) Hb1 => [|?]//; (do 2 (case: (_./2) => [|?]//)) => ->.
   set x1 := (_ + _) in Ea1 Ea2; set y1 := (_ + _) in Eb1 Eb2.
   pose xx := nseq (x1 + x1).+1 false ++ nseq (y1 + y1).+1 true.
   have xxE : [tuple of eocat n1 n2] = [tuple of xx]:> seq bool.
@@ -367,7 +367,6 @@ have -> : [tuple of eocat n1 n2] = tcast sxxE  [tuple of xx].
 rewrite cfun_Batcher_merge_case1.
 by rewrite val_tcast; apply/isorted_boolP; exists ((x1 + x1), (y1 + y1)).
 Qed.
-Qed.
 
 Lemma sorted_nfun_Batcher_merge m (t : (`2^ m.+1).-tuple bool) :
   sorted <=%O (ttake t) -> sorted <=%O (tdrop t) ->
@@ -377,20 +376,13 @@ Proof. exact: sorted_nfun_Batcher_merge_rec. Qed.
 Lemma sorted_nfun_Batcher m (t : (`2^ m).-tuple bool) :
   sorted <=%O (nfun (Batcher m) t).
 Proof.
-elim: m t => [|m IH t] /=.
-  by do 2 case => // [] [] [].
+elim: m t => [t|m IH t] /=; first by apply: tsorted01.
 rewrite nfun_cat.
 apply: sorted_nfun_Batcher_merge_rec.
-  rewrite nfun_dup.
-  rewrite ttakeK.
-  by apply: IH.
-rewrite nfun_dup.
-rewrite tdropK.
-by apply: IH.
+  by rewrite nfun_dup ttakeK; apply: IH.
+by rewrite nfun_dup; rewrite tdropK; apply: IH.
 Qed.
 
 Lemma sorted_Batcher m : Batcher m \is sorting.
-Proof.
-apply/forallP => x; apply: sorted_nfun_Batcher.
-Qed.
+Proof. apply/forallP => x; apply: sorted_nfun_Batcher. Qed.
 
