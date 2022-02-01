@@ -41,7 +41,13 @@ Some extra material for mathcomp
 
   [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
 
-  [A formalisation of sorting network (bitonic sort)](./nsort.v) (in progress)
+  [More theorems about tuples](./more_tuple.v)
+
+  [A formalisation of sorting network](./nsort.v)
+    
+  [A formalisation of bitonic sort](./bitonic.v) 
+    
+  [A formalisation of batcher odd or even sort](./batcher.v) 
 
   [A fun puzzle about a tricky integer function ](./puzzleFF.v)
 

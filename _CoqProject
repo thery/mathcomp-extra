@@ -16,5 +16,8 @@ bgcdn.v
 digitn.v
 tplayer.v
 fft.v
+more_tuple.v
 nsort.v
+bitonic.v
+batcher.v
 puzzleFF.v
