@@ -39,7 +39,7 @@ Some extra material for mathcomp
 
   [A formalisation of 2-player games](./tplayer.v) (in progress)
 
-  [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
+  [A formalisation of Fast Fourier Transform](./fft.v)
 
   [More theorems about tuples](./more_tuple.v)
 
@@ -47,7 +47,7 @@ Some extra material for mathcomp
     
   [A formalisation of bitonic sort](./bitonic.v) 
     
-  [A formalisation of batcher odd or even sort](./batcher.v) 
+  [A formalisation of Batcher odd or even sort](./batcher.v) 
 
   [A fun puzzle about a tricky integer function ](./puzzleFF.v)
 
