@@ -117,6 +117,12 @@ Fixpoint half_cleaner_rec n : network (`2^ n) :=
   if n is n1.+1 then half_cleaner (`2^ n1) :: ndup (half_cleaner_rec n1)
   else [::].
 
+Lemma size_half_cleaner_rec n : size (half_cleaner_rec n) = n.
+Proof.
+elim: n => //= n IH.
+by rewrite /ndup /= size_map size_zip IH minnn.
+Qed.
+
 End HalfCleaner.
 
 Lemma bitonic_boolP (l : seq bool) :
@@ -493,6 +499,13 @@ Definition rhalf_cleaner_rec n : network (`2^ n) :=
     rhalf_cleaner (`2^ n1) :: ndup (half_cleaner_rec n1)
   else [::].
 
+Lemma size_rhalf_cleaner_rec n : size (rhalf_cleaner_rec n) = n.
+Proof.
+case: n => //= n.
+by rewrite /ndup /= size_map size_zip size_half_cleaner_rec minnn.
+Qed.
+
+
 End RHalfCleaner.
 
 Lemma rhalf_cleaner_rec_bool m (t : (`2^ m.+1).-tuple bool) :
@@ -527,6 +540,14 @@ Variable A : orderType d.
 Fixpoint bsort m : network (`2^ m) :=
   if m is m1.+1 then ndup (bsort m1) ++ rhalf_cleaner_rec m1.+1 
   else [::].
+
+Lemma size_bsort n : size (bsort n) = (n * n.+1)./2.
+Proof.
+elim: n => [|n IH] //.
+rewrite /ndup [LHS]/= size_cat [LHS]/= size_map size_zip.
+rewrite minnn size_map size_zip size_half_cleaner_rec minnn IH.
+by rewrite -addn2 mulnDr -!divn2 divnDMl // mulnC.
+Qed.
 
 Lemma sorting_bsort m : bsort m \is sorting.
 Proof.

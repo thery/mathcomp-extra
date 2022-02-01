@@ -64,12 +64,29 @@ Fixpoint Batcher_merge_rec_aux m : network (`2^ m.+1) :=
   if m is m1.+1 then rcons (neodup (Batcher_merge_rec_aux m1)) Batcher_merge
   else [:: cswap ord0 ord_max].
 
+Lemma size_Batcher_merge_rec_aux m : size (Batcher_merge_rec_aux m) = m.+1.
+Proof.
+elim: m => [//| m IH] /=.
+by rewrite size_rcons size_map size_zip minnn IH.
+Qed.
+
 Definition Batcher_merge_rec m := 
   if m is m1.+1 then Batcher_merge_rec_aux m1 else [::].
+
+Lemma size_Batcher_merge_rec m : size (Batcher_merge_rec m) = m.
+Proof. by case: m => //= m; rewrite size_Batcher_merge_rec_aux. Qed.
 
 Fixpoint Batcher m : network (`2^ m) :=
   if m is m1.+1 then ndup (Batcher m1) ++ Batcher_merge_rec m1.+1
   else [::].
+
+Lemma size_Batcher m : size (Batcher m) = (m * m.+1)./2.
+Proof. 
+elim: m => [//|m IH].
+rewrite [in LHS]/= size_cat size_map size_zip minnn.
+rewrite size_Batcher_merge_rec_aux IH.
+by rewrite -addn2 mulnDr -!divn2 divnDMl // mulnC.
+Qed.
 
 End Batcher.
 
