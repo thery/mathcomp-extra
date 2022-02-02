@@ -8,10 +8,11 @@ Import Order POrderTheory TotalTheory.
 (*                                                                            *)
 (*         `2^ m == 2 ^ n so that                                             *)
 (*                  `2^ m.+1 = `2^ m + `2^ m is true by reduction             *)
-(*       ipred i == i.-1 for 'I_m                                             *)
-(*       inext i == i.+1 for 'I_m or m i i = m.-1                             *)
+(*       ipred i == i.-1                                                      *)
+(*       inext i == i.+1 when possible otherwise i                            *)
+(*      isub k i == i - k when k <= i otherwise i                             *)
+(*      iadd k i == i.+ k when possible otherwise i                           *)
 (*       olift t == odd lift : move n of 'I_m into n.*2.+1 in 'I_(m + m)      *)
-
 (*       elift t == even lift : move n of 'I_m into n.*2 in 'I_(m + m)        *)
 (*       olift t == odd lift : move n of 'I_m into n.*2.+1 in 'I_(m + m)      *)
 (*       idiv2 t == div2 on I_n : move n of 'I_(m + m) into n./2 in 'I_m      *)
@@ -201,7 +202,7 @@ Definition inext m : 'I_m -> 'I_m :=
   if m is m1.+1 then fun i => inZp (if i == m1 :> nat then i : nat else i.+1)
   else fun i => i.
 
-Lemma inext_val m (i : 'I_m) : 
+Lemma val_inext m (i : 'I_m) : 
   inext i = if i == m.-1 :> nat then i : nat else i.+1 :> nat.
 Proof.
 case: m i => [[]//|n i /=].
@@ -212,10 +213,42 @@ Qed.
 Definition ipred m : 'I_m -> 'I_m := 
   if m is m1.+1 then fun i => inZp (i.-1) else fun i => i.
 
-Lemma ipred_val m (i : 'I_m) : ipred i = i.-1 :> nat.
+Lemma val_ipred m (i : 'I_m) : ipred i = i.-1 :> nat.
 Proof.
 case: m i => [[]//|n i /=].
 by rewrite modn_small // (leq_ltn_trans (leq_pred _) (ltn_ord i)).
+Qed.
+
+Definition iadd m k : 'I_m -> 'I_m := 
+  if m is m1.+1 then fun i => inZp (if k + i <= m1 then k + i else i)
+  else fun i => i.
+
+Lemma val_iadd m (i : 'I_m) k : 
+  iadd k i = if k + i < m then k + i else i :> nat.
+Proof.
+case: m i => [[]//|n i /=]; have iLn := ltn_ord i.
+by rewrite modn_small ?ltnS //=; case: (leqP (k + i)).
+Qed.
+
+Lemma inextE m (i : 'I_m) : inext i = iadd 1 i.
+Proof.
+apply/val_eqP; rewrite /= val_inext val_iadd.
+have := ltn_ord i; rewrite leq_eqVlt => /orP[/eqP iE|iLm].
+  by rewrite -[X in X.-1]iE /= eqxx -[X in _ < X]iE ltnn.
+rewrite iLm [_ == _.-1]eqn_leq [_.-1 <= _]leqNgt.
+by rewrite -[i < _]ltnS prednK ?iLm ?andbF // (ltn_trans _ iLm).
+Qed.
+
+Definition isub m k : 'I_m -> 'I_m := 
+  if m is m1.+1 then fun i => inZp (if k <= i then i - k else i)
+  else fun i => i.
+
+Lemma val_isub m (i : 'I_m) k : isub k i = if k <= i then i - k else i :> nat.
+Proof.
+case: m i => [[]//|n i /=]; have iLn := ltn_ord i.
+rewrite modn_small //=; case: (leqP k) => // _.
+apply: leq_ltn_trans _ iLn.
+by rewrite -[X in _ <= X]subn0 leq_sub.
 Qed.
 
 Lemma split_lshift m i (j : 'I_m) : split (lshift i j) = inl j.
@@ -235,7 +268,7 @@ Qed.
 Definition elift m : 'I_m -> 'I_(m + m) := 
   if m is m1.+1 then fun i => inZp (i.*2) else fun i => i.
 
-Lemma elift_val m (i : 'I_m) : elift i = i.*2 :> nat.
+Lemma val_elift m (i : 'I_m) : elift i = i.*2 :> nat.
 Proof.
 case: m i => [[]//|m i].
 by rewrite -[LHS]/(i.*2 %% (m.+1 + m.+1)) modn_small // addnn ltn_double.
@@ -244,7 +277,7 @@ Qed.
 Definition olift m : 'I_m -> 'I_(m + m) := 
   if m is m1.+1 then fun i => inZp (i.*2.+1) else fun i => i.
 
-Lemma olift_val m (i : 'I_m) : olift i = i.*2.+1 :> nat.
+Lemma val_olift m (i : 'I_m) : olift i = i.*2.+1 :> nat.
 Proof.
 case: m i => [[]//|m i].
 rewrite -[LHS]/(i.*2.+1 %% (m.+1 + m.+1)) modn_small //.
@@ -254,7 +287,7 @@ Qed.
 Definition idiv2 m : 'I_(m + m) -> 'I_m := 
   if m is m1.+1 then fun i => inZp (i./2) else fun i => i.
 
-Lemma idiv2_val m (i : 'I_(m + m)) : idiv2 i = i./2 :> nat.
+Lemma val_idiv2 m (i : 'I_(m + m)) : idiv2 i = i./2 :> nat.
 Proof.
 case: m i => [[]//|n i /=].
 rewrite modn_small // -ltn_double -[X in _ < X]addnn.
@@ -264,27 +297,27 @@ Qed.
 
 Lemma oliftK m (i : 'I_m) : idiv2 (olift i) = i.
 Proof.
-apply/val_eqP; rewrite /= idiv2_val /= olift_val.
+apply/val_eqP; rewrite /= val_idiv2 /= val_olift.
 by rewrite -divn2 -muln2 -addn1 divnMDl // addn0.
 Qed.
 
 Lemma idiv2K_odd m (i : 'I_(m + m)) : odd i -> olift (idiv2 i) = i.
 Proof.
 move=> iO.
-apply/val_eqP; rewrite /= olift_val /= idiv2_val.
+apply/val_eqP; rewrite /= val_olift /= val_idiv2.
 by rewrite -[X in _ == X]odd_double_half iO.
 Qed.
 
 Lemma idiv2K_even m (i : 'I_(m + m)) : ~~ odd i -> elift (idiv2 i) = i.
 Proof.
 move=> iO.
-apply/val_eqP; rewrite /= elift_val /= idiv2_val.
+apply/val_eqP; rewrite /= val_elift /= val_idiv2.
 by rewrite -[X in _ == X]odd_double_half (negPf iO).
 Qed.
 
 Lemma eliftK m (i : 'I_m) : idiv2 (elift i) = i.
 Proof.
-by apply/val_eqP; rewrite /= idiv2_val /= elift_val doubleK.
+by apply/val_eqP; rewrite /= val_idiv2 /= val_elift doubleK.
 Qed.
 
 End MoreIn.
@@ -716,7 +749,7 @@ Variable f : A -> B.
 
 Definition tmap t := [tuple f (tnth t i) | i < m].
 
-Lemma tmap_val t : tmap t = map f t :> seq B.
+Lemma val_tmap t : tmap t = map f t :> seq B.
 Proof.
 have -> : tmap t = [tuple of [seq f (tnth t i) | i <- ord_tuple m]].
   by apply: eq_from_tnth => i; rewrite !(tnth_map, tnth_ord_tuple).

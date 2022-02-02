@@ -87,9 +87,9 @@ Lemma clink_eomerge_proof m (c1 : connector m) (c2 : connector m) :
 Proof.
 apply/forallP=> i /=.
 rewrite !ffunE /=; have [iO|iE] := boolP (odd i).
-  rewrite oliftK olift_val /= odd_double /= (eqP (forallP (cfinv c2) _)).
+  rewrite oliftK val_olift /= odd_double /= (eqP (forallP (cfinv c2) _)).
   by rewrite idiv2K_odd.
-rewrite eliftK elift_val /= odd_double /= (eqP (forallP (cfinv c1) _)).
+rewrite eliftK val_elift /= odd_double /= (eqP (forallP (cfinv c1) _)).
 by rewrite idiv2K_even.
 Qed.
 
@@ -326,7 +326,7 @@ have gM : {homo g : x y / (x <= y)%O >-> (x <= y)%O}.
   by rewrite leNgt (le_lt_trans jLx1).
 have -> : t = tmap g (tmap f t).
   by apply: eq_from_tnth => i; rewrite !tnth_map !tnth_ord_tuple fK.
-by rewrite tmap_nfun // tmap_val (homo_sorted gM _ _).
+by rewrite tmap_nfun // val_tmap (homo_sorted gM _ _).
 Qed.
 
 Lemma sorting_sorted n (r : m.-tuple A) :
@@ -341,7 +341,7 @@ have gM : {homo g : x y / (x <= y)%O >-> (x <= y)%O}.
   by rewrite leNgt (le_lt_trans jLx2).
 apply/existsP; exists (tmap g r).
 apply/sortedPn; exists ((g x1, g x2), (map g l1, map g l2)) => /=.
-  by rewrite tmap_nfun // tmap_val nfunE map_cat.
+  by rewrite tmap_nfun // val_tmap nfunE map_cat.
 by rewrite /g lexx leNgt x2Lx1.
 Qed.
 
@@ -511,7 +511,7 @@ Lemma cfun_eomerge (c1 : connector m) (c2 : connector m)
 Proof.
 apply: eq_from_tnth => i.
 have iLm : i < m + m by apply: ltn_ord.
-have i2Lm : i./2 < m by have := ltn_ord (idiv2 i); rewrite idiv2_val.
+have i2Lm : i./2 < m by have := ltn_ord (idiv2 i); rewrite val_idiv2.
 pose a := tnth t i.
 rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=; last 2 first.
 - by rewrite -fintype.enumT -enum_ord size_enum_ord.
@@ -525,8 +525,8 @@ have [iO|iE] := boolP (odd i).
   - by rewrite -enum_ord size_enum_ord.
   set u := nth _ _ _; have -> : u = idiv2 i.
     apply/val_eqP; rewrite /= /u.
-    by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?idiv2_val.
-  rewrite !(tnth_nth a) /= !nth_otake /= olift_val /= idiv2_val.
+    by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?val_idiv2.
+  rewrite !(tnth_nth a) /= !nth_otake /= val_olift /= val_idiv2.
   have F : i = i./2.*2.+1 :> nat by rewrite -[LHS]odd_double_half iO.
   by rewrite -F {1}F ltnS leq_double.
 rewrite !(nth_map (idiv2 i)); last 2 first.
@@ -534,8 +534,8 @@ rewrite !(nth_map (idiv2 i)); last 2 first.
 - by rewrite -enum_ord size_enum_ord.
 set u := nth _ _ _; have -> : u = idiv2 i.
   apply/val_eqP; rewrite /= /u.
-  by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?idiv2_val.
-rewrite !(tnth_nth a) /= !nth_etake /= elift_val /= idiv2_val.
+  by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?val_idiv2.
+rewrite !(tnth_nth a) /= !nth_etake /= val_elift /= val_idiv2.
 have F : i = i./2.*2 :> nat by rewrite -[LHS]odd_double_half (negPf iE).
 by rewrite -F {1}F leq_double.
 Qed.

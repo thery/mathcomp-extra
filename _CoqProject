@@ -20,4 +20,5 @@ more_tuple.v
 nsort.v
 bitonic.v
 batcher.v
+bjsort.v
 puzzleFF.v
