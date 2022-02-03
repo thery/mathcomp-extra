@@ -580,6 +580,11 @@ elim: a b => // [b | a IH b].
 by rewrite addnS (nseqS a) (nseqS a.+2) 2!(cat_cons v1) eocat_cons IH.
 Qed.
 
+Lemma nth_cat_seqT a b i : nth true (nseq a false ++ nseq b true) i = (a <= i). 
+Proof.
+by rewrite nth_cat !nth_nseq !size_nseq if_same; case: leqP.
+Qed.
+
 Lemma nseq_cat_sortedE (l : seq bool) m1 m2 m3 m4 : 
   sorted (<=%O) l ->  
   perm_eq l (nseq m1 false ++ nseq m2 true ++ nseq m3 false ++ nseq m4 true) ->
