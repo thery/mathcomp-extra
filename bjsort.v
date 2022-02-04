@@ -223,14 +223,14 @@ by rewrite !nth_cat_seqT geq_max; do 2 case: leqP => ?.
 Qed.
 
 Lemma cfun_knuth_jump_eocat_nseq a b i k :
-  odd k -> i <= k + 1 -> let j := i - uphalf k in
+  odd k -> let j := i - uphalf k in
   cfun (knuth_jump k) 
     [tuple of eocat (nseq (a + i) false ++ nseq b true)
                     (nseq a false ++ nseq (b + i) true)] =
      eocat (nseq (a + i - j) false ++ nseq (b + j) true)
            (nseq (a + j) false ++ nseq (b + i - j) true) :> seq _.
 Proof.
-move=> kO jLk1 j.
+move=> kO j.
 have jLi : j <= i by apply: leq_subr.
 have aibE : a + i + b = a + (b + i) by rewrite [b + _]addnC addnA.
 apply: (@eq_from_nth _ true) => [|v].
@@ -321,4 +321,102 @@ case: leqP => [aiLv2|v2Lai].
 rewrite leqNgt ltn_halfl (leq_trans vLk) // doubleD.
 rewrite (leq_trans _ (leq_addl _ _)) //.
 by rewrite -[X in X <= _]odd_double_half uphalf_half kO doubleD !addSn.
+Qed.
+
+Lemma cfun_knuth_jump_eocat_nseq_up a b i k :
+  odd k -> let j := i - uphalf k in
+  i <= (uphalf k).*2 ->
+  cfun (knuth_jump k) 
+    [tuple of eocat (nseq (a + i) false ++ nseq b true)
+                    (nseq a false ++ nseq (b + i) true)] =
+     eocat (nseq (a + j + (i - j.*2)) false ++ nseq (b + j) true)
+           (nseq (a + j) false ++ nseq (b + j + (i - j.*2)) true) :> seq _.
+Proof.
+move=> kO j iLk2. 
+have jLij : j <= i - j.
+  rewrite /j leq_subRL ?leq_subr // addnn doubleB.
+  by rewrite leq_subLR ?leq_subr // -addnn leq_add2r.
+rewrite -addnn subnDA [a + j + _]addnAC [b + j + _]addnAC.
+rewrite -![_ + (_ - _) + j]addnA subnK // ![_ + (i - j)]addnBA ?leq_subr //.
+by apply: cfun_knuth_jump_eocat_nseq.
+Qed.
+
+
+Lemma cfun_knuth_jump_rec_eocat_nseq a b i m k (H : _ = _) :
+  i <= `2^ k ->
+  nfun (knuth_jump_rec m k (`2^ k).-1) 
+    (tcast H [tuple of eocat (nseq (a + i) false ++ nseq b true)
+                    (nseq a false ++ nseq (b + i) true)]) =
+     eocat (nseq (a + uphalf i) false ++ nseq (b + i./2) true)
+           (nseq (a + i./2) false ++ nseq (b + uphalf i) true) :> seq _.
+Proof.
+elim: k a i b H => [/=|k IH/=] a i b H iL.
+  rewrite val_tcast /=.
+  by case: i H iL => [|[|]] // H _; rewrite /= ?(addn0, addn1).
+rewrite tcast_knuth_jump.
+set u := cfun _ _; have := (refl_equal (val u)).
+have e2nk1_gt0 := e2n_gt0 k.+1.
+rewrite [RHS]cfun_knuth_jump_eocat_nseq_up //; last 2 first.
+- by rewrite -[odd _]negbK -oddS prednK // addnn odd_double.
+- by rewrite uphalfE prednK // addnn doubleK -addnn.
+set v := eocat _ _ => vuE.
+have iLk : i - `2^ k <= i by apply: leq_subr.
+have i2kLii2k : i - `2^ k <= i - (i - `2^ k).
+  by rewrite leq_subRL // addnn doubleB leq_subLR -!addnn leq_add2r.
+have H1 : size v = m.
+  rewrite size_tuple -H !addnn; congr (_.*2).
+  rewrite uphalfE prednK; last by rewrite double_gt0 e2n_gt0.
+  rewrite doubleK -addnn subnDA.
+  rewrite [a + _ + _]addnAC -[a + _ + _]addnA subnK //.
+  by rewrite addnCA -addnA subnK // addnC.
+rewrite size_tuple /= in H1.
+have <- : tcast H1 [tuple of v] = tcast H u.
+  by apply/val_eqP/eqP => /=; rewrite !val_tcast.
+rewrite [X in X.-1]uphalfE prednK // [X in X./2]addnn doubleK IH //; last first.
+  rewrite uphalfE prednK // addnn doubleK.
+  rewrite leq_subLR.
+  rewrite -addnn -addnA.
+  case: (leqP (`2^ k) i) => [k2Li|iLk2].
+    by rewrite subnK // leq_addl.
+  have := ltnW iLk2.
+    rewrite -subn_eq0 => /eqP->.
+    by rewrite ltnW. 
+have F : i - `2^ k <= i./2.
+    by rewrite geq_halfr doubleB leq_subLR -addnn leq_add2r -addnn.
+have G1 : (i - (i - `2^ k).*2)./2 = i./2 - (i - `2^ k).
+  case: (boolP (odd i)) => [iO|iE]; last first.
+    rewrite -[X in X - _.*2]odd_double_half (negPf iE) add0n.
+    by rewrite -doubleB doubleK.
+  rewrite -[X in X - _.*2]odd_double_half iO add1n subSn ?leq_double //.
+  by rewrite -uphalfE -doubleB uphalf_double.
+have G2 : uphalf (i - (i - `2^ k).*2) = odd i + i./2 - (i - `2^ k).
+  rewrite uphalf_half G1 oddB //.
+    rewrite odd_double addbF addnBA //.
+  by rewrite -geq_halfr.
+congr (eocat (nseq _ _ ++ nseq _  _) (nseq _ _ ++ nseq _ _)); apply/eqP.
+- rewrite uphalfE prednK // addnn doubleK G2.
+  by rewrite uphalf_half -!addnA eqn_add2l addnC -addnBA // -addnA subnK.
+- rewrite uphalfE prednK ?(e2n_gt0 k.+1) // addnn doubleK.
+  by rewrite G1 addnAC -addnA subnK.
+- rewrite uphalfE prednK ?(e2n_gt0 k.+1) // addnn doubleK.
+  by rewrite G1 addnAC -addnA subnK.
+rewrite uphalfE prednK ?(e2n_gt0 k.+1) // addnn doubleK G2.
+by rewrite uphalf_half -!addnA eqn_add2l addnC -addnBA // -addnA subnK.
+Qed.
+
+Lemma sorted_cfun_knuth_jump_rec_eocat_nseq a b i m k (H : _ = _) :
+  i <= `2^ k ->
+  sorted <=%O
+  (nfun (knuth_jump_rec m k (`2^ k).-1) 
+    (tcast H [tuple of eocat (nseq (a + i) false ++ nseq b true)
+                    (nseq a false ++ nseq (b + i) true)])).
+Proof.
+move=> iL2k.
+rewrite cfun_knuth_jump_rec_eocat_nseq //.
+rewrite uphalf_half [odd _ + _]addnC !addnA.
+case: odd; rewrite ?(addn0, addn1).
+  rewrite eocat_nseq_catDS.
+  by apply/isorted_boolP; set x := _.+1; set y := _.+1; exists (x, y).
+rewrite eocat_nseq_catD.
+by apply/isorted_boolP; set x := _ + _; set y := _ + _; exists (x, y).
 Qed.
