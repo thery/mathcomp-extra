@@ -10,6 +10,8 @@ Import Order POrderTheory TotalTheory.
 (*      knuth_merge == the connector that links i to i.+1 for i odd           *)
 (*  knuth_merge_rec == the recursive connect that calls itself on             *)
 (*                       the even and odd parts and then apply Batcher_merge  *)
+(*   knuth_exchange == the recursive connect that calls itself on             *)
+(*                       the even and odd parts and then apply Batcher_merge  *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -173,12 +175,12 @@ Fixpoint knuth_jump_rec m k r : network m :=
 
 Fixpoint knuth_exchange m : network (`2^ m) :=
   if m is m1.+1 then
-    neodup (knuth_exchange m1) ++ ceswap :: knuth_jump_rec _ m1 (2^m1.-1)
+    neodup (knuth_exchange m1) ++ ceswap :: knuth_jump_rec _ m1 ((`2^ m1).-1)
   else [::].
 
 End Knuth.
 
-Lemma cfun_eswap_eacat_nseq a b c d :
+Lemma cfun_eswap_eocat_nseq a b c d :
   a + b = c + d ->
   cfun ceswap [tuple of eocat (nseq a false ++ nseq b true)
                               (nseq c false ++ nseq d true)] =
@@ -341,7 +343,6 @@ rewrite -![_ + (_ - _) + j]addnA subnK // ![_ + (i - j)]addnBA ?leq_subr //.
 by apply: cfun_knuth_jump_eocat_nseq.
 Qed.
 
-
 Lemma cfun_knuth_jump_rec_eocat_nseq a b i m k (H : _ = _) :
   i <= `2^ k ->
   nfun (knuth_jump_rec m k (`2^ k).-1) 
@@ -404,7 +405,7 @@ rewrite uphalfE prednK ?(e2n_gt0 k.+1) // addnn doubleK G2.
 by rewrite uphalf_half -!addnA eqn_add2l addnC -addnBA // -addnA subnK.
 Qed.
 
-Lemma sorted_cfun_knuth_jump_rec_eocat_nseq a b i m k (H : _ = _) :
+Lemma sorted_nfun_knuth_jump_rec_eocat_nseq a b i m k (H : _ = _) :
   i <= `2^ k ->
   sorted <=%O
   (nfun (knuth_jump_rec m k (`2^ k).-1) 
@@ -420,3 +421,47 @@ case: odd; rewrite ?(addn0, addn1).
 rewrite eocat_nseq_catD.
 by apply/isorted_boolP; set x := _ + _; set y := _ + _; exists (x, y).
 Qed.
+
+Lemma sorted_nfun_knuth_exchange m (t : (`2^ m).-tuple bool) :
+  sorted <=%O (nfun (knuth_exchange m) t).
+Proof.
+elim: m t => [t|m IH t] /=; first by apply: tsorted01.
+rewrite nfun_cat /= nfun_eodup.
+have /isorted_boolP[[a1 b1] teH] := IH (tetake t).
+have /isorted_boolP[[a2 b2] toH] := IH (totake t).
+have /(@sym_equal _ _ _)a1b1E := congr1 size teH.
+rewrite [X in _= X]size_tuple size_cat !size_nseq in a1b1E.
+have /(@sym_equal _ _ _)a2b2E := congr1 size toH.
+rewrite [X in _= X]size_tuple size_cat !size_nseq in a2b2E.
+set u := [tuple of _].
+have /val_eqP/eqP := refl_equal u.
+rewrite [X in _ = X]/= teH toH; set v := eocat _ _ => uE.
+have := refl_equal (size u).
+  rewrite [X in size X = _]uE 
+          !(size_tuple, size_eocat, size_cat, size_nseq) => Hv.
+have {u uE}-> : u = tcast Hv [tuple of v].
+  by apply/val_eqP; rewrite uE /= val_tcast.
+set u1 := cfun _ _.
+have /val_eqP/eqP := refl_equal u1.
+rewrite [X in _ = val X]tcast_eswap [X in _ = X]val_tcast.
+rewrite cfun_eswap_eocat_nseq ?a2b2E //.
+have m1K : minn a1 a2 <= maxn a1 a2 by case: (ltngtP a1 a2) => // /ltnW.
+rewrite -(subnK m1K) addnC.
+have m2K : minn b1 b2 <= maxn b1 b2 by case: (ltngtP b1 b2) => // /ltnW.
+rewrite -(subnK m2K) [_ + minn _ _]addnC.
+set a := minn a1 a2; set b := minn b1 b2.
+set i := maxn a1 a2 - minn a1 a2.
+have F1 : a1 + b1 = a2 + b2 by rewrite a2b2E.
+have -> : (maxn b1 b2 - minn b1 b2) = i by lia.
+set v1 := eocat _ _ => u1E.
+have := refl_equal (size u1).
+  rewrite [X in size X = _]u1E 
+          !(size_tuple, size_eocat, size_cat, size_nseq)
+           => Hv1.
+have {u1 u1E}-> : u1 = tcast Hv1 [tuple of v1].
+  by apply/val_eqP; rewrite u1E /= val_tcast.
+apply: sorted_nfun_knuth_jump_rec_eocat_nseq.
+by rewrite -leq_double -!addnn -Hv1 !addnn leq_double addnAC leq_addl.
+Qed.
+Lemma sorted_knuth_exchange m : knuth_exchange m \is sorting.
+Proof. apply/forallP => x; apply: sorted_nfun_knuth_exchange. Qed.
