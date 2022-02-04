@@ -49,6 +49,8 @@ Some extra material for mathcomp
     
   [A formalisation of Batcher odd or even sort](./batcher.v) 
 
+  [A formalisation of Knuth exchange sort](./bjsort.v) 
+
   [A fun puzzle about a tricky integer function ](./puzzleFF.v)
 
 ## Meta
