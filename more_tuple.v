@@ -395,7 +395,7 @@ Proof.
 by case: l; rewrite //= ?nth_nil // => _ l; rewrite nth_etake.
 Qed.
 
-Lemma size_etake (T : Type) (l : seq T) : size (etake l) = (size l).+1./2.
+Lemma size_etake (T : Type) (l : seq T) : size (etake l) = uphalf (size l).
 Proof.
 have [n leMn] := ubnP (size l); elim: n l leMn => // n IH [|a [|bl]] //= l.
 rewrite !ltnS => slLn.
@@ -616,7 +616,7 @@ have sl1E : size l1 = (size l)./2 by rewrite size_take half_gtnn; case: size.
 rewrite -/l1.
 rewrite {2}lE etake_cat sl1E (negPf H2).
 rewrite take_cat size_etake sl1E.
-by rewrite -uphalfE uphalf_half (negPf H2) /= ltnn subnn take0 cats0.
+by rewrite uphalf_half (negPf H2) /= ltnn subnn take0 cats0.
 Qed.
 
 Lemma ttake_etakeE n (t : ((n + n) + (n + n)).-tuple A) :
@@ -675,7 +675,7 @@ have sl1E : size l1 = (size l)./2.
 rewrite -/l2.
 rewrite {2}lE etake_cat sl1E (negPf H2).
 rewrite drop_cat size_etake sl1E.
-by rewrite -uphalfE uphalf_half (negPf H2) /= ltnn subnn drop0.
+by rewrite uphalf_half (negPf H2) /= ltnn subnn drop0.
 Qed.
 
 Lemma tdrop_etakeE n (t : ((n + n) + (n + n)).-tuple A) :
