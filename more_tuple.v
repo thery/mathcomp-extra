@@ -96,6 +96,24 @@ rewrite -{1}(odd_double_half n) uphalf_half e2Sn addnn.
 by case: odd; rewrite //= ?add1n ?ltn_double // leq_double.
 Qed.
 
+Lemma e2n_div2 n : 0 < n -> (`2^ n)./2 = `2^ n.-1.
+Proof. by case: n => // n _; rewrite e2Sn addnn doubleK. Qed.
+
+Lemma dvdn_e2n m n : (`2^ m %| `2^ n) = (m <= n).
+Proof.
+elim: n m => [[|m]//=|n IH [/=|m]].
+- rewrite dvdn1.
+  by rewrite eqn_leq leqNgt -add1n !addnn leq_double e2n_gt0.
+- by rewrite dvd1n.
+by rewrite !e2Sn !addnn -!muln2 dvdn_pmul2r // IH.
+Qed.
+
+Lemma e2nD m n : `2^ (m + n) = `2^ m * (`2^ n).
+Proof.
+elim: m => /= [|m IH]; first by rewrite mul1n.
+by rewrite !addnn -doubleMl IH.
+Qed.
+
 End E2.
 
 Notation "`2^ n" := (e2n n) (at level 40).

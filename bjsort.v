@@ -1291,23 +1291,6 @@ elim: n m => [/= [|m]//|n IH [|m]].
 by rewrite !e2Sn !addnn leq_double IH.
 Qed.
 
-Lemma e2n_div2 n : 0 < n -> (`2^ n)./2 = `2^ n.-1.
-Proof. by case: n => // n _; rewrite e2Sn addnn doubleK. Qed.
-
-Lemma dvdn_e2n m n : (`2^ m %| `2^ n) = (m <= n).
-Proof.
-elim: n m => [[|m]//=|n IH [/=|m]].
-- rewrite dvdn1.
-  by rewrite eqn_leq leqNgt -add1n !addnn leq_double e2n_gt0.
-- by rewrite dvd1n.
-by rewrite !e2Sn !addnn -!muln2 dvdn_pmul2r // IH.
-Qed.
-
-Lemma e2nD m n : `2^ m * (`2^ n) = `2^ (m + n).
-Proof.
-elim: m => /= [|m IH]; first by rewrite mul1n.
-by rewrite !addnn -doubleMl IH.
-Qed.
 
 Axiom foo : forall P,  P.
 
@@ -1384,7 +1367,7 @@ have <- : l4 = eotake p.+1 i l1.
     case: leqP => // q2Lipk.
     have FF1 : `2^ q <= `2^ p + (`2^ p + `2^ p) * k.
       by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
-    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite e2nD subnK // ltnW.
+    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
     have FF3 : `2^ (q -p) <= 1 + k.*2.
       move: FF1; rewrite -FF2 addnn -doubleMl doubleMr.
       rewrite -[X in _ <= X + _]mul1n  [`2^ p * _]mulnC -mulnDl leq_mul2r.
@@ -1397,11 +1380,11 @@ have <- : l4 = eotake p.+1 i l1.
       rewrite divn2 doubleK -muln2 divnDMl // add0n => H.
       by rewrite -FF4 muln2 leq_double.
     rewrite -addnBA; last first.
-      rewrite -e2Sn -(subnK pLq) -e2nD mulnC leq_mul2l.
+      rewrite -e2Sn -(subnK pLq) e2nD mulnC leq_mul2l.
       case: e2n (e2n_gt0 p.+1) => //= _ _.
       by rewrite -leq_double -addnn -e2Sn -subSn.
     rewrite [i + _ + _]addnAC [i + `2^ _]addnC.
-    rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC -e2nD -mulnBr.
+    rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC e2nD -mulnBr.
     rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last first.
       by rewrite ltn_add2l.
     rewrite -nth_eotake.
@@ -1411,7 +1394,7 @@ have <- : l4 = eotake p.+1 i l1.
   case: (leqP (`2^ q)) => [q2Lipk|ipkLq2].
     have FF1 : `2^ q <= `2^ p + (`2^ p + `2^ p) * k.
       by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
-    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite e2nD subnK // ltnW.
+    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
     have FF3 : `2^ (q -p) <= 1 + k.*2.
       move: FF1; rewrite -FF2 addnn -doubleMl doubleMr.
       rewrite -[X in _ <= X + _]mul1n  [`2^ p * _]mulnC -mulnDl leq_mul2r.
@@ -1424,11 +1407,11 @@ have <- : l4 = eotake p.+1 i l1.
       rewrite divn2 doubleK -muln2 divnDMl // add0n => H.
       by rewrite -FF4 muln2 leq_double.
     rewrite -addnBA; last first.
-      rewrite -e2Sn -(subnK pLq) -e2nD mulnC leq_mul2l.
+      rewrite -e2Sn -(subnK pLq) e2nD mulnC leq_mul2l.
       case: e2n (e2n_gt0 p.+1) => //= _ _.
       by rewrite -leq_double -addnn -e2Sn -subSn.
     rewrite [i + _ + _]addnAC [i + `2^ _]addnC.
-    rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC -e2nD -mulnBr.
+    rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC e2nD -mulnBr.
     rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last first.
       by rewrite ltn_add2l.
     rewrite -nth_eotake.
@@ -1438,12 +1421,12 @@ have <- : l4 = eotake p.+1 i l1.
     lia.
   case: leqP => //.
   have FF1 :  (`2^ p) * k.*2 <= (`2^ p) * (`2^ (q - p)).
-    rewrite e2nD addnC subnK; last by lia.
+    rewrite -e2nD addnC subnK; last by lia.
     apply: leq_trans (ltnW ipkLq2).
     by rewrite addnn -doubleMl -doubleMr leq_addl.
   have := leq_div2r (`2^ p) FF1.
   rewrite !mulKn ?e2n_gt0 // => FF2.
-  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite e2nD subnK // ltnW.
+  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
   have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
     by rewrite -addnn -e2Sn -subSn.
   nia.
@@ -1471,7 +1454,7 @@ have <- : l5 = eotake p.+1 (`2^ p + i) l1.
     case: leqP => // q2Lipk.
     rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
       by rewrite e2Sn; lia.
-    rewrite -e2Sn -(subnK pLq) -e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
+    rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
     rewrite -nth_eotake.
     rewrite -/l2 l2E nth_cat !nth_nseq /= size_nseq if_same.
     case: leqP => //.
@@ -1479,7 +1462,7 @@ have <- : l5 = eotake p.+1 (`2^ p + i) l1.
   case: leqP => JJ; last first.
     rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
       by rewrite e2Sn; lia.
-    rewrite -e2Sn -(subnK pLq) -e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
+    rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
     rewrite -nth_eotake.
     rewrite -/l2 l2E nth_cat !nth_nseq /= size_nseq if_same.
     case: leqP => //.
@@ -1492,7 +1475,7 @@ have <- : l5 = eotake p.+1 (`2^ p + i) l1.
       by apply: size_iter2 => //; apply: e2n_gt0.
     rewrite ss => ->//; last first.
     by rewrite ltn_add2l.
-  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite e2nD subnK // ltnW.
+  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
   have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
     by rewrite -addnn -e2Sn -subSn.
   have FF5 : j <= `2^ (q - p.+1).
@@ -1514,7 +1497,7 @@ have <- : l5 = eotake p.+1 (`2^ p + i) l1.
   have FF11 : a2 + j + `2^(q - p.+1) <= a1.
     lia.
   have FF12 : (a2 + j) * (`2^ p.+1) + `2^  q <= a1 *  (`2^ p.+1).
-    rewrite -(subnK pLq) -e2nD -mulnDl leq_mul2r.
+    rewrite -(subnK pLq) e2nD -mulnDl leq_mul2r.
     by case: e2n (e2n_gt0 p.+1).
   case: (ltngtP 0 b1) => // [b1_gt0 | b1_eq0].
     suff : i + `2^ p.+1 * a1 < size l by lia.
