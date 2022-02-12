@@ -1032,7 +1032,37 @@ rewrite -IH // [LHS]/=.
 by case: odd => //=; rewrite IH.
 Qed.
 
+Lemma leq_size_eotake_e2n (A : Type) i p q (l : seq A) :
+  i <= q -> size l <= `2^ q -> size (eotake i p l) <= `2^ (q - i).
+Proof.
+elim: i p q l => [|i IH] p q l iLq Hs /=; first by rewrite subn0.
+have q_gt0 : 0 < q by apply: leq_ltn_trans iLq.
+case: odd.
+  apply: leq_trans (IH _ q.-1 _ _ _) _.
+  - by rewrite -ltnS prednK // (leq_ltn_trans _ iLq).
+  - rewrite size_otake -leq_double -!addnn -e2Sn addnn.
+    rewrite prednK // (leq_trans _ Hs) //.
+    by rewrite -[X in _ <= X]odd_double_half; case: odd.
+  by case: (q) q_gt0.
+apply: leq_trans (IH _ q.-1 _ _ _) _.
+- by rewrite -ltnS prednK // (leq_ltn_trans _ iLq).
+- by rewrite size_etake leq_uphalf_e2n // prednK.
+by case: (q) q_gt0.
+Qed.
+
+
+Lemma teocat_nseq (A : Type) (a : A) n m : 
+  m <= n <= m.+1 -> teocat (nseq n a) (nseq m a) = nseq (n + m) a.
+Proof.
+elim: n m => [[]//|n IH [|m]]; first by case: (n).
+rewrite addnS /= !ltnS => H.
+by rewrite IH.
+Qed.
+
 Definition weight (l : seq bool) := count (fun x => false == x) l.
+
+Lemma weight_size (l : seq bool) : weight l <= size l.
+Proof. exact: count_size. Qed.
 
 Lemma weight_cat l1 l2 : weight (l1 ++ l2) = weight l1 + weight l2.
 Proof. by exact: count_cat. Qed.
@@ -1084,6 +1114,40 @@ rewrite -[i as X in (X + _ < _)]odd_double_half (negPf iO) add0n.
 rewrite e2Sn addnn -doubleMl -doubleD.
 case: odd => /=; first by rewrite !ltnS leq_double.
 by rewrite ltn_double.
+Qed.
+
+Lemma eotake_sorted (p : nat) (l : seq bool) i :
+  i < `2^ p -> 
+  [/\ sorted <=%O (eotake p.+1 i l),
+      sorted <=%O (eotake p.+1 (`2^ p + i) l) & 
+  weight (eotake p.+1 (`2^p + i) l) <= weight (eotake p.+1 i l) <=
+  weight (eotake p.+1 (`2^p + i) l) + 1] ->
+  sorted <=%O (eotake p i l).
+Proof.
+move=> iL2p [/isorted_boolP[[a1 b1] E1 /isorted_boolP[[a2 b2] E2]]].
+rewrite E1 E2 !weight_cat !weight_nseqT !weight_nseqF !addn0 addn1 => a2La1.
+rewrite -teocat_take // E1 E2.
+have := size_etake (eotake p i l).
+have := size_otake (eotake p i l).
+rewrite etake_eotake // otake_eotake // E1 E2 uphalf_half => <-.
+rewrite !size_cat !size_nseq.
+elim: a1 {E1 E2}a2 a2La1 => [[|a2]//= _ Hs|a1 IH [|a2]].
+- rewrite teocat_nseq //.
+    by apply/isorted_boolP; exists (0, b1 + b2).
+  rewrite add0n in Hs.
+  by rewrite Hs; case: odd; rewrite ?add1n !leqnn ?andbT //=.
+- case: (a1) => // _; case: (b1); case: (b2) => // b3 b4 Hs.
+  rewrite /= in Hs.
+  rewrite ![_ ++ _]/= teocat_cons (@teocat_nseq _ true b4.+1).
+    rewrite isorted_consF.
+    by apply/isorted_boolP; exists (0, (b4.+1 + b3).+1).
+  rewrite add1n add0n addnS in Hs.
+  by case: Hs=> ->; case: odd; rewrite ?add1n !leqnn ?andbT /=.
+rewrite ![_ ++ _]/= !ltnS => HS1 HS2.
+rewrite !addSn addnS in HS2.
+rewrite [_ ++ nseq b2 _]/= teocat_cons !isorted_consF.
+apply: IH => //.
+by case: HS2.
 Qed.
 
 (* Needs some cleaning *)
@@ -1476,48 +1540,6 @@ have FF5 : (`2^ (q - p.+1)).*2 = `2^ (q -p).
 lia.
 Qed.
 
-Lemma teocat_nseq (A : Type) (a : A) n m : 
-  m <= n <= m.+1 -> teocat (nseq n a) (nseq m a) = nseq (n + m) a.
-Proof.
-elim: n m => [[]//|n IH [|m]]; first by case: (n).
-rewrite addnS /= !ltnS => H.
-by rewrite IH.
-Qed.
-
-Lemma eotake_sorted (p : nat) (l : seq bool) i :
-  i < `2^ p -> 
-  [/\ sorted <=%O (eotake p.+1 i l),
-      sorted <=%O (eotake p.+1 (`2^ p + i) l) & 
-  weight (eotake p.+1 (`2^p + i) l) <= weight (eotake p.+1 i l) <=
-  weight (eotake p.+1 (`2^p + i) l) + 1] ->
-  sorted <=%O (eotake p i l).
-Proof.
-move=> iL2p [/isorted_boolP[[a1 b1] E1 /isorted_boolP[[a2 b2] E2]]].
-rewrite E1 E2 !weight_cat !weight_nseqT !weight_nseqF !addn0 addn1 => a2La1.
-rewrite -teocat_take // E1 E2.
-have := size_etake (eotake p i l).
-have := size_otake (eotake p i l).
-rewrite etake_eotake // otake_eotake // E1 E2 uphalf_half => <-.
-rewrite !size_cat !size_nseq.
-elim: a1 {E1 E2}a2 a2La1 => [[|a2]//= _ Hs|a1 IH [|a2]].
-- rewrite teocat_nseq //.
-    by apply/isorted_boolP; exists (0, b1 + b2).
-  rewrite add0n in Hs.
-  by rewrite Hs; case: odd; rewrite ?add1n !leqnn ?andbT //=.
-- case: (a1) => // _; case: (b1); case: (b2) => // b3 b4 Hs.
-  rewrite /= in Hs.
-  rewrite ![_ ++ _]/= teocat_cons (@teocat_nseq _ true b4.+1).
-    rewrite isorted_consF.
-    by apply/isorted_boolP; exists (0, (b4.+1 + b3).+1).
-  rewrite add1n add0n addnS in Hs.
-  by case: Hs=> ->; case: odd; rewrite ?add1n !leqnn ?andbT /=.
-rewrite ![_ ++ _]/= !ltnS => HS1 HS2.
-rewrite !addSn addnS in HS2.
-rewrite [_ ++ nseq b2 _]/= teocat_cons !isorted_consF.
-apply: IH => //.
-by case: HS2.
-Qed.
-
 Lemma iter3_aux_sorted k (p : nat) q (l : seq bool) i :
   i < `2^ p -> q < k + p ->
   let l1 := iter3_aux k (`2^ p) (`2^ q) l in 
@@ -1548,40 +1570,6 @@ apply: iter2_sorted => //.
 by rewrite -ltn_e2n.
 Qed.
 
-Lemma weight_size (l : seq bool) : weight l <= size l.
-Proof. exact: count_size. Qed.
-
-Lemma leq_uphalf_e2n n m : n <= `2^ m.+1 -> uphalf n <= `2^ m.
-Proof.
-rewrite -{1}(odd_double_half n) uphalf_half e2Sn addnn.
-by case: odd; rewrite //= ?add1n ?ltn_double // leq_double.
-Qed.
-
-Lemma leq_size_eotake_e2n (A : Type) i p q (l : seq A) :
-  i <= q -> size l <= `2^ q -> size (eotake i p l) <= `2^ (q - i).
-Proof.
-elim: i p q l => [|i IH] p q l iLq Hs /=; first by rewrite subn0.
-have q_gt0 : 0 < q by apply: leq_ltn_trans iLq.
-case: odd.
-  apply: leq_trans (IH _ q.-1 _ _ _) _.
-  - by rewrite -ltnS prednK // (leq_ltn_trans _ iLq).
-  - rewrite size_otake -leq_double -!addnn -e2Sn addnn.
-    rewrite prednK // (leq_trans _ Hs) //.
-    by rewrite -[X in _ <= X]odd_double_half; case: odd.
-  by case: (q) q_gt0.
-apply: leq_trans (IH _ q.-1 _ _ _) _.
-- by rewrite -ltnS prednK // (leq_ltn_trans _ iLq).
-- by rewrite size_etake leq_uphalf_e2n // prednK.
-by case: (q) q_gt0.
-Qed.
-
-Lemma ltn_ne2n n : n < `2^ n.
-Proof.
-elim: n => // [] [|n] // IH.
-apply: leq_ltn_trans (_ : n.+1.*2 < _).
-  by rewrite -addnn addnS addSn !ltnS leq_addr.
-by rewrite e2Sn addnn ltn_double.
-Qed.
 
 Lemma iter3_sorted (p : nat) q (l : seq bool) i :
   i < `2^ p -> `2^ q < size l <= `2^ q.+1 -> p <= q ->

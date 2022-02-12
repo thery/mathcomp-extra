@@ -82,6 +82,20 @@ Proof. by rewrite e2nE expn_gt0. Qed.
 Lemma odd_e2 m : odd (`2^ m) = (m == 0).
 Proof. by case: m => //= m; rewrite addnn odd_double. Qed.
 
+Lemma ltn_ne2n n : n < `2^ n.
+Proof.
+elim: n => // [] [|n] // IH.
+apply: leq_ltn_trans (_ : n.+1.*2 < _).
+  by rewrite -addnn addnS addSn !ltnS leq_addr.
+by rewrite e2Sn addnn ltn_double.
+Qed.
+
+Lemma leq_uphalf_e2n n m : n <= `2^ m.+1 -> uphalf n <= `2^ m.
+Proof.
+rewrite -{1}(odd_double_half n) uphalf_half e2Sn addnn.
+by case: odd; rewrite //= ?add1n ?ltn_double // leq_double.
+Qed.
+
 End E2.
 
 Notation "`2^ n" := (e2n n) (at level 40).
