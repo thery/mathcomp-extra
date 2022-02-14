@@ -12,8 +12,8 @@ Import Order POrderTheory TotalTheory.
 (*                       the even and odd parts and then apply Batcher_merge  *)
 (*   knuth_exchange == the recursive connect that calls itself on             *)
 (*                       the even and odd parts and then apply Batcher_merge  *)
-(*   iknuth_exchance_exchange == an iterative version of knuth that works directly on  *)
-(*                      list                                                  *)
+(*   iknuth_exchance_exchange == an iterative version of knuth that works     *)
+(*                               directly on list                             *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -704,7 +704,8 @@ Lemma nth_iter1_aux k n p i l l1 (a : A) :
       else nth a l j).
 Proof.
 move=> p_gt0 nEl nEl1.
-elim: k i l1 nEl1 => [i l1 nEl1 nLi /= Hc j jLn|/= k IH i l1 nEl1 nLi Hc j jLn /=].
+elim: k i l1 nEl1 => [i l1 nEl1 nLi /= Hc j jLn|
+                      /= k IH i l1 nEl1 nLi Hc j jLn /=].
   have := Hc j.
   rewrite (leq_trans jLn nLi) andbT.
   suff -> : j < i + p by [].
@@ -798,7 +799,7 @@ by rewrite -divn_gt0; case: (_ %/ _) j1pO.
 Qed.
   
 (******************************************************************************)
-(* Proof for iter2                                                             *)
+(* Proof for iter2                                                            *)
 (******************************************************************************)
 
 Lemma iter2_auxS k n p q i (l : seq A) :
@@ -815,7 +816,8 @@ Lemma iter2_aux_nth k n p q i l l1 (a : A) :
   (forall j,
   nth a l1 j = 
     if odd (j %/ p) then 
-      if (j < i + p) && (j + q < n + p) then min (nth a l j) (nth a l (j + q - p))
+      if (j < i + p) && (j + q < n + p) 
+      then min (nth a l j) (nth a l (j + q - p))
       else nth a l j
     else 
       if (q <= j < i + q) then max (nth a l (j - q + p)) (nth a l j)
@@ -834,7 +836,8 @@ move=> p_gt0 q_gt0 pDq pDqE nEl nEl1.
 have pLq : p < q.
   have : p <= q by rewrite dvdn_leq.
   by case: ltngtP => // pE; case/negP: pDqE; rewrite pE divnn q_gt0.
-elim: k i l1 nEl1 => [i l1 nEl1 nLi /= Hc j jLn|/= k IH i l1 nEl1 nLi Hc j jLn /=].
+elim: k i l1 nEl1 => [i l1 nEl1 nLi /= Hc j jLn|
+                      /= k IH i l1 nEl1 nLi Hc j jLn /=].
   have := Hc j.
   rewrite (leq_trans (leq_trans jLn _) (leq_addr q i)) // andbT.
   by rewrite (leq_trans (leq_trans jLn _) (leq_addr p i)) // andbT.
@@ -901,7 +904,8 @@ Proof. by move=> p_gt0 qLp nE; apply/perm_size/perm_iter2_aux. Qed.
 Lemma perm_iter2 p q (l : seq A) : 0 < p -> p < q -> perm_eq (iter2 p q l) l.
 Proof. by move=> p_gt0 pLq; apply: perm_iter2_aux. Qed.
 
-Lemma size_iter2 p q (l : seq A) : 0 < p -> p < q -> size (iter2 p q l) = size l.
+Lemma size_iter2 p q (l : seq A) :
+  0 < p -> p < q -> size (iter2 p q l) = size l.
 Proof. by move=> p_gt0 pLq; apply/perm_size/perm_iter2. Qed.
 
 Lemma nth_iter2 p q l (a : A) j :
@@ -931,7 +935,7 @@ by rewrite ifN // negb_and; case: leqP.
 Qed.
 
 (******************************************************************************)
-(* Proof for iter3                                                             *)
+(* Proof for iter3                                                            *)
 (******************************************************************************)
 
 Lemma iter3_auxS k p q (l : seq A) :
@@ -967,7 +971,8 @@ Proof. by move=> q_gt; apply/perm_size/perm_iter3. Qed.
 (* Proof for iknuth_exchance                                                             *)
 (******************************************************************************)
 
-Lemma perm_iknuth_exchance_aux k p q (l : seq A) : perm_eq (iknuth_exchance_aux k p q l) l.
+Lemma perm_iknuth_exchance_aux k p q (l : seq A) :
+  perm_eq (iknuth_exchance_aux k p q l) l.
 Proof.
 elim: k p q l => //= k IH p q l.
 case: leqP => // q_gt0.
@@ -976,7 +981,8 @@ apply: perm_trans; first by apply: perm_iter3.
 by apply: perm_iter1.
 Qed.  
 
-Lemma size_iknuth_exchance_aux k p q (l : seq A) : size (iknuth_exchance_aux k p q l) = size l.
+Lemma size_iknuth_exchance_aux k p q (l : seq A) :
+  size (iknuth_exchance_aux k p q l) = size l.
 Proof. by apply/perm_size/perm_iknuth_exchance_aux. Qed.
 
 Lemma perm_iknuth_exchance (l : seq A) : perm_eq (iknuth_exchance l) l.
