@@ -114,6 +114,24 @@ elim: m => /= [|m IH]; first by rewrite mul1n.
 by rewrite !addnn -doubleMl IH.
 Qed.
 
+
+Lemma ltn_e2n m n : (`2^ m < `2^ n) = (m < n).
+Proof.
+elim: n m => [/= [|m]//|n IH [|m]].
+- by rewrite ltnS; case: e2n (e2n_gt0 m.+1).
+- by rewrite !e2Sn !addnn (leq_double 1) e2n_gt0.
+by rewrite !e2Sn !addnn ltn_double IH.
+Qed.
+
+Lemma leq_e2n m n : (`2^ m <= `2^ n) = (m <= n).
+Proof.
+elim: n m => [/= [|m]//|n IH [|m]].
+- by rewrite e2Sn; case: e2n (e2n_gt0 m) => //= n; rewrite addnS.
+- rewrite (leq_trans _ (_ : `2^ 1 <= `2^ n.+1)) //.
+  by rewrite !e2Sn !addnn (leq_double 1) e2n_gt0.
+by rewrite !e2Sn !addnn leq_double IH.
+Qed.
+
 End E2.
 
 Notation "`2^ n" := (e2n n) (at level 40).
@@ -499,6 +517,20 @@ Lemma otake_sorted (leA : rel A) (s : seq A) :
 Proof.
 move=> leT_trans; case: s => //= a s sS.
 by apply: etake_sorted => //; case: s sS => //= b l /andP[].
+Qed.
+
+Lemma eq_size_etake (T :  Type) (l1 l2 : seq T) :
+  size l1 = size l2 -> size (etake l1) = size (etake l2).
+Proof.
+have [k leMl] := ubnP (size l1).
+elim: k l1 l2 leMl => // k IH [|a [|b l1]] [|c [|d l2]] //= sl1Lk [] /IH -> //.
+by rewrite -ltnS ltnW.
+Qed.
+
+Lemma eq_size_otake (T : Type) (l1 l2 : seq T) :
+  size l1 = size l2 -> size (otake l1) = size (otake l2).
+Proof.
+by case: l1; case: l2 => //= b l2 a l1 [] /eq_size_etake.
 Qed.
 
 Definition tetake (T : Type) (m : nat) (t : (m + m).-tuple T) :=

@@ -12,6 +12,8 @@ Import Order POrderTheory TotalTheory.
 (*                       the even and odd parts and then apply Batcher_merge  *)
 (*   knuth_exchange == the recursive connect that calls itself on             *)
 (*                       the even and odd parts and then apply Batcher_merge  *)
+(*   iknuth_exchance_exchange == an iterative version of knuth that works directly on  *)
+(*                      list                                                  *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -506,7 +508,35 @@ Lemma nth_eotake_div (A : Type) d (l : seq A) a n :
   nth a (eotake d n l) (n %/ `2^ d) = nth a l n.
 Proof. by rewrite nth_eotake mulnC addnC -divn_eq. Qed.
 
-Section Main.
+Lemma eq_size_eotake (A:  Type) d n (l1 l2 : seq A) :
+  size l1 = size l2 -> size (eotake d n l1) = size (eotake d n l2).
+Proof.
+elim: d n l1 l2 => //= d IH n l1 l2 sl1Esl2.
+case: odd; apply: IH; first by apply: eq_size_otake.
+by apply: eq_size_etake.
+Qed.
+
+Lemma gtn_size_eotake (A : Type) k p i (l : seq A) :
+   i < `2^ p -> k < size (eotake p i l) -> i + `2^ p * k < size l.
+Proof.
+elim: p i k l => [[]// k l _|p IH i k l iLk kLs]; first by rewrite mul1n.
+rewrite /= in kLs.
+case: (boolP (odd _)) kLs => iO /IH; 
+  rewrite ?(size_otake, size_etake) ltn_halfl -addnn -e2Sn => /(_ iLk) ikLs.
+  rewrite -(odd_double_half i) iO -addSn -doubleS.
+  rewrite e2Sn addnn -doubleMl -doubleD.
+  rewrite -(odd_double_half (size l)).
+  apply: leq_trans (leq_addl _ _).
+  by rewrite leq_double addSn.
+move: ikLs.
+rewrite uphalf_half -[X in i + _ < X](odd_double_half (size l)).
+rewrite -[i as X in (X + _ < _)]odd_double_half (negPf iO) add0n.
+rewrite e2Sn addnn -doubleMl -doubleD.
+case: odd => /=; first by rewrite !ltnS leq_double.
+by rewrite ltn_double.
+Qed.
+
+Section IKnuthExchance.
 
 Variables (d : unit) (A : orderType d).
 
@@ -521,6 +551,62 @@ Definition swap i j (l : seq A) :=
     let v2 := head a l5 in
     l1 ++ min v1 v2 :: l4 ++ max v1 v2 :: behead l5
   else [::].
+
+Fixpoint iter1_aux k n p i (l : seq A) :=
+  if k is k1.+1 then
+  if i + p < n then
+     iter1_aux k1 n p i.+1 
+       (if odd (i %/ p) then l else swap i (i + p) l)
+  else l
+  else l.
+
+Definition iter1 p (l : seq A) := 
+  iter1_aux (size l).+1 (size l) p 0 l.
+
+Fixpoint iter2_aux k n p q i (l : seq A) :=
+  if k is k1.+1 then
+  if i + q < n then
+     iter2_aux k1 n p q i.+1 
+       (if odd (i %/ p) then l else swap (i + p) (i + q) l )
+  else l
+  else l.
+
+Definition iter2 p q (l : seq A) := 
+  iter2_aux (size l).+1 (size l) p q 0 l.
+
+Fixpoint iter3_aux k p q (l : seq A) :=
+  if k is k1.+1 then
+  if q > p then
+     iter3_aux k1 p q./2 (iter2 p q l)
+  else l
+  else l.
+
+Definition iter3 top p (l : seq A) := iter3_aux (size l).+1 p top l.
+
+Fixpoint iknuth_exchance_aux k top p (l : seq A) :=
+  if k is k1.+1 then
+  if p > 0 then
+     let l1 := iter3 top p (iter1 p l) in
+     iknuth_exchance_aux k1 top p./2 l1
+  else l
+  else l.
+
+Definition iknuth_exchance (l : seq A) : seq A :=
+  let top := `2^ ((up_log 2 (size l)).-1) in
+  iknuth_exchance_aux (size l) top top l.
+
+End IKnuthExchance.
+
+Compute iknuth_exchance [::8; 7; 6; 5; 4; 3; 2; 1].
+Compute iknuth_exchance [::true; true; true; true; false; false; false; false].
+
+Section IKnuthExchangeProof.
+
+Variables (d : unit) (A : orderType d).
+
+(******************************************************************************)
+(* Proof for swap                                                             *)
+(******************************************************************************)
 
 Lemma perm_swap (l : seq A) i j : 
    i < j < size l -> perm_eq (swap i j l) l.
@@ -596,13 +682,9 @@ rewrite !(nth_behead, nth_drop) prednK ?subn_gt0 // -addSn prednK ?subn_gt0 //.
 by rewrite addnCA addnA subnK 1?ltnW // addnC subnK 1?ltnW.
 Qed.
 
-Fixpoint iter1_aux k n p i (l : seq A) :=
-  if k is k1.+1 then
-  if i + p < n then
-     iter1_aux k1 n p i.+1 
-       (if odd (i %/ p) then l else swap i (i + p) l)
-  else l
-  else l.
+(******************************************************************************)
+(* Proof for iter1                                                             *)
+(******************************************************************************)
 
 Lemma nth_iter1_aux k n p i l l1 (a : A) :
   0 < p -> n = size l -> n = size l1 -> n <= k + i ->  
@@ -688,9 +770,6 @@ Lemma iter1_auxS k n p i (l : seq A) :
   else l.
 Proof. by []. Qed.
 
-Definition iter1 p (l : seq A) := 
-  iter1_aux (size l).+1 (size l) p 0 l.
-
 Lemma perm_iter1 p (l : seq A) : 0 < p -> perm_eq (iter1 p l) l.
 Proof. by move=> p_gt0; apply: perm_iter1_aux. Qed.
 
@@ -717,15 +796,11 @@ case: (boolP (odd _)) => [j1pO|]//.
 rewrite ifN // -leqNgt.
 by rewrite -divn_gt0; case: (_ %/ _) j1pO.
 Qed.
-
-Fixpoint iter2_aux k n p q i (l : seq A) :=
-  if k is k1.+1 then
-  if i + q < n then
-     iter2_aux k1 n p q i.+1 
-       (if odd (i %/ p) then l else swap (i + p) (i + q) l )
-  else l
-  else l.
   
+(******************************************************************************)
+(* Proof for iter2                                                             *)
+(******************************************************************************)
+
 Lemma iter2_auxS k n p q i (l : seq A) :
 iter2_aux k.+1 n p q i (l : seq A) =
   if i + q < n then
@@ -823,9 +898,6 @@ Lemma size_iter2_aux k n p q i (l : seq A) :
   0 < p -> p < q -> n = size l -> size (iter2_aux k n p q i l) = size l.
 Proof. by move=> p_gt0 qLp nE; apply/perm_size/perm_iter2_aux. Qed.
 
-Definition iter2 p q (l : seq A) := 
-  iter2_aux (size l).+1 (size l) p q 0 l.
-
 Lemma perm_iter2 p q (l : seq A) : 0 < p -> p < q -> perm_eq (iter2 p q l) l.
 Proof. by move=> p_gt0 pLq; apply: perm_iter2_aux. Qed.
 
@@ -858,12 +930,9 @@ case: (boolP (odd _)) => [j1pO|j1pE]//.
 by rewrite ifN // negb_and; case: leqP.
 Qed.
 
-Fixpoint iter3_aux k p q (l : seq A) :=
-  if k is k1.+1 then
-  if q > p then
-     iter3_aux k1 p q./2 (iter2 p q l)
-  else l
-  else l.
+(******************************************************************************)
+(* Proof for iter3                                                             *)
+(******************************************************************************)
 
 Lemma iter3_auxS k p q (l : seq A) :
   iter3_aux k.+1 p q (l : seq A) =
@@ -887,8 +956,6 @@ Lemma size_iter3_aux k p q (l : seq A) :
   0 < p -> size (iter3_aux k p q l) = size l.
 Proof. by move=> p_gt; apply/perm_size/perm_iter3_aux. Qed.
 
-Definition iter3 top p (l : seq A) := iter3_aux (size l).+1 p top l.
-
 Lemma perm_iter3 p q (l : seq A) : 0 < q -> perm_eq (iter3 p q l) l.
 Proof. by apply: perm_iter3_aux. Qed.
 
@@ -896,15 +963,11 @@ Lemma size_iter3  p q (l : seq A) :
   0 < q -> size (iter3 p q l) = size l.
 Proof. by move=> q_gt; apply/perm_size/perm_iter3. Qed.
 
-Fixpoint main_aux k top p (l : seq A) :=
-  if k is k1.+1 then
-  if p > 0 then
-     let l1 := iter3 top p (iter1 p l) in
-     main_aux k1 top p./2 l1
-  else l
-  else l.
+(******************************************************************************)
+(* Proof for iknuth_exchance                                                             *)
+(******************************************************************************)
 
-Lemma perm_main_aux k p q (l : seq A) : perm_eq (main_aux k p q l) l.
+Lemma perm_iknuth_exchance_aux k p q (l : seq A) : perm_eq (iknuth_exchance_aux k p q l) l.
 Proof.
 elim: k p q l => //= k IH p q l.
 case: leqP => // q_gt0.
@@ -913,23 +976,16 @@ apply: perm_trans; first by apply: perm_iter3.
 by apply: perm_iter1.
 Qed.  
 
-Lemma size_main_aux k p q (l : seq A) : size (main_aux k p q l) = size l.
-Proof. by apply/perm_size/perm_main_aux. Qed.
+Lemma size_iknuth_exchance_aux k p q (l : seq A) : size (iknuth_exchance_aux k p q l) = size l.
+Proof. by apply/perm_size/perm_iknuth_exchance_aux. Qed.
 
-Definition main (l : seq A) : seq A :=
-  let top := `2^ ((up_log 2 (size l)).-1) in
-  main_aux (size l) top top l.
+Lemma perm_iknuth_exchance (l : seq A) : perm_eq (iknuth_exchance l) l.
+Proof. by apply: perm_iknuth_exchance_aux. Qed.
 
-Lemma perm_main (l : seq A) : perm_eq (main l) l.
-Proof. by apply: perm_main_aux. Qed.
+Lemma size_iknuth_exchance (l : seq A) : size (iknuth_exchance l) = size l.
+Proof. by apply/perm_size/perm_iknuth_exchance_aux. Qed.
 
-Lemma size_main (l : seq A) : size (main l) = size l.
-Proof. by apply/perm_size/perm_main_aux. Qed.
-
-End Main.
-
-Compute main [::8; 7; 6; 5; 4; 3; 2; 1].
-Compute main [::true; true; true; true; false; false; false; false].
+End IKnuthExchangeProof.
 
 (* We develop a true variant of eocat, so that teocatK holds *)
 Fixpoint teocat (A : Type) (l1 l2 : seq A) := 
@@ -1073,49 +1129,6 @@ Proof. by rewrite [LHS]count_nseq mul1n. Qed.
 Lemma weight_nseqT a : weight (nseq a true) = 0.
 Proof. by rewrite [LHS]count_nseq mul0n. Qed.
 
-Lemma eq_size_etake (A:  Type) (l1 l2 : seq A) :
-  size l1 = size l2 -> size (etake l1) = size (etake l2).
-Proof.
-have [k leMl] := ubnP (size l1).
-elim: k l1 l2 leMl => // k IH [|a [|b l1]] [|c [|d l2]] //= sl1Lk [] /IH -> //.
-by rewrite -ltnS ltnW.
-Qed.
-
-Lemma eq_size_otake (A:  Type) (l1 l2 : seq A) :
-  size l1 = size l2 -> size (otake l1) = size (otake l2).
-Proof.
-by case: l1; case: l2 => //= b l2 a l1 [] /eq_size_etake.
-Qed.
-
-Lemma eq_size_eotake (A:  Type) d n (l1 l2 : seq A) :
-  size l1 = size l2 -> size (eotake d n l1) = size (eotake d n l2).
-Proof.
-elim: d n l1 l2 => //= d IH n l1 l2 sl1Esl2.
-case: odd; apply: IH; first by apply: eq_size_otake.
-by apply: eq_size_etake.
-Qed.
-
-
-Lemma gtn_size_eotake (A : Type) k p i (l : seq A) :
-   i < `2^ p -> k < size (eotake p i l) -> i + `2^ p * k < size l.
-Proof.
-elim: p i k l => [[]// k l _|p IH i k l iLk kLs]; first by rewrite mul1n.
-rewrite /= in kLs.
-case: (boolP (odd _)) kLs => iO /IH; 
-  rewrite ?(size_otake, size_etake) ltn_halfl -addnn -e2Sn => /(_ iLk) ikLs.
-  rewrite -(odd_double_half i) iO -addSn -doubleS.
-  rewrite e2Sn addnn -doubleMl -doubleD.
-  rewrite -(odd_double_half (size l)).
-  apply: leq_trans (leq_addl _ _).
-  by rewrite leq_double addSn.
-move: ikLs.
-rewrite uphalf_half -[X in i + _ < X](odd_double_half (size l)).
-rewrite -[i as X in (X + _ < _)]odd_double_half (negPf iO) add0n.
-rewrite e2Sn addnn -doubleMl -doubleD.
-case: odd => /=; first by rewrite !ltnS leq_double.
-by rewrite ltn_double.
-Qed.
-
 Lemma eotake_sorted (p : nat) (l : seq bool) i :
   i < `2^ p -> 
   [/\ sorted <=%O (eotake p.+1 i l),
@@ -1150,7 +1163,6 @@ apply: IH => //.
 by case: HS2.
 Qed.
 
-(* Needs some cleaning *)
 Lemma iter1_sorted (p : nat) (l : seq bool) i :
   i < `2^ p -> 
   let l1 := iter1 (`2^ p) l in 
@@ -1251,9 +1263,8 @@ have <- : nseq (minn a1 a2) false ++ nseq (maxn b1 (d + b2) - d) true =
       by rewrite maxxx if_same.
     case: (ltnP k a2) => [a2Lk|kLa2].
       rewrite ifT // -e2Sn [i + _]addnC.
-      suff /gtn_size_eotake-> : k < size (eotake p.+1 (`2^ p + i) l).
-      - by [].
-      - by rewrite ltn_add2l.
+      suff /gtn_size_eotake-> : k < size (eotake p.+1 (`2^ p + i) l) => //.
+        by rewrite ltn_add2l.
       have : k < size l5.
         rewrite size_cat !size_nseq.
         have -> : minn a1 a2 = a1 by lia.
@@ -1273,26 +1284,6 @@ split.
 rewrite !weight_cat !weight_nseqF !weight_nseqT !addn0.
 by case: (ltnP a1 a2) => // ?; rewrite ltnW.
 Qed.
-
-Lemma ltn_e2n m n : (`2^ m < `2^ n) = (m < n).
-Proof.
-elim: n m => [/= [|m]//|n IH [|m]].
-- by rewrite ltnS; case: e2n (e2n_gt0 m.+1).
-- by rewrite !e2Sn !addnn (leq_double 1) e2n_gt0.
-by rewrite !e2Sn !addnn ltn_double IH.
-Qed.
-
-Lemma leq_e2n m n : (`2^ m <= `2^ n) = (m <= n).
-Proof.
-elim: n m => [/= [|m]//|n IH [|m]].
-- by rewrite e2Sn; case: e2n (e2n_gt0 m) => //= n; rewrite addnS.
-- rewrite (leq_trans _ (_ : `2^ 1 <= `2^ n.+1)) //.
-  by rewrite !e2Sn !addnn (leq_double 1) e2n_gt0.
-by rewrite !e2Sn !addnn leq_double IH.
-Qed.
-
-
-Axiom foo : forall P,  P.
 
 Lemma iter2_sorted (p : nat) q (l : seq bool) i :
   i < `2^ p -> p < q ->
@@ -1341,7 +1332,7 @@ have l5S : size l5 = size (eotake p.+1 (`2^ p + i) l1).
   rewrite -/l3 l3E size_cat !size_nseq.
   rewrite -subSS subSn // e2Sn in a1B.
   lia.
-have x1Lpq : xi <= `2^ (q - p) by lia.
+have xiLpq : xi <= `2^ (q - p) by lia.
 have <- : l4 = eotake p.+1 i l1.
   apply: (@eq_from_nth _ true) => // k kLs.
   rewrite !nth_cat !nth_nseq size_nseq if_same.
@@ -1355,8 +1346,7 @@ have <- : l4 = eotake p.+1 i l1.
   rewrite [X in (i + X * _) %/ _]e2Sn addnn -doubleMl doubleMr.
   rewrite [_ * _.*2]mulnC divnDMl ?e2n_gt0 // oddD odd_double.
   rewrite divn_small //=.
-  have := kLs.
-  rewrite l4S => /gtn_size_eotake.
+  have := kLs; rewrite l4S => /gtn_size_eotake.
   have ss : size l1 = size l.
     by apply: size_iter2 => //; apply: e2n_gt0.
   rewrite ss => ->; last first.
@@ -1365,70 +1355,55 @@ have <- : l4 = eotake p.+1 i l1.
   case: ltnP => [kLa1j|a1jLk].
     rewrite (leq_trans kLa1j (leq_subr _ _)).
     case: leqP => // q2Lipk.
-    have FF1 : `2^ q <= `2^ p + (`2^ p + `2^ p) * k.
-      by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
-    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
-    have FF3 : `2^ (q -p) <= 1 + k.*2.
-      move: FF1; rewrite -FF2 addnn -doubleMl doubleMr.
+    have qp2L1k : `2^ (q -p) <= 1 + k.*2.
+      have : `2^ q <= `2^ p + (`2^ p + `2^ p) * k
+        by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
+      rewrite -[in X in X <= _](subnK (ltnW pLq)) e2nD.
+      rewrite addnn -doubleMl doubleMr.
       rewrite -[X in _ <= X + _]mul1n  [`2^ p * _]mulnC -mulnDl leq_mul2r.
       by case: e2n (e2n_gt0 p).
-    have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
-      by rewrite -addnn -e2Sn -subSn.
-    have FF5 : `2^ (q - p) <= k.*2.
-      rewrite -FF4 in FF3.
-      have := leq_div2r 2 FF3.
-      rewrite divn2 doubleK -muln2 divnDMl // add0n => H.
-      by rewrite -FF4 muln2 leq_double.
+    have qp2Lk : `2^ (q - p) <= k.*2.
+      have := half_leq qp2L1k.
+      rewrite e2n_div2 ?subn_gt0 // halfD /= odd_double /= -leq_double.
+      by rewrite -addnn -e2Sn doubleK prednK // subn_gt0.
     rewrite -addnBA; last first.
       rewrite -e2Sn -(subnK pLq) e2nD mulnC leq_mul2l.
       case: e2n (e2n_gt0 p.+1) => //= _ _.
-      by rewrite -leq_double -addnn -e2Sn -subSn.
+      by rewrite subnS -e2n_div2 ?subn_gt0 // leq_halfl.
     rewrite [i + _ + _]addnAC [i + `2^ _]addnC.
     rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC e2nD -mulnBr.
-    rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last first.
-      by rewrite ltn_add2l.
-    rewrite -nth_eotake.
-    rewrite -/l3 l3E nth_cat !nth_nseq /= size_nseq.
+    rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last by rewrite ltn_add2l.
+    rewrite -nth_eotake -/l3 l3E nth_cat !nth_nseq /= size_nseq.
     case: leqP => //.
+    have : (`2^ (q -p.+1)).*2 = `2^ (q -p).
+      by rewrite -addnn -e2Sn -subSn.
     lia.
   case: (leqP (`2^ q)) => [q2Lipk|ipkLq2].
-    have FF1 : `2^ q <= `2^ p + (`2^ p + `2^ p) * k.
-      by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
-    have FF2 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
-    have FF3 : `2^ (q -p) <= 1 + k.*2.
-      move: FF1; rewrite -FF2 addnn -doubleMl doubleMr.
+    have qp2L1k : `2^ (q -p) <= 1 + k.*2.
+      have : `2^ q <= `2^ p + (`2^ p + `2^ p) * k
+        by apply: leq_trans q2Lipk _; rewrite leq_add2r ltnW.
+      rewrite -[in X in X <= _](subnK (ltnW pLq)) e2nD.
+      rewrite addnn -doubleMl doubleMr.
       rewrite -[X in _ <= X + _]mul1n  [`2^ p * _]mulnC -mulnDl leq_mul2r.
       by case: e2n (e2n_gt0 p).
-    have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
-      by rewrite -addnn -e2Sn -subSn.
-    have FF5 : `2^ (q - p) <= k.*2.
-      rewrite -FF4 in FF3.
-      have := leq_div2r 2 FF3.
-      rewrite divn2 doubleK -muln2 divnDMl // add0n => H.
-      by rewrite -FF4 muln2 leq_double.
+    have qp2Lk : `2^ (q - p) <= k.*2.
+      have := half_leq qp2L1k.
+      rewrite e2n_div2 ?subn_gt0 // halfD /= odd_double /= -leq_double.
+      by rewrite -addnn -e2Sn doubleK prednK // subn_gt0.
     rewrite -addnBA; last first.
       rewrite -e2Sn -(subnK pLq) e2nD mulnC leq_mul2l.
       case: e2n (e2n_gt0 p.+1) => //= _ _.
       by rewrite -leq_double -addnn -e2Sn -subSn.
     rewrite [i + _ + _]addnAC [i + `2^ _]addnC.
     rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC e2nD -mulnBr.
-    rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last first.
-      by rewrite ltn_add2l.
-    rewrite -nth_eotake.
-    rewrite -/l3 l3E nth_cat !nth_nseq /= size_nseq.
+    rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last by rewrite ltn_add2l.
+    rewrite -nth_eotake -/l3 l3E nth_cat !nth_nseq /= size_nseq.
     case: leqP => // k2pqLa2; first by rewrite if_same maxTb.
     case: leqP => //.
     lia.
   case: leqP => //.
-  have FF1 :  (`2^ p) * k.*2 <= (`2^ p) * (`2^ (q - p)).
-    rewrite -e2nD addnC subnK; last by lia.
-    apply: leq_trans (ltnW ipkLq2).
-    by rewrite addnn -doubleMl -doubleMr leq_addl.
-  have := leq_div2r (`2^ p) FF1.
-  rewrite !mulKn ?e2n_gt0 // => FF2.
-  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
-  have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
-    by rewrite -addnn -e2Sn -subSn.
+  have : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
+  have : (`2^ (q -p.+1)).*2 = `2^ (q -p) by rewrite -addnn -e2Sn -subSn.
   nia.
 have <- : l5 = eotake p.+1 (`2^ p + i) l1.
   apply: (@eq_from_nth _ true) => // k kLs.
@@ -1457,68 +1432,28 @@ have <- : l5 = eotake p.+1 (`2^ p + i) l1.
     rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
     rewrite -nth_eotake.
     rewrite -/l2 l2E nth_cat !nth_nseq /= size_nseq if_same.
-    case: leqP => //.
-    lia.
-  case: leqP => JJ; last first.
-    rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
-      by rewrite e2Sn; lia.
-    rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
-    rewrite -nth_eotake.
-    rewrite -/l2 l2E nth_cat !nth_nseq /= size_nseq if_same.
-    case: leqP => //.
-    lia.
-  rewrite -e2Sn in JJ.
-  have FF : `2^ p + i + `2^ p.+1 * k < size l.
-    have := kLs.
-    rewrite l5S => /gtn_size_eotake.
-    have ss : size l1 = size l.
-      by apply: size_iter2 => //; apply: e2n_gt0.
-    rewrite ss => ->//; last first.
-    by rewrite ltn_add2l.
-  have FF3 : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
-  have FF4 : (`2^ (q -p.+1)).*2 = `2^ (q -p).
-    by rewrite -addnn -e2Sn -subSn.
-  have FF5 : j <= `2^ (q - p.+1).
-    by lia.
-  have FF6 : a2 + j <= a1 + `2^(q - p.+1).
-    lia.
-  have FF7 : (a2 + j) * (`2^ p.+1) <= a1 *  (`2^ p.+1) + `2^  q.
-    nia.
-  have FF8 : (`2^ p.+1) * k < (`2^ p.+1) * (a2 + j).
-    by rewrite ltn_mul2l ?e2n_gt0.
-  have FF9 : i + (`2^ p.+1) * k
-              + `2^ q < (i + `2^ p) + 
-                   (`2^ p.+1) * (a2 + j) + `2^ q - `2^ p.
-    by lia.
-  have FF10 : i + (`2^ p.+1) * k
-              + `2^ q < i + 
-                   `2^ p.+1 * a1 + `2^ q.
-    by lia.
-  have FF11 : a2 + j + `2^(q - p.+1) <= a1.
-    lia.
-  have FF12 : (a2 + j) * (`2^ p.+1) + `2^  q <= a1 *  (`2^ p.+1).
-    rewrite -(subnK pLq) e2nD -mulnDl leq_mul2r.
-    by case: e2n (e2n_gt0 p.+1).
-  case: (ltngtP 0 b1) => // [b1_gt0 | b1_eq0].
-    suff : i + `2^ p.+1 * a1 < size l by lia.
-    apply: gtn_size_eotake.
-      by rewrite (leq_trans iL2p (leq_addr _ _)).
-    rewrite -/l2 l2E size_cat !size_nseq; lia.
-  have : (`2^ p + i) + (`2^ p.+1) * (k - j) < size l1.
-    apply: gtn_size_eotake.
-      by rewrite ltn_add2l.
-    rewrite -l5S size_cat !size_nseq; lia.
-  have ss : size l1 = size l.
-    by apply: size_iter2 => //; apply: e2n_gt0.
-  rewrite ss.
-  apply: foo.
+    by case: leqP => //; lia.
+  rewrite ifT; last first.
+    have kqpLa1 : k + `2^ (q - p.+1) < a1 by lia.
+    have iL2p1 : i < `2^ p.+1 by rewrite (leq_trans iL2p (leq_addr _ _)).
+    have kqpLsl2 : k + `2^ (q - p.+1) < size l2.
+      by rewrite l2E size_cat !size_nseq; lia.
+    have := gtn_size_eotake iL2p1 kqpLsl2. 
+    have : (`2^ (q -p.+1) * `2^ p.+1) = `2^ q by rewrite -e2nD subnK // ltnW.
+    rewrite -e2Sn; nia.
+  rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
+    by rewrite e2Sn; lia.
+  rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
+  rewrite -nth_eotake.
+  rewrite -/l2 l2E nth_cat !nth_nseq /= size_nseq if_same.
+  by case: leqP => //; lia.
 split.
 - by apply/isorted_boolP; exists (a1 - j, b1 + j).
 - by apply/isorted_boolP; exists (a2 + j, b2 - j).
 rewrite !weight_cat !weight_nseqF !weight_nseqT !addn0.
-have FF4 : (`2^ (q.-1 - p)).*2 = `2^ (q -p).
+have : (`2^ (q.-1 - p)).*2 = `2^ (q -p).
   by rewrite -addnn -e2Sn -subSn ?prednK; lia.
-have FF5 : (`2^ (q - p.+1)).*2 = `2^ (q -p).
+have : (`2^ (q - p.+1)).*2 = `2^ (q -p).
   rewrite -addnn -e2Sn -subSn ?subSS //.
 lia.
 Qed.
@@ -1577,9 +1512,9 @@ rewrite -subSS.
 by apply: leq_size_eotake_e2n.
 Qed.
 
-Lemma main_aux_sorted k (p : nat) q (l : seq bool) :
+Lemma iknuth_exchance_aux_sorted k (p : nat) q (l : seq bool) :
   0 < q -> `2^ q < size l <= `2^ q.+1 -> p <= q -> p < k ->
-  let l1 := main_aux k (`2^ q) (`2^ p) l in 
+  let l1 := iknuth_exchance_aux k (`2^ q) (`2^ p) l in 
   (forall i, i < `2^ p -> 
   [/\ 
   sorted <=%O (eotake p.+1 i l) &
@@ -1616,8 +1551,8 @@ apply: iter3_sorted => //.
 by apply: iter1_sorted.
 Qed.
 
-Lemma main_sorted (l : seq bool) :
-  sorted <=%O (main l).
+Lemma iknuth_exchance_sorted (l : seq bool) :
+  sorted <=%O (iknuth_exchance l).
 Proof.
 case: (ltP 3 (size l)) => [sl_gt4|]; last first.
   case: l => // a [|b [|c []]]//= _; lia.
@@ -1626,7 +1561,7 @@ have up_gt0 : 0 < up_log 2 (size l).
   by rewrite up_log_gt0 // (leq_trans _ sl_gt1).
 have up_gt1 : 1 < up_log 2 (size l).
   by rewrite -{1}[2]/(up_log 2 4) leq_up_log.
-apply: main_aux_sorted => //.
+apply: iknuth_exchance_aux_sorted => //.
 - by rewrite -ltnS prednK.
 - rewrite prednK //.
   by rewrite !e2nE; apply: up_log_bounds.
