@@ -901,18 +901,19 @@ Variable A : orderType d1.
 Variable B : orderType d2.
 Variable f : A -> B.
 
-Lemma min_homo x y : 
-  {homo f : x y / (x <= y)%O >-> (x <= y)%O} -> min (f x) (f y) = f (min x y).
+
+Lemma min_homo : 
+  {homo f : x y / (x <= y)%O >-> (x <= y)%O} -> {morph f : x y / min x y}.
 Proof.
-(move=> fH; case: leP => [fxLfy|fyLfx]; case: leP => //).
+(move=> fH x y; case: (leP (f x)) => [fxLfy|fyLfx]; case: leP => //).
   by rewrite lt_neqAle => /andP[_ /fH]; case: ltgtP fxLfy.
 by move=> /fH; case: ltgtP fyLfx.
 Qed.
 
-Lemma max_homo x y : 
-  {homo f : x y / (x <= y)%O >-> (x <= y)%O} -> max (f x) (f y) = f (max x y).
+Lemma max_homo : 
+  {homo f : x y / (x <= y)%O >-> (x <= y)%O} -> {morph f : x y / max x y}.
 Proof.
-(move=> fH; case: leP => [fxLfy|fyLfx]; case: leP => //).
+(move=> fH x y; case: (leP (f x)) => [fxLfy|fyLfx]; case: leP => //).
   by rewrite lt_neqAle => /andP[_ /fH]; case: ltgtP fxLfy.
 by move=> /fH; case: ltgtP fyLfx.
 Qed.

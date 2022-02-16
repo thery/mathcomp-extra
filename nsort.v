@@ -165,7 +165,7 @@ case: (k =P i) => [->|/eqP kDi]; first by case: (i =P j) => [->|].
 by case: (k =P j) => [->|/eqP kDj].
 Qed.
 
-Lemma cfun_perm c t : perm_eq (cfun c t) t.
+Lemma perm_cfun c t : perm_eq (cfun c t) t.
 Proof.
 apply/tuple_permP.
 pose cfunS c t :=
@@ -202,10 +202,10 @@ Proof. by elim: n1 t => /=. Qed.
 Lemma nfun_rcons n c t : nfun (rcons n c) t = cfun c (nfun n t).
 Proof. exact: foldl_rcons. Qed.
 
-Lemma nfun_perm n t : perm_eq (nfun n t) t.
+Lemma perm_nfun n t : perm_eq (nfun n t) t.
 Proof.
 elim: n t => //= p n IH t.
-by apply: perm_trans (IH _) (cfun_perm _ _).
+by apply: perm_trans (IH _) (perm_cfun _ _).
 Qed.
 
 Lemma fun_of_network_empty : nfun nempty =1 id.
@@ -282,20 +282,20 @@ Variable A : orderType d1.
 Variable B : orderType d2.
 Variable f : A -> B.
 
-Lemma tmap_connector c (t : m.-tuple A) : 
+Lemma tmap_connector (c : connector m) : 
   {homo f : x y / (x <= y)%O >-> (x <= y)%O} ->
-  cfun c (tmap f t) = tmap f (cfun c t).
+  {morph tmap f : t / cfun c t >-> cfun c t}.
 Proof.
-move=> Hm; apply: eq_from_tnth => i.
-rewrite /cfun !tnth_map !tnth_ord_tuple min_homo // max_homo //.
+move=> Hm t; apply: eq_from_tnth => i.
+rewrite /cfun !tnth_map !tnth_ord_tuple -(min_homo Hm) -(max_homo Hm).
 by case: leqP.
 Qed.
 
-Lemma tmap_nfun n (t : m.-tuple A) : 
+Lemma tmap_network (n : network m) : 
   {homo f : x y / (x <= y)%O >-> (x <= y)%O} ->
-  nfun n (tmap f t) = tmap f (nfun n t).
+  {morph tmap f : t / nfun n t >-> nfun n t}.
 Proof.
-by move=> Hm; elim: n t => //= a n IH t; rewrite tmap_connector // IH.
+by move=> Hm t; elim: n t => //= a n IH t; rewrite -tmap_connector // IH.
 Qed.
 
 End TMap.
@@ -326,7 +326,7 @@ have gM : {homo g : x y / (x <= y)%O >-> (x <= y)%O}.
   by rewrite leNgt (le_lt_trans jLx1).
 have -> : t = tmap g (tmap f t).
   by apply: eq_from_tnth => i; rewrite !tnth_map !tnth_ord_tuple fK.
-by rewrite tmap_nfun // val_tmap (homo_sorted gM _ _).
+by rewrite -tmap_network // val_tmap (homo_sorted gM _ _).
 Qed.
 
 Lemma sorting_sorted n (r : m.-tuple A) :
@@ -341,7 +341,7 @@ have gM : {homo g : x y / (x <= y)%O >-> (x <= y)%O}.
   by rewrite leNgt (le_lt_trans jLx2).
 apply/existsP; exists (tmap g r).
 apply/sortedPn; exists ((g x1, g x2), (map g l1, map g l2)) => /=.
-  by rewrite tmap_nfun // val_tmap nfunE map_cat.
+  by rewrite -tmap_network // val_tmap nfunE map_cat.
 by rewrite /g lexx leNgt x2Lx1.
 Qed.
 

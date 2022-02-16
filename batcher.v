@@ -18,7 +18,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-
 Section Batcher.
 
 Variable d : unit.
@@ -237,12 +236,12 @@ elim: m t => [t tS dS|m IH t tS dS /=].
   by rewrite cswapE_min // cswapE_max // le_minl le_maxr lexx.
 rewrite nfun_rcons nfun_eodup.
 set n1 := nfun _ _; set n2 := nfun _ _.
-have n1P : perm_eq n1 (tetake t) by apply: nfun_perm.
+have n1P : perm_eq n1 (tetake t) by apply: perm_nfun.
 have /isorted_boolP[[a1 b1] n1E] : sorted <=%O n1.
   apply: IH.
     by rewrite ttake_etakeE; apply: etake_sorted => // [] [] [] [].
   by rewrite tdrop_etakeE; apply: etake_sorted => // [] [] [] [].
-have n2P : perm_eq n2 (totake t) by apply: nfun_perm.
+have n2P : perm_eq n2 (totake t) by apply: perm_nfun.
 have /isorted_boolP[[a2 b2] n2E] : sorted <=%O n2.
   apply: IH.
   - by rewrite ttake_otakeE; apply: otake_sorted => // [] [] [] [].
