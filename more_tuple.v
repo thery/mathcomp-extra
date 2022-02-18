@@ -843,6 +843,23 @@ Proof.
 by apply/val_eqP; rewrite /= totakeE /= otake_eocat // !size_tuple.
 Qed.
 
+(* We develop a true variant of eocat, so that eotcatK holds *)
+Fixpoint eotcat (A : Type) (s1 s2 : seq A) := 
+  if s1 is a :: s3 then
+  if s2 is b :: s4 then a :: b :: eotcat s3 s4 
+  else [:: a] else [::].
+
+Lemma eotcat_cons (R : Type) a b (s1 s2 : seq R) : 
+  eotcat (a :: s1) (b :: s2) = a :: b :: eotcat s1 s2.
+Proof. by []. Qed.
+
+Lemma eotcatK (T : Type) (s : seq T) : eotcat (etake s) (otake s) = s.
+Proof.
+have [n leMs] := ubnP (size s).
+elim: n s leMs => //= n IH [|a[|b s]] //= sLn.
+by rewrite IH // -ltnS ltnW.
+Qed.
+
 End Tuple.
 
 Section TMap.
@@ -934,7 +951,6 @@ Variable d1 d2 : unit.
 Variable A : orderType d1.
 Variable B : orderType d2.
 Variable f : A -> B.
-
 
 Lemma min_homo : 
   {homo f : x y / (x <= y)%O >-> (x <= y)%O} -> {morph f : x y / min x y}.
