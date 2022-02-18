@@ -114,7 +114,6 @@ elim: m => /= [|m IH]; first by rewrite mul1n.
 by rewrite !addnn -doubleMl IH.
 Qed.
 
-
 Lemma ltn_e2n m n : (`2^ m < `2^ n) = (m < n).
 Proof.
 elim: n m => [/= [|m]//|n IH [|m]].
@@ -138,43 +137,43 @@ Notation "`2^ n" := (e2n n) (at level 40).
 
 Section Sorted.
 
-Lemma isorted_consF l : sorted <=%O (false :: l) = sorted <=%O (l).
-Proof. by elim: l. Qed.
+Lemma isorted_consF s : sorted <=%O (false :: s) = sorted <=%O s.
+Proof. by elim: s. Qed.
 
-Lemma dsorted_consF l : sorted >=%O (false :: l) = (l == nseq (size l) false).
-Proof. by elim: l => // [[]] //= [|[]]. Qed.
+Lemma dsorted_consF s : sorted >=%O (false :: s) = (s == nseq (size s) false).
+Proof. by elim: s => // [[]] //= [|[]]. Qed.
 
-Lemma isorted_consT l : sorted <=%O (true :: l) = (l == nseq (size l) true).
-Proof. by elim: l => // [[]] //= [|[]]. Qed.
+Lemma isorted_consT s : sorted <=%O (true :: s) = (s == nseq (size s) true).
+Proof. by elim: s => // [[]] //= [|[]]. Qed.
 
-Lemma dsorted_consT l : sorted >=%O (true :: l) = sorted >=%O l.
-Proof. by elim: l => //= [[]]. Qed.
+Lemma dsorted_consT s : sorted >=%O (true :: s) = sorted >=%O s.
+Proof. by elim: s => //= [[]]. Qed.
 
-Lemma sorted_bool_constl m (l : seq bool) :
-  sorted <=%O ((nseq m false) ++ l) = sorted <=%O l.
+Lemma sorted_bool_constl m (s : seq bool) :
+  sorted <=%O ((nseq m false) ++ s) = sorted <=%O s.
 Proof.
 by elim: m => // [] n; rewrite [nseq _.+1 _ ++ _]/= isorted_consF.
 Qed.
 
-Lemma sorted_bool_constr m (l : seq bool) :
-  sorted <=%O (l ++ (nseq m true)) = sorted <=%O l.
+Lemma sorted_bool_constr m (s : seq bool) :
+  sorted <=%O (s ++ (nseq m true)) = sorted <=%O s.
 Proof.
-elim: l => [|[] l IH].
+elim: s => [|[] s IH].
 - by case: m => // m; rewrite [nseq _.+1 _]/= isorted_consT size_nseq eqxx.
 - rewrite [(_ :: _) ++ _]/= !isorted_consT size_cat nseqD size_nseq.
   by rewrite eqseq_cat ?eqxx ?andbT ?size_nseq.
 by rewrite [(_ :: _) ++ _]/= !isorted_consF.
 Qed.
 
-Lemma isorted_boolP (l : seq bool) :
+Lemma isorted_boolP (s : seq bool) :
   reflect (exists t,
-            let: (j,k) := t in l = nseq j false ++ nseq k true) 
-          (sorted <=%O l).
+            let: (j,k) := t in s = nseq j false ++ nseq k true) 
+          (sorted <=%O s).
 Proof.
-elim: l => [|[] l IH].
+elim: s => [|[] s IH].
 - by apply: (iffP idP) => // _; exists (0,0).
 - rewrite isorted_consT; apply: (iffP eqP) => [->|[[[|j] k]]] /=.
-  + by exists (0, (size l).+1).
+  + by exists (0, (size s).+1).
   + by case: k => [|k /= [->]]; rewrite ?size_nseq.
   by case.
 rewrite isorted_consF; apply: (iffP IH) => [] [[j k]].
@@ -189,19 +188,19 @@ case: b; apply/isorted_boolP; first by exists (0, k).
 by exists (k, 0); rewrite cats0.
 Qed.
 
-Lemma dsorted_boolP (l : seq bool) :
+Lemma dsorted_boolP (s : seq bool) :
   reflect (exists t,
-            let: (j,k) := t in l = nseq j true ++ nseq k false) 
-          (sorted >=%O l).
+            let: (j,k) := t in s = nseq j true ++ nseq k false) 
+          (sorted >=%O s).
 Proof.
-elim: l => [|[] l IH].
+elim: s => [|[] s IH].
 - by apply: (iffP idP) => // _; exists (0,0).
 - rewrite dsorted_consT; apply: (iffP IH) => [] [[j k]].
     by move=> ->; exists (j.+1, k).
   case: j => /= [|j [->]]; first by case: k.
   by exists (j, k).
 rewrite dsorted_consF; apply: (iffP eqP) => [->|[[[|j] k]]] /=.
-- by exists (0, (size l).+1).
+- by exists (0, (size s).+1).
 - by case: k => [|k /= [->]]; rewrite ?size_nseq.
 by case.
 Qed.
@@ -227,21 +226,21 @@ Proof.
 by case: t => [] [] // a [] // b [] //= i; rewrite !(tnth_nth a) /= andbT.
 Qed.
 
-Lemma sortedPn (l : seq A) :
+Lemma sortedPn (s : seq A) :
   reflect 
-    (exists2 x, l = x.2.1 ++ [:: x.1.1, x.1.2 & x.2.2] & (x.1.2 < x.1.1)%O)
-    (~~ sorted <=%O l).
+    (exists2 x, s = x.2.1 ++ [:: x.1.1, x.1.2 & x.2.2] & (x.1.2 < x.1.1)%O)
+    (~~ sorted <=%O s).
 Proof.
-elim: l => [|a [|b l] IH].
+elim: s => [|a [|b s] IH].
 - by apply: (iffP idP) => // [[[x1 [[|x x21] x22]]]].
 - by apply: (iffP idP) => // [[[x1 [[|x [| y x21]] x22] []]]].
 rewrite /= negb_and; case: leP => [aLb | bLa] /=; last first.
-  by apply: (iffP idP) => // _; exists ((a, b), ([::], l)).
-apply: (iffP IH) => [] [[[x1 x2] [l1 l2]] /= blE x2Lx1] /=.
-  by exists ((x1, x2), (a :: l1, l2)) => //=; rewrite blE.
-case: l1 blE => [[aE bE lE]|x3 l1 [aE blE]].
+  by apply: (iffP idP) => // _; exists ((a, b), ([::], s)).
+apply: (iffP IH) => [] [[[x1 x2] [s1 s2]] /= blE x2Lx1] /=.
+  by exists ((x1, x2), (a :: s1, s2)) => //=; rewrite blE.
+case: s1 blE => [[aE bE lE]|x3 s1 [aE blE]].
   by move: aLb; rewrite aE bE leNgt x2Lx1.
-by exists ((x1, x2), (l1, l2)).
+by exists ((x1, x2), (s1, s2)).
 Qed.
 
 End Sorted.
@@ -300,6 +299,7 @@ rewrite modn_small //=; case: (leqP k) => // _.
 apply: leq_ltn_trans _ iLn.
 by rewrite -[X in _ <= X]subn0 leq_sub.
 Qed.
+
 
 Lemma split_lshift m i (j : 'I_m) : split (lshift i j) = inl j.
 Proof.
@@ -415,23 +415,23 @@ Proof. by apply/val_eqP; rewrite /= ttakeE tdropE; rewrite cat_take_drop. Qed.
 
 Definition trev (T : Type) m (t : m.-tuple T) := [tuple of rev t].
 
-Fixpoint etake (T : Type) (l : seq T) :=
-  if l is a :: l1 then a :: (if l1 is _ :: l2 then etake l2 else [::])
+Fixpoint etake (T : Type) (s : seq T) :=
+  if s is a :: s1 then a :: (if s1 is _ :: s2 then etake s2 else [::])
   else [::].
 
-Definition otake (T : Type) (l : seq T) := 
-  if l is _ :: l1 then etake l1 else [::].
+Definition otake (T : Type) (s : seq T) := 
+  if s is _ :: s1 then etake s1 else [::].
 
-Lemma etake_cons (T : Type) a (l : seq T) : etake (a :: l) = a :: otake l.
+Lemma etake_cons (T : Type) a (s : seq T) : etake (a :: s) = a :: otake s.
 Proof. by []. Qed.
 
-Lemma otake_cons (T : Type) a (l : seq T) : otake (a :: l) = etake l.
+Lemma otake_cons (T : Type) a (s : seq T) : otake (a :: s) = etake s.
 Proof. by []. Qed.
 
-Lemma nth_etake (T : Type) a (l : seq T) n : nth a (etake l) n = nth a l n.*2.
+Lemma nth_etake (T : Type) a (s : seq T) n : nth a (etake s) n = nth a s n.*2.
 Proof.
-have [m leMm] := ubnP (size l);
-    elim: m l leMm n => [[]//|m IH [|b [|c l]]] HS n.
+have [m leMm] := ubnP (size s);
+    elim: m s leMm n => [[]//|m IH [|b [|c s]]] HS n.
 - by rewrite /= !nth_nil.
 - by case: n => [|n]; rewrite //= nth_nil.
 rewrite etake_cons otake_cons; case: n => //= n.
@@ -439,15 +439,15 @@ rewrite ltnS in HS.
 by apply: IH; apply: leq_trans HS => /=.
 Qed.
 
-Lemma nth_otake (T : Type) a (l : seq T) n :
-  nth a (otake l) n = nth a l n.*2.+1.
+Lemma nth_otake (T : Type) a (s : seq T) n :
+  nth a (otake s) n = nth a s n.*2.+1.
 Proof.
-by case: l; rewrite //= ?nth_nil // => _ l; rewrite nth_etake.
+by case: s; rewrite //= ?nth_nil // => _ s; rewrite nth_etake.
 Qed.
 
-Lemma size_etake (T : Type) (l : seq T) : size (etake l) = uphalf (size l).
+Lemma size_etake (T : Type) (s : seq T) : size (etake s) = uphalf (size s).
 Proof.
-have [n leMn] := ubnP (size l); elim: n l leMn => // n IH [|a [|bl]] //= l.
+have [n leMn] := ubnP (size s); elim: n s leMn => // n IH [|a [|b s]] //=.
 rewrite !ltnS => slLn.
 by rewrite IH //= (leq_trans _ slLn).
 Qed.
@@ -457,8 +457,8 @@ Proof. by rewrite size_etake size_tuple /= addnn uphalf_double. Qed.
 Canonical etake_tuple (T : Type) m (t : (m + m).-tuple T) :=
   Tuple (etake_tupleP t).
 
-Lemma size_otake (T : Type) (l : seq T) : size (otake l) = (size l)./2.
-Proof. by case: l => //= a l; rewrite size_etake. Qed.
+Lemma size_otake (T : Type) (s : seq T) : size (otake s) = (size s)./2.
+Proof. by case: s => //= a s; rewrite size_etake. Qed.
 
 Lemma otake_tupleP (T : Type) m (t : (m + m).-tuple T) : size (otake t) == m.
 Proof. by rewrite size_otake size_tuple addnn doubleK. Qed.
@@ -474,17 +474,17 @@ Qed.
 Lemma otake_nseq i (T : Type) (a : T) : otake (nseq i a) = nseq i./2 a.
 Proof. by case: i => //= i; exact: etake_nseq. Qed.
 
-Lemma etake_cat (T : Type) (l1 l2 : seq T) : 
-  etake (l1 ++ l2) = etake l1 ++ if odd (size l1) then otake l2 else etake l2.
+Lemma etake_cat (T : Type) (s1 s2 : seq T) : 
+  etake (s1 ++ s2) = etake s1 ++ if odd (size s1) then otake s2 else etake s2.
 Proof.
-have [n leMl1] := ubnP (size l1).
-elim: n l1 leMl1 => // n IH [|a[|b l1]] //= slLn.
+have [n leMs1] := ubnP (size s1).
+elim: n s1 leMs1 => // n IH [|a[|b s1]] //= slLn.
 by rewrite negbK IH // -ltnS (leq_trans _ slLn).
 Qed.
 
-Lemma otake_cat (T : Type) (l1 l2 : seq T) : 
-  otake (l1 ++ l2) = otake l1 ++ if odd (size l1) then etake l2 else otake l2.
-Proof. by case: l1 => // a l; rewrite /= if_neg etake_cat. Qed.
+Lemma otake_cat (T : Type) (s1 s2 : seq T) : 
+  otake (s1 ++ s2) = otake s1 ++ if odd (size s1) then etake s2 else otake s2.
+Proof. by case: s1 => // a l; rewrite /= if_neg etake_cat. Qed.
 
 Lemma etake_cat_nseq (T : Type) (a1 a2 : T) m1 m2 : 
   etake (nseq m1 a1 ++ nseq m2 a2) = 
@@ -519,18 +519,18 @@ move=> leT_trans; case: s => //= a s sS.
 by apply: etake_sorted => //; case: s sS => //= b l /andP[].
 Qed.
 
-Lemma eq_size_etake (T :  Type) (l1 l2 : seq T) :
-  size l1 = size l2 -> size (etake l1) = size (etake l2).
+Lemma eq_size_etake (T :  Type) (s1 s2 : seq T) :
+  size s1 = size s2 -> size (etake s1) = size (etake s2).
 Proof.
-have [k leMl] := ubnP (size l1).
-elim: k l1 l2 leMl => // k IH [|a [|b l1]] [|c [|d l2]] //= sl1Lk [] /IH -> //.
+have [k leMl] := ubnP (size s1).
+elim: k s1 s2 leMl => // k IH [|a [|b s1]] [|c [|d s2]] //= ss1Lk [] /IH -> //.
 by rewrite -ltnS ltnW.
 Qed.
 
-Lemma eq_size_otake (T : Type) (l1 l2 : seq T) :
-  size l1 = size l2 -> size (otake l1) = size (otake l2).
+Lemma eq_size_otake (T : Type) (s1 s2 : seq T) :
+  size s1 = size s2 -> size (otake s1) = size (otake s2).
 Proof.
-by case: l1; case: l2 => //= b l2 a l1 [] /eq_size_etake.
+by case: s1; case: s2 => //= b s2 a s1 [] /eq_size_etake.
 Qed.
 
 Definition tetake (T : Type) (m : nat) (t : (m + m).-tuple T) :=
@@ -546,61 +546,61 @@ Lemma totakeE (T : Type) (m : nat) (t : (m + m).-tuple T) :
   totake t = otake t :> seq T.
 Proof. by []. Qed.
 
-Fixpoint eocat (T : Type) (l1 l2 : seq T) :=
-  if l1 is a :: l3 then a :: head a l2 :: eocat l3 (behead l2) else [::].
+Fixpoint eocat (T : Type) (s1 s2 : seq T) :=
+  if s1 is a :: s3 then a :: head a s2 :: eocat s3 (behead s2) else [::].
 
-Lemma size_eocat (T : Type) (l1 l2 : seq T) :
-  size (eocat l1 l2) = (size l1 + size l1).
-Proof. by elim: l1 l2 => //= a l1 IH l2; rewrite IH addnS. Qed.
+Lemma size_eocat (T : Type) (s1 s2 : seq T) :
+  size (eocat s1 s2) = (size s1 + size s1).
+Proof. by elim: s1 s2 => //= a s1 IH s2; rewrite IH addnS. Qed.
 
-Lemma nth_eocat (T : Type) a (l1 l2 : seq T) n : 
-  size l1 = size l2 ->
-  nth a (eocat l1 l2) n = nth a (if odd n then l2 else l1) n./2.
+Lemma nth_eocat (T : Type) a (s1 s2 : seq T) n : 
+  size s1 = size s2 ->
+  nth a (eocat s1 s2) n = nth a (if odd n then s2 else s1) n./2.
 Proof.
-elim: l1 l2 n => /= [[]//= n|b l1 IH [//= n|c l2 [|[|n]] //= [Hs]/=]].
+elim: s1 s2 n => /= [[]//= n|b s1 IH [//= n|c s2 [|[|n]] //= [Hs]/=]].
   by rewrite if_same !nth_nil.
 by rewrite negbK IH; case: odd.
 Qed.
 
-Lemma eocat_cat (T : Type) (l1 l2 l3 l4 : seq T) :
-  ~~ odd (size l1) -> size l1 = size l3 -> 
-  eocat (l1 ++ l2) (l3 ++ l4) = eocat l1 l3 ++ eocat l2 l4.
+Lemma eocat_cat (T : Type) (s1 s2 s3 s4 : seq T) :
+  ~~ odd (size s1) -> size s1 = size s3 -> 
+  eocat (s1 ++ s2) (s3 ++ s4) = eocat s1 s3 ++ eocat s2 s4.
 Proof.
-have [n leMl1] := ubnP (size l1).
-elim: n l1 l3 leMl1 => //= n IH [|a[|b l1]] [|c[|d l3]] //=.
-rewrite !ltnS negbK => sl1Ln sl1O [sl1E].
-by rewrite IH // (leq_ltn_trans _ sl1Ln).
+have [n leMs1] := ubnP (size s1).
+elim: n s1 s3 leMs1 => //= n IH [|a[|b s1]] [|c[|d s3]] //=.
+rewrite !ltnS negbK => ss1Ln ss1O [ss1E].
+by rewrite IH // (leq_ltn_trans _ ss1Ln).
 Qed.
 
-Lemma eocat_etake_otake (T : Type) n (l : seq T) :
-  size l = n + n -> eocat (etake l) (otake l) = l.
+Lemma eocat_etake_otake (T : Type) n (s : seq T) :
+  size s = n + n -> eocat (etake s) (otake s) = s.
 Proof.
-elim: n l =>[[]// | n IH [//|a [|b l]]]; rewrite !addnS //.
+elim: n s =>[[]// | n IH [//|a [|b s]]]; rewrite !addnS //.
 by rewrite !(etake_cons, otake_cons) /= => [] [H]; rewrite IH.
 Qed.
 
-Lemma etakeK (T : Type) (l1 l2 : seq T) : etake (eocat l1 l2) = l1.
-Proof. by elim: l1 l2 => //= a l IH l2; rewrite IH. Qed.
+Lemma etakeK (T : Type) (s1 s2 : seq T) : etake (eocat s1 s2) = s1.
+Proof. by elim: s1 s2 => //= a l IH s2; rewrite IH. Qed.
 
-Lemma otakeK (T : Type) (l1 l2 : seq T) :
-  size l1 = size l2 -> otake (eocat l1 l2) = l2.
+Lemma otakeK (T : Type) (s1 s2 : seq T) :
+  size s1 = size s2 -> otake (eocat s1 s2) = s2.
 Proof.
-elim: l1 l2 => [[]//|a l1 IH [|b l2] //].
+elim: s1 s2 => [[]//|a s1 IH [|b s2] //].
 by rewrite [eocat _ _]/= otake_cons etake_cons /= => [] [/IH->].
 Qed.
 
-Lemma etake_eocat (T : Type) (l1 l2 : seq T) :  etake (eocat l1 l2) = l1.
+Lemma etake_eocat (T : Type) (s1 s2 : seq T) :  etake (eocat s1 s2) = s1.
 Proof.
-have [n leMl1] := ubnP (size l1).
-elim: n l1 leMl1 l2 => // n IH [|a[|b l1]] //= slLn l2.
+have [n leMs1] := ubnP (size s1).
+elim: n s1 leMs1 s2 => // n IH [|a[|b s1]] //= slLn s2.
 by rewrite IH // -ltnS (leq_trans _ slLn).
 Qed.
 
-Lemma otake_eocat (T : Type) (l1 l2 : seq T) :
-  size l1 = size l2 -> otake (eocat l1 l2) = l2.
+Lemma otake_eocat (T : Type) (s1 s2 : seq T) :
+  size s1 = size s2 -> otake (eocat s1 s2) = s2.
 Proof.
-elim: l1 l2 => [|a l1 IH] l2; first by case: l2.
-case: l2 => [//|b l2].
+elim: s1 s2 => [|a s1 IH] s2; first by case: s2.
+case: s2 => [//|b s2].
 by rewrite [eocat _ _]/= otake_cons etake_cons => [] [/IH->].
 Qed.
 
@@ -619,11 +619,11 @@ Qed.
 Lemma nseqS (T : Type) a (b : T) : nseq a.+1 b = b :: nseq a b.
 Proof. by []. Qed.
 
-Lemma cat_cons (T : Type) (a : T) l1 l2 : (a :: l1) ++ l2 = a :: (l1 ++ l2).
+Lemma cat_cons (T : Type) (a : T) s1 s2 : (a :: s1) ++ s2 = a :: (s1 ++ s2).
 Proof. by []. Qed.
 
-Lemma eocat_cons (T : Type) (a b : T) l1 l2 :
-  eocat (a :: l1) (b :: l2) = a :: b :: eocat l1 l2.
+Lemma eocat_cons (T : Type) (a b : T) s1 s2 :
+  eocat (a :: s1) (b :: s2) = a :: b :: eocat s1 s2.
 Proof. by []. Qed.
 
 Lemma eocat_nseq_catDS (T : Type) (v1 v2 : T) a b :
@@ -649,37 +649,37 @@ Proof.
 by rewrite nth_cat !nth_nseq !size_nseq if_same; case: leqP.
 Qed.
 
-Lemma nseq_cat_sortedE (l : seq bool) m1 m2 m3 m4 : 
-  sorted (<=%O) l ->  
-  perm_eq l (nseq m1 false ++ nseq m2 true ++ nseq m3 false ++ nseq m4 true) ->
-  l = nseq (m1 + m3) false ++ nseq (m2 + m4) true.
+Lemma nseq_cat_sortedE (s : seq bool) m1 m2 m3 m4 : 
+  sorted (<=%O) s ->  
+  perm_eq s (nseq m1 false ++ nseq m2 true ++ nseq m3 false ++ nseq m4 true) ->
+  s = nseq (m1 + m3) false ++ nseq (m2 + m4) true.
 Proof.
-move=> /isorted_boolP[[u v] ->] /allP; set l1 := _ ++ _ => permH.
+move=> /isorted_boolP[[u v] ->] /allP; set s1 := _ ++ _ => permH.
 congr (nseq _ _ ++ nseq _ _).
-  have [/permH/=|] := boolP (false \in l1).
+  have [/permH/=|] := boolP (false \in s1).
     by rewrite !(count_cat, count_nseq) /= !(mul0n, mul1n, addn0, add0n) =>/eqP.
   by rewrite !(mem_cat, mem_nseq) /= eqxx !negb_or /=; 
      case: (m1) => [|k1];  case: (m3) => [|k2]; rewrite ?(andbF, andbT) //; 
      case: (u).
-have [/permH/=|] := boolP (true \in l1).
+have [/permH/=|] := boolP (true \in s1).
   by rewrite !(count_cat, count_nseq) /= !(mul0n, mul1n, addn0, add0n) =>/eqP.
 by rewrite !(mem_cat, mem_nseq) /= eqxx !negb_or /=; 
    case: (m2) => [|k1];  case: (m4) => [|k2]; rewrite ?(andbF, andbT) //; 
    case: (v).
 Qed.
 
-Lemma take_etakeE (T : Type) (l : seq T) :
-  ~~ odd (size l) ->   ~~ odd (size l)./2 -> 
-  take (size l)./2./2 (etake l) = etake (take (size l)./2 l).
+Lemma take_etakeE (T : Type) (s : seq T) :
+  ~~ odd (size s) ->   ~~ odd (size s)./2 -> 
+  take (size s)./2./2 (etake s) = etake (take (size s)./2 s).
 Proof.
 move=> H1 H2.
-pose l1 := take (size l)./2 l; pose l2 := drop (size l)./2 l.
-pose l3 := etake l; pose l4 := otake l.
-have lE : l = l1 ++ l2 by rewrite cat_take_drop.
-have sl1E : size l1 = (size l)./2 by rewrite size_take half_gtnn; case: size.
-rewrite -/l1.
-rewrite {2}lE etake_cat sl1E (negPf H2).
-rewrite take_cat size_etake sl1E.
+pose s1 := take (size s)./2 s; pose s2 := drop (size s)./2 s.
+pose s3 := etake s; pose s4 := otake s.
+have lE : s = s1 ++ s2 by rewrite cat_take_drop.
+have ss1E : size s1 = (size s)./2 by rewrite size_take half_gtnn; case: size.
+rewrite -/s1.
+rewrite {2}lE etake_cat ss1E (negPf H2).
+rewrite take_cat size_etake ss1E.
 by rewrite uphalf_half (negPf H2) /= ltnn subnn take0 cats0.
 Qed.
 
@@ -697,18 +697,18 @@ rewrite [X in take X _]nE take_etakeE //.
 by rewrite -nnE addnn odd_double.
 Qed.
 
-Lemma take_otakeE (T : Type) (l : seq T) :
-  ~~ odd (size l) ->   ~~ odd (size l)./2 -> 
-  take (size l)./2./2 (otake l) = otake (take (size l)./2 l).
+Lemma take_otakeE (T : Type) (s : seq T) :
+  ~~ odd (size s) ->   ~~ odd (size s)./2 -> 
+  take (size s)./2./2 (otake s) = otake (take (size s)./2 s).
 Proof.
 move=> H1 H2.
-pose l1 := take (size l)./2 l; pose l2 := drop (size l)./2 l.
-pose l3 := etake l; pose l4 := otake l.
-have lE : l = l1 ++ l2 by rewrite cat_take_drop.
-have sl1E : size l1 = (size l)./2 by rewrite size_take half_gtnn; case: size.
-rewrite -/l1.
-rewrite {2}lE otake_cat sl1E (negPf H2).
-rewrite take_cat size_otake sl1E.
+pose s1 := take (size s)./2 s; pose s2 := drop (size s)./2 s.
+pose s3 := etake s; pose s4 := otake s.
+have sE : s = s1 ++ s2 by rewrite cat_take_drop.
+have ss1E : size s1 = (size s)./2 by rewrite size_take half_gtnn; case: size.
+rewrite -/s1.
+rewrite {2}sE otake_cat ss1E (negPf H2).
+rewrite take_cat size_otake ss1E.
 by rewrite ltnn subnn take0 cats0.
 Qed.
 
@@ -726,20 +726,20 @@ rewrite [X in take X _]nE take_otakeE //.
 by rewrite -nnE addnn odd_double.
 Qed.
 
-Lemma drop_etakeE (T : Type) (l : seq T) :
-  ~~ odd (size l) ->   ~~ odd (size l)./2 -> 
-  drop (size l)./2./2 (etake l) = etake (drop (size l)./2 l).
+Lemma drop_etakeE (T : Type) (s : seq T) :
+  ~~ odd (size s) ->   ~~ odd (size s)./2 -> 
+  drop (size s)./2./2 (etake s) = etake (drop (size s)./2 s).
 Proof.
-move=> H1 H2.
-pose l1 := take (size l)./2 l; pose l2 := drop (size l)./2 l.
-pose l3 := etake l; pose l4 := otake l.
-have lE : l = l1 ++ l2 by rewrite cat_take_drop.
-have sl1E : size l1 = (size l)./2.
+move=> ssE ss2E.
+pose s1 := take (size s)./2 s; pose s2 := drop (size s)./2 s.
+pose s3 := etake s; pose s4 := otake s.
+have lE : s = s1 ++ s2 by rewrite cat_take_drop.
+have ss1E : size s1 = (size s)./2.
   by rewrite size_take half_gtnn; case: size.
-rewrite -/l2.
-rewrite {2}lE etake_cat sl1E (negPf H2).
-rewrite drop_cat size_etake sl1E.
-by rewrite uphalf_half (negPf H2) /= ltnn subnn drop0.
+rewrite -/s2.
+rewrite {2}lE etake_cat ss1E (negPf ss2E).
+rewrite drop_cat size_etake ss1E.
+by rewrite uphalf_half (negPf ss2E) /= ltnn subnn drop0.
 Qed.
 
 Lemma tdrop_etakeE n (t : ((n + n) + (n + n)).-tuple A) :
@@ -756,19 +756,19 @@ rewrite [X in drop X _]nE drop_etakeE //.
 by rewrite -nnE addnn odd_double.
 Qed.
 
-Lemma drop_otakeE (T : Type) (l : seq T) :
-  ~~ odd (size l) ->   ~~ odd (size l)./2 -> 
-  drop (size l)./2./2 (otake l) = otake (drop (size l)./2 l).
+Lemma drop_otakeE (T : Type) (s : seq T) :
+  ~~ odd (size s) ->   ~~ odd (size s)./2 -> 
+  drop (size s)./2./2 (otake s) = otake (drop (size s)./2 s).
 Proof.
-move=> H1 H2.
-pose l1 := take (size l)./2 l; pose l2 := drop (size l)./2 l.
-pose l3 := etake l; pose l4 := otake l.
-have lE : l = l1 ++ l2 by rewrite cat_take_drop.
-have sl1E : size l1 = (size l)./2.
+move=> ssE ss2E.
+pose s1 := take (size s)./2 s; pose s2 := drop (size s)./2 s.
+pose s3 := etake s; pose s4 := otake s.
+have sE : s = s1 ++ s2 by rewrite cat_take_drop.
+have ss1E : size s1 = (size s)./2.
   by rewrite size_take half_gtnn; case: size.
-rewrite -/l2.
-rewrite {2}lE otake_cat sl1E (negPf H2).
-by rewrite drop_cat size_otake sl1E ltnn subnn drop0.
+rewrite -/s2.
+rewrite {2}sE otake_cat ss1E (negPf ss2E).
+by rewrite drop_cat size_otake ss1E ltnn subnn drop0.
 Qed.
 
 Lemma tdrop_otakeE n (t : ((n + n) + (n + n)).-tuple A) :

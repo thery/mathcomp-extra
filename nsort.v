@@ -79,7 +79,7 @@ Definition cmerge m1 m2 (c1 : connector m1) (c2 : connector m2) :=
 Definition cdup m (c : connector m) := cmerge c c.
 
 Definition clink_eomerge m (c1 : connector m) (c2 : connector m) :=
-  [ffun i : 'I_ _ => 
+  [ffun i : 'I_(m + m) => 
     if odd i then olift (clink c2 (idiv2 i)) else elift (clink c1 (idiv2 i))].
   
 Lemma clink_eomerge_proof m (c1 : connector m) (c2 : connector m) :
@@ -286,7 +286,7 @@ Lemma tmap_connector (c : connector m) :
   {homo f : x y / (x <= y)%O >-> (x <= y)%O} ->
   {morph tmap f : t / cfun c t >-> cfun c t}.
 Proof.
-move=> Hm t; apply: eq_from_tnth => i.
+move=> Hm t ; apply: eq_from_tnth => i.
 rewrite /cfun !tnth_map !tnth_ord_tuple -(min_homo Hm) -(max_homo Hm).
 by case: leqP.
 Qed.
@@ -311,7 +311,7 @@ Definition sorting :=
   [qualify n | [forall r : m.-tuple bool, sorted <=%O (nfun n r)]].
 
 Lemma sorted_sorting n (x1 x2 : A) : 
-  x1 != x2 -> (forall r : m.-tupleA, sorted <=%O (nfun n r)) -> n \is sorting.
+  x1 != x2 -> (forall t : m.-tupleA, sorted <=%O (nfun n t)) -> n \is sorting.
 Proof.
 wlog x1Lx2 : x1 x2 / (x1 < x2)%O => [Hgs x1Dx2 Hs|].
   case: (ltgtP x1 x2) => [/Hgs->|/Hgs->|] //; first by rewrite eq_sym.
@@ -329,18 +329,18 @@ have -> : t = tmap g (tmap f t).
 by rewrite -tmap_network // val_tmap (homo_sorted gM _ _).
 Qed.
 
-Lemma sorting_sorted n (r : m.-tuple A) :
-  n \is sorting -> sorted <=%O (nfun n r).
+Lemma sorting_sorted n (t : m.-tuple A) :
+  n \is sorting -> sorted <=%O (nfun n t).
 Proof.
-apply: contraLR => /sortedPn[[[x1 x2]][l1 l2] /= nfunE x2Lx1].
+apply: contraLR => /sortedPn[[[x1 x2]][s1 s2] /= nfunE x2Lx1].
 rewrite negb_forall.
 pose g x := if (x <= x2)%O then false else true.
 have gM : {homo g : x y / (x <= y)%O >-> (x <= y)%O}.
   move=> i j; rewrite /g.
   case: (leP i x2); case: (leP j x2) => // jLx2 x2Li.
   by rewrite leNgt (le_lt_trans jLx2).
-apply/existsP; exists (tmap g r).
-apply/sortedPn; exists ((g x1, g x2), (map g l1, map g l2)) => /=.
+apply/existsP; exists (tmap g t).
+apply/sortedPn; exists ((g x1, g x2), (map g s1, map g s2)) => /=.
   by rewrite -tmap_network // val_tmap nfunE map_cat.
 by rewrite /g lexx leNgt x2Lx1.
 Qed.

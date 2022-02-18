@@ -25,46 +25,46 @@ Section Bitonic.
 Variable d : unit.
 Variable A : orderType d.
 
-Definition bitonic := [qualify p | 
- [exists r : 'I_(size (p : seq A)).+1, 
-  exists n : 'I_(size (p : seq A)).+1,
-  let p1 := rot r p in sorted (<=%O) (take n p1) && sorted (>=%O) (drop n p1)]].
+Definition bitonic := [qualify s | 
+ [exists r : 'I_(size (s : seq A)).+1, 
+  exists n : 'I_(size (s : seq A)).+1,
+  let s1 := rot r s in sorted (<=%O) (take n s1) && sorted (>=%O) (drop n s1)]].
 
-Lemma bitonic_sorted (l : seq A) : sorted <=%O l -> l \is bitonic.
+Lemma bitonic_sorted (s : seq A) : sorted <=%O s -> s \is bitonic.
 Proof.
-move=> lS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
-apply/existsP; exists (inord (size l)); rewrite !inordK //.
-by rewrite take_size lS /= drop_size.
+move=> sS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
+apply/existsP; exists (inord (size s)); rewrite !inordK //.
+by rewrite take_size sS /= drop_size.
 Qed.
 
-Lemma bitonic_r_sorted (l : seq A) : sorted >=%O l -> l \is bitonic.
+Lemma bitonic_r_sorted (s : seq A) : sorted >=%O s -> s \is bitonic.
 Proof.
-move=> lS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
+move=> sS; apply/existsP; exists (inord 0); rewrite !inordK //= rot0.
 by apply/existsP; exists (inord 0); rewrite !inordK // take0 drop0.
 Qed.
 
-Lemma bitonic_cat (l1 l2 : seq A) :  
-  sorted <=%O l1 -> sorted >=%O l2 -> (l1 ++ l2) \is bitonic.
+Lemma bitonic_cat (s1 s2 : seq A) :  
+  sorted <=%O s1 -> sorted >=%O s2 -> (s1 ++ s2) \is bitonic.
 Proof.
-move=> l1S l2S.
+move=> s1S s2S.
 apply/existsP; exists (inord 0); rewrite inordK ?rot0 //=.
 apply/existsP; rewrite size_cat /=.
-have sLs : size l1 < (size l1 + size l2).+1 by rewrite ltnS leq_addr.
+have sLs : size s1 < (size s1 + size s2).+1 by rewrite ltnS leq_addr.
 exists (Ordinal sLs) => /=.
-rewrite take_cat ltnn subnn take0 cats0 l1S /=.
+rewrite take_cat ltnn subnn take0 cats0 s1S /=.
 by rewrite drop_cat ltnn subnn drop0.
 Qed.
 
-Lemma bitonic_rev (l : seq A) : (rev l \is  bitonic) = (l \is bitonic).
+Lemma bitonic_rev (s : seq A) : (rev s \is  bitonic) = (s \is bitonic).
 Proof.
-suff {l}Hi (l : seq A) : l \is  bitonic -> rev l \is  bitonic.
+suff {s}Hi (s : seq A) : s \is  bitonic -> rev s \is  bitonic.
   apply/idP/idP=> [H|]; last by apply: Hi.
-  by rewrite -[l]revK; apply: Hi.
+  by rewrite -[s]revK; apply: Hi.
 move=> /existsP[/= r /existsP[n /andP[tS dS]]].
 apply/existsP; rewrite size_rev.
-have xO : size l - r < (size l).+1 by rewrite ltnS leq_subr.
+have xO : size s - r < (size s).+1 by rewrite ltnS leq_subr.
 exists (Ordinal xO) => /=.
-have yO : size l - n < (size l).+1 by rewrite ltnS leq_subr.
+have yO : size s - n < (size s).+1 by rewrite ltnS leq_subr.
 apply/existsP; exists (Ordinal yO) => /=.
 rewrite -rev_rotr take_rev drop_rev !rev_sorted size_rotr /rotr.
 by rewrite !subnA ?subnn -1?ltnS // dS.
@@ -125,10 +125,10 @@ Qed.
 
 End HalfCleaner.
 
-Lemma bitonic_boolP (l : seq bool) :
+Lemma bitonic_boolP (s : seq bool) :
   reflect (exists t,
-            let: (b,i,j,k) := t in l = nseq i b ++ nseq j (~~ b) ++ nseq k b)
-          (l \is bitonic).
+            let: (b,i,j,k) := t in s = nseq i b ++ nseq j (~~ b) ++ nseq k b)
+          (s \is bitonic).
 Proof.
 apply: (iffP existsP) => /= [[x /existsP[n /andP[isort dsort]]]|
                              [[[[b i] j] k] ->]]; last first.
@@ -147,7 +147,7 @@ apply: (iffP existsP) => /= [[x /existsP[n /andP[isort dsort]]]|
   by rewrite -catA -nseqD; apply/dsorted_boolP; exists (j, k + i).
 have /isorted_boolP[[j1 k1] Hirot] := isort.
 have /dsorted_boolP[[j2 k2] Hdrot] := dsort.
-have -> : l = rotr x (nseq j1 false ++ nseq (k1 + j2) true ++ nseq k2 false).
+have -> : s = rotr x (nseq j1 false ++ nseq (k1 + j2) true ++ nseq k2 false).
   apply: (@rot_inj x); rewrite rotrK.
   by rewrite -[LHS](cat_take_drop n) Hirot Hdrot nseqD !catA.
 rewrite /rotr !size_cat !size_nseq.
@@ -323,7 +323,7 @@ have [jLn|nLj]:= leqP j n.
 (*** 
        b b~b~b~b~b~b
       ~b~b~b~b~b b b
-  min  0 0~b~b~bhalf_cleaner 0 0 
+  min  0 0~b~b~b 0 0 
   max  1 1~b~b~b 1 1
 ***)
 have ttE : ttake t1 = nseq i false ++ nseq (j - n) (~~b)
@@ -361,7 +361,6 @@ apply/orP; right.
 rewrite tdE -!nseqD; apply/andP; split; first by apply/eqP; congr nseq; lia.
 by apply/bitonic_boolP; exists (false, i, j - n, k).
 Qed.
-
 
 Lemma half_cleaner_rec_bool m (t : (`2^ m).-tuple bool) :
   (t : seq _) \is bitonic -> 
