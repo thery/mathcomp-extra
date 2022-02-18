@@ -7,8 +7,6 @@ Require Import more_tuple.
 (******************************************************************************)
 (*  Definition of some network sorting algorithms                             *)
 (*                                                                            *)
-(*         `2^ m == 2 ^ n so that                                             *)
-(*                  `2^ m.+1 = `2^ m + `2^ m is true by reduction             *)
 (*       ttake t == take the left part of a (m + n).-tuple                    *)
 (*       tdrop t == take the right part of a (m + n).-tuple                   *)
 (*      tmap f t == apply f to the tuple t                                    *)
@@ -557,4 +555,3 @@ by rewrite IH !cfun_eodup tetakeK totakeK.
 Qed.
 
 End EOMerge.
-

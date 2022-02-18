@@ -127,36 +127,33 @@ End Batcher.
 Lemma aabbEabab a b : (a + a) + (b + b) = (a + b) + (a + b).
 Proof. by rewrite [RHS]addnAC !addnA. Qed.
 
-Lemma cfun_batcher_merge_case1 a b :
-  ~~ odd (a + b) -> 
-  let t1 := [tuple of nseq a false ++ nseq b true] in
-  cfun batcher_merge t1 = t1. 
+Lemma cfun_batcher_sorted_even m (t : m.-tuple bool) :
+  sorted <=%O t -> ~~ odd m -> cfun batcher_merge t = t. 
 Proof.
-rewrite oddD negb_add => /eqP aOE.
-move=> t1.
+rewrite isorted_noFT => /eqP tE.
+have mE : m = noF t + noT t.
+  by rewrite -[LHS](size_tuple t) tE size_cat !size_nseq !noE addnC.
+rewrite [X in odd X]mE oddD negb_add => /eqP odd_noE.
 rewrite cfun_batcher_merge.
 apply: eq_from_tnth => i.
-have ab_gt0 : 0 < a + b by apply: leq_ltn_trans (ltn_ord i).
-rewrite !(tnth_nth false) /= nth_cat !nth_nseq /= ?size_nseq.
+have m_gt0 : 0 < m by apply: leq_ltn_trans (ltn_ord i).
+rewrite !(tnth_nth true) /= tE nth_cat !nth_nseq /= size_nseq.
 rewrite !if_same -enum_ord !(nth_map i) ?size_enum_ord //.
 rewrite !nth_ord_enum !(tnth_nth false) /=.
-rewrite !nth_cat !nth_nseq /= ?size_nseq val_inext val_ipred.
-rewrite !if_same.
-have [iLa|aLi] := ltnP i.
-  by rewrite minFb (_ : i.-1 < a) ?if_same // (leq_ltn_trans (leq_pred _) iLa).
-rewrite ltn_subLR // ltn_ord /= maxTb minTb.
-have aLab : a < a + b by apply: leq_ltn_trans (ltn_ord i).
-case: eqP => [->|/eqP iDab].
-rewrite prednK // -[odd _]negbK -oddS prednK // oddD -aOE addbb /=.
-rewrite leqNgt (leq_ltn_trans _ (ltn_ord i)) //= ifT //.
-case: (b) aLab => [|b1 _]; first by rewrite addn0 ltnn.
-  by rewrite addnS /= addnC addnK.
-rewrite [_ < a]ltnNge (leq_trans aLi) //=.
-rewrite ltn_subLR; last by rewrite (leq_trans aLi).
-by rewrite ltn_neqAle ltn_ord -[X in _ != X](prednK ab_gt0) eqSS iDab if_same.
+rewrite tE !nth_cat !nth_nseq /= ?size_nseq val_inext val_ipred !noE !if_same.
+have [iLF|FLi] := ltnP i.
+  by rewrite minFb (_ : i.-1 < noF _) ?if_same ?(leq_ltn_trans (leq_pred _) _).
+rewrite ltn_subLR // -mE ltn_ord /= maxTb minTb.
+have FLm : noF t < m by apply: leq_ltn_trans (ltn_ord i).
+case: eqP => [->|/eqP iDm1].
+  rewrite prednK // leqNgt FLm /= ltn_subLR; last by rewrite -ltnS prednK.
+  by rewrite -mE prednK // leqnn if_same.
+rewrite ltnNge (leq_trans FLi) //= ltn_subLR ?(leq_trans FLi) //.
+rewrite -mE [X in if _ then X else _]ifT ?if_same //.
+by rewrite ltn_neqAle ltn_ord -[X in _ != X]prednK // eqSS iDm1.
 Qed.
 
-Lemma cfun_batcher_merge_case12 a b :
+Lemma cfun_batcher_merge_case a b :
   odd a -> odd b ->
   cfun batcher_merge [tuple of nseq a false ++ true :: false :: nseq b true] =
        [tuple of nseq a.+1 false ++ nseq b.+1 true] :> seq _. 
@@ -294,7 +291,7 @@ case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
     rewrite [in LHS]xxE !size_tuple in sxxE.
     have -> : [tuple of eocat n1 n2] = tcast sxxE  [tuple of xx].
       by apply/val_eqP/eqP=> /=; rewrite [in RHS]val_tcast.
-    rewrite tcast_batcher_merge /= val_tcast cfun_batcher_merge_case12 //.
+    rewrite tcast_batcher_merge /= val_tcast cfun_batcher_merge_case //.
     - by apply/isorted_boolP; exists ((x1 + x1).+2, (y1 + y1).+2).
     - by rewrite addnn /= odd_double.
     by rewrite addnn /= odd_double.
@@ -333,10 +330,10 @@ case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
   rewrite [in LHS]xxE !size_tuple in sxxE.
   have -> : [tuple of eocat n1 n2] = tcast sxxE  [tuple of xx].
     by apply/val_eqP/eqP=> /=; rewrite [in RHS]val_tcast.
-  rewrite tcast_batcher_merge cfun_batcher_merge_case1; last first.
-    by rewrite sxxE addnn odd_double.
-  apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
-  by rewrite val_tcast.
+  rewrite tcast_batcher_merge cfun_batcher_sorted_even ?val_tcast; last first.
+  - by rewrite sxxE addnn odd_double.
+  - by apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
+  by apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
 rewrite /= in b3E.
 case: (boolP (odd a4)) b4O => [a4O /negP/negP b4O|/negPf a4E b4E].
 (* Third case *)
@@ -374,9 +371,10 @@ case: (boolP (odd a4)) b4O => [a4O /negP/negP b4O|/negPf a4E b4E].
   rewrite [in LHS]xxE !size_tuple in sxxE.
   have -> : [tuple of eocat n1 n2] = tcast sxxE  [tuple of xx].
     by apply/val_eqP/eqP=> /=; rewrite [in RHS]val_tcast.
-  rewrite tcast_batcher_merge cfun_batcher_merge_case1; last first.
-    by rewrite sxxE addnn odd_double.
-  by rewrite val_tcast; apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
+  rewrite tcast_batcher_merge cfun_batcher_sorted_even ?val_tcast; last first.
+  - by rewrite sxxE addnn odd_double.
+  - by apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
+  by apply/isorted_boolP; exists ((x1 + x1).+1, (y1 + y1).+1).
 (* Fourth case *)
 rewrite /= in b4E.
 move: n1P.
@@ -414,9 +412,10 @@ have sxxE : size [tuple of eocat n1 n2] = size [tuple of eocat n1 n2] by [].
 rewrite [in LHS]xxE !size_tuple in sxxE.
 have -> : [tuple of eocat n1 n2] = tcast sxxE  [tuple of xx].
   by apply/val_eqP/eqP=> /=; rewrite [in RHS]val_tcast.
-rewrite tcast_batcher_merge cfun_batcher_merge_case1; last first.
-  by rewrite sxxE addnn odd_double.
-by rewrite val_tcast; apply/isorted_boolP; exists ((x1 + x1), (y1 + y1)).
+rewrite tcast_batcher_merge cfun_batcher_sorted_even ?val_tcast; last first.
+- by rewrite sxxE addnn odd_double.
+- by apply/isorted_boolP; exists ((x1 + x1), (y1 + y1)).
+by apply/isorted_boolP; exists ((x1 + x1), (y1 + y1)).
 Qed.
 
 Lemma sorted_nfun_batcher_merge m (t : (`2^ m.+1).-tuple bool) :

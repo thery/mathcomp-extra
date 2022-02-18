@@ -113,13 +113,13 @@ rewrite ifN 1?maxC //=.
 by rewrite -ltnNge (leq_trans (ltn_ord _) _) // iE leq_addr.
 Qed.
 
-Fixpoint half_cleaner_rec n : network (`2^ n) :=
-  if n is n1.+1 then half_cleaner (`2^ n1) :: ndup (half_cleaner_rec n1)
+Fixpoint half_cleaner_rec m : network (`2^ m) :=
+  if m is m1.+1 then half_cleaner (`2^ m1) :: ndup (half_cleaner_rec m1)
   else [::].
 
-Lemma size_half_cleaner_rec n : size (half_cleaner_rec n) = n.
+Lemma size_half_cleaner_rec m : size (half_cleaner_rec m) = m.
 Proof.
-elim: n => //= n IH.
+elim: m => //= m IH.
 by rewrite /ndup /= size_map size_zip IH minnn.
 Qed.
 
@@ -183,13 +183,13 @@ Qed.
 Lemma half_cleaner_bool n (t : (n + n).-tuple bool) :
   (t : seq _) \is bitonic -> 
   let t1 := cfun (half_cleaner n) t in 
-    ((ttake t1 == nseq n false :> seq bool) && 
-    ((tdrop t1 : seq bool) \is bitonic))
+    (ttake t1 == nseq n false :> seq _) && 
+    ((tdrop t1 : seq _) \is bitonic)
   ||
-    ((tdrop t1 == nseq n true :> seq bool) && 
-    ((ttake t1 : seq bool) \is bitonic)).
+    (tdrop t1 == nseq n true :> seq _) && 
+    ((ttake t1 : seq _) \is bitonic).
 Proof.
-move=> /bitonic_boolP[[[[b i] j] k] tE] /=; set t1 := cfun _ _.
+move=> /bitonic_boolP[[[[b i] j] k] tE] /=. set t1 := cfun _ _.
 have nnE : n + n = i + j + k.
   by rewrite -(size_tuple t) tE !size_cat !size_nseq addnA.
 have [iLn|nLi]:= leqP i n; last first.
@@ -540,9 +540,9 @@ Fixpoint bsort m : network (`2^ m) :=
   if m is m1.+1 then ndup (bsort m1) ++ rhalf_cleaner_rec m1.+1 
   else [::].
 
-Lemma size_bsort n : size (bsort n) = (n * n.+1)./2.
+Lemma size_bsort m : size (bsort m) = (m * m.+1)./2.
 Proof.
-elim: n => [|n IH] //.
+elim: m => [|m IH] //.
 rewrite /ndup [LHS]/= size_cat [LHS]/= size_map size_zip.
 rewrite minnn size_map size_zip size_half_cleaner_rec minnn IH.
 by rewrite -addn2 mulnDr -!divn2 divnDMl // mulnC.

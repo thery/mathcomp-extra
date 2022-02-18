@@ -8,6 +8,8 @@ Import Order POrderTheory TotalTheory.
 (*                                                                            *)
 (*         `2^ m == 2 ^ n so that                                             *)
 (*                  `2^ m.+1 = `2^ m + `2^ m is true by reduction             *)
+(*         noT s  == number of T of a sequence of booleans                    *)
+(*         noF s  == number of F of a sequence of booleans                    *)
 (*       ipred i == i.-1                                                      *)
 (*       inext i == i.+1 when possible otherwise i                            *)
 (*      isub k i == i - k when k <= i otherwise i                             *)
@@ -244,6 +246,38 @@ by exists ((x1, x2), (s1, s2)).
 Qed.
 
 End Sorted.
+
+Section NoFT.
+
+Definition noT (s : seq bool) := count (fun b => b) s.
+Definition noF (s : seq bool) := count (fun b => ~~b) s.
+
+Lemma noT_cat s1 s2 : noT (s1 ++ s2) = noT s1 + noT s2.
+Proof. exact: count_cat. Qed.
+
+Lemma noF_cat s1 s2 : noF (s1 ++ s2) = noF s1 + noF s2.
+Proof. exact: count_cat. Qed.
+
+Lemma noT_nseq n b : noT (nseq n b) = b * n.
+Proof. exact: count_nseq. Qed.
+
+Lemma noF_nseq n b : noF (nseq n b) = ~~b * n.
+Proof. exact: count_nseq. Qed.
+
+Definition noE := (noT_cat, noF_cat, noT_nseq, noF_nseq, mul1n, mul0n,
+                   add0n, addn0).
+
+Lemma size_noFT s : noF s + noT s = size s.
+Proof. by elim: s => // [] [] s; rewrite /= !(addnS, addSn) => ->. Qed.
+
+Lemma isorted_noFT s :
+  (sorted <=%O s) = (s == nseq (noF s) false ++ nseq (noT s) true).
+Proof.
+apply/isorted_boolP/eqP => [[[i j]->]|->]; first by rewrite !noE.
+by exists (noF s, noT s).
+Qed.
+
+End NoFT.
 
 Section MoreIn.
 
