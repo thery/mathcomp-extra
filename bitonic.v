@@ -185,7 +185,7 @@ rewrite -leq_subRL; last by apply: ltnW.
 by rewrite -leq_subRL ltnW.
 Qed.
 
-Lemma half_cleaner_bool n (t : (n + n).-tuple bool) :
+Lemma bitonic_half_cleaner n (t : (n + n).-tuple bool) :
   (t : seq _) \is bitonic -> 
   let t1 := cfun (half_cleaner n) t in 
     (ttake t1 == nseq n false :> seq _) && 
@@ -367,13 +367,12 @@ rewrite tdE -!nseqD; apply/andP; split; first by apply/eqP; congr nseq; lia.
 by apply/bitonic_boolP; exists (false, i, j - n, k).
 Qed.
 
-Lemma half_cleaner_rec_bool m (t : (`2^ m).-tuple bool) :
-  (t : seq _) \is bitonic -> 
-  sorted <=%O (nfun (half_cleaner_rec m) t).
+Lemma sorted_half_cleaner_rec m (t : (`2^ m).-tuple bool) :
+  (t : seq _) \is bitonic -> sorted <=%O (nfun (half_cleaner_rec m) t).
 Proof.
 elim: m t => /= [|m IH t tB]; first by (do 2 case => //=) => x [].
 rewrite nfun_dup.
-have /orP[/andP[Ht Hd]|/andP[Ht Hd]] := half_cleaner_bool tB.
+have /orP[/andP[Ht Hd]|/andP[Ht Hd]] := bitonic_half_cleaner tB.
   have -> : ttake (cfun (half_cleaner (`2^ m)) t) = [tuple of nseq (`2^ m) false].
     by apply/val_eqP.
   rewrite nfun_const sorted_bool_constl.
@@ -509,10 +508,9 @@ case: n => //= n.
 by rewrite /ndup /= size_map size_zip size_half_cleaner_rec minnn.
 Qed.
 
-
 End RHalfCleaner.
 
-Lemma rhalf_cleaner_rec_bool m (t : (`2^ m.+1).-tuple bool) :
+Lemma sorted_rhalf_cleaner_rec m (t : (`2^ m.+1).-tuple bool) :
   sorted <=%O (ttake t : seq _) -> sorted <=%O (tdrop t : seq _) ->
   sorted <=%O (nfun (rhalf_cleaner_rec m.+1) t).
 Proof.        
@@ -523,17 +521,17 @@ set u : (`2^ m.+1).-tuple _ := [tuple of _ ++ rev _].
 have uB : (u : seq _) \is bitonic.
   apply: bitonic_cat => //.
   by rewrite rev_sorted.
-have := half_cleaner_bool uB; rewrite -/e2n => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
+have := bitonic_half_cleaner uB; rewrite -/e2n => /orP[/andP[Ht Hd]|/andP[Ht Hd]].
   have -> : ttake (cfun (half_cleaner (`2^ m)) u) = [tuple of nseq (`2^ m) false].
     by apply/val_eqP.
   rewrite nfun_const sorted_bool_constl.
-  apply: half_cleaner_rec_bool.
+  apply: sorted_half_cleaner_rec.
   by rewrite bitonic_rev.
 have -> : trev (tdrop (cfun (half_cleaner (`2^ m)) u)) = 
             [tuple of nseq (`2^ m) true].
   by apply/val_eqP; rewrite /= (eqP Ht) rev_nseq.
 rewrite nfun_const sorted_bool_constr.
-by apply: half_cleaner_rec_bool.
+by apply: sorted_half_cleaner_rec.
 Qed.
 
 Section BitonicSort.
@@ -558,7 +556,7 @@ Proof.
 elim: m => [|m IH]; first by apply: sorting1.
 apply/forallP => t.
 rewrite /bsort -/bsort nfun_cat.
-apply: rhalf_cleaner_rec_bool; first by rewrite nfun_dup ttakeK (forallP IH).
+apply: sorted_rhalf_cleaner_rec; first by rewrite nfun_dup ttakeK (forallP IH).
 by rewrite nfun_dup tdropK (forallP IH).
 Qed.
 
