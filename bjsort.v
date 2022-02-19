@@ -1288,7 +1288,8 @@ have <- : s4 = eotake p.+1 i s1.
   case: leqP => //.
   have : (`2^ (q -p) * `2^ p) = `2^ q by rewrite -e2nD subnK // ltnW.
   have : (`2^ (q -p.+1)).*2 = `2^ (q -p) by rewrite -addnn -e2Sn -subSn.
-  nia.
+  move=> {ss kLs xiLpq s5S s4S a1B a1b1E ss2E ss3E dE s3E s2E p2Dq2}//. 
+  by nia.
 have <- : s5 = eotake p.+1 (`2^ p + i) s1.
   apply: (@eq_from_nth _ true) => // k kLs.
   rewrite !nth_cat !nth_nseq size_nseq if_same.
@@ -1324,7 +1325,9 @@ have <- : s5 = eotake p.+1 (`2^ p + i) s1.
       by rewrite s2E size_cat !size_nseq; lia.
     have := gtn_size_eotake iL2p1 kqpLss2. 
     have : (`2^ (q -p.+1) * `2^ p.+1) = `2^ q by rewrite -e2nD subnK // ltnW.
-    rewrite -e2Sn; nia.
+    rewrite -e2Sn.
+    move=> {kLs xiLpq s5S s4S a1B a1b1E ss2E ss3E dE s3E s2E p2Dq2}//. 
+    by nia.
   rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
     by rewrite e2Sn; lia.
   rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.
