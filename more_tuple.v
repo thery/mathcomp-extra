@@ -21,9 +21,10 @@ Import Order POrderTheory TotalTheory.
 (*       ttake t == take the left part of a (m + n).-tuple                    *)
 (*       tdrop t == take the right part of a (m + n).-tuple                   *)
 (*       etake t == take the even part of a sequence                          *)
-(*      tetake t == take the even part of a (m + n).-tuple                    *)
+(*      tetake t == take the even part of a (m + m).-tuple                    *)
 (*       otake t == take the odd part of a sequence                           *)
-(*      totake t == take the odd part of a (m + n).-tuple                     *)
+(*      totake t == take the odd part of a (m + m).-tuple                     *)
+(*      teocat t == build an (m + m).-tuple                                   *)
 (*      tmap f t == apply f to the tuple t                                    *)
 (*        trev t == get the reverse of a tuple                                *)
 (*    leqt t1 t2 == all the elements of t1 are <=%O to their respective       *)
@@ -569,6 +570,7 @@ Qed.
 
 Definition tetake (T : Type) (m : nat) (t : (m + m).-tuple T) :=
   [tuple of etake t].
+
 Definition totake (T : Type) (m : nat) (t : (m + m).-tuple T) := 
   [tuple of otake t].
 
@@ -579,6 +581,7 @@ Proof. by []. Qed.
 Lemma totakeE (T : Type) (m : nat) (t : (m + m).-tuple T) :
   totake t = otake t :> seq T.
 Proof. by []. Qed.
+
 
 Fixpoint eocat (T : Type) (s1 s2 : seq T) :=
   if s1 is a :: s3 then a :: head a s2 :: eocat s3 (behead s2) else [::].
@@ -667,15 +670,6 @@ Proof.
 elim: a b => // [b | a IH b].
   by case: b => //= b; rewrite eocat_nseqD [(_ + _)%Nrec]addnS.
 by rewrite addnS (nseqS a) (nseqS a.+1) 2!(cat_cons v1) eocat_cons IH.
-Qed.
-
-Lemma eocat_nseq_catDSS (T : Type) (v1 v2 : T) a b :
-  eocat (nseq a.+2 v1 ++ nseq b v2) (nseq a v1 ++ nseq b.+2 v2) = 
-        (nseq (a + a).+1 v1 ++ v2 :: v1 :: nseq (b + b).+1 v2).
-Proof.
-elim: a b => // [b | a IH b].
-  by case: b => //= b; rewrite eocat_nseqD [(_ + _)%Nrec]addnS.
-by rewrite addnS (nseqS a) (nseqS a.+2) 2!(cat_cons v1) eocat_cons IH.
 Qed.
 
 Lemma nth_cat_seqT a b i : nth true (nseq a false ++ nseq b true) i = (a <= i). 
@@ -825,22 +819,44 @@ Proof. by rewrite size_eocat size_tuple. Qed.
 Canonical eocat_tuple (T : Type) m1 m2 (t1 : m1.-tuple T) (t2 : m2.-tuple T) :=
   Tuple (eocat_tupleP t1 t2).
 
+Definition teocat (T : Type) m1 m2 (t1 : m1.-tuple T) (t2 : m2.-tuple T) :=
+  [tuple of eocat t1 t2].
+
 Lemma eocat_tetake_totake (T : eqType) n (t : (n + n).-tuple T) : 
-  t = [tuple of eocat (tetake t) (totake t)].
+  t = teocat (tetake t) (totake t).
 Proof. 
 by apply/val_eqP; rewrite /= (@eocat_etake_otake T n) // size_tuple.
 Qed.
 
-Lemma tetakeK (T : eqType) (m : nat) (t1 t2 : m.-tuple T) : 
-  tetake [tuple of eocat t1 t2] = t1.
+Lemma tetakeK (T : eqType) (m : nat) (t1 t2 : m.-tuple T) :
+  tetake (teocat t1 t2) = t1.
 Proof.
 by apply/val_eqP; rewrite /= tetakeE /= etake_eocat.
 Qed.
 
 Lemma totakeK (T : eqType) (m : nat) (t1 t2 : m.-tuple T) : 
-  totake [tuple of eocat t1 t2] = t2.
+  totake (teocat t1 t2) = t2.
 Proof.
 by apply/val_eqP; rewrite /= totakeE /= otake_eocat // !size_tuple.
+Qed.
+
+Lemma sorted_tetake_totake m (t : (m + m).-tuple bool) (b : bool) :
+  sorted <=%O (tetake t) ->
+  sorted <=%O (totake t) ->
+  noF (tetake t) = noF (totake t) + b ->
+  sorted <=%O t.
+Proof. 
+rewrite tetakeE totakeE.
+move => /isorted_boolP [[a1 a2] teE] /isorted_boolP [[b1 b2] toE] noTE.
+have : size (tetake t) = size (totake t) by rewrite !size_tuple.
+move: noTE.
+rewrite [X in sorted _ (tval X)]eocat_tetake_totake /= {}teE {}toE !noE.
+rewrite !(size_cat, size_nseq) => ->/eqP.
+rewrite -addnA eqn_add2l => /eqP<-.
+rewrite [_ + b]addnC.
+apply/isorted_boolP; exists (b + b1.*2,b + a2.*2).
+case: b; rewrite !(add0n, addSn); first by rewrite eocat_nseq_catDS !addnn.
+by rewrite eocat_nseq_catD !addnn.
 Qed.
 
 (* We develop a true variant of eocat, so that eotcatK holds *)

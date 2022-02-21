@@ -61,53 +61,8 @@ apply/val_eqP =>> /=; move: iLip; rewrite !val_ipred /=.
 by case: (i : nat) => //= i1; rewrite ltnn.
 Qed.
 
-Definition clink_knuth_jump m k : {ffun 'I_m -> 'I_m} :=
-  if odd k then 
-    [ffun i : 'I_ _ => if odd i then iadd k i else isub k i]
-  else [ffun i => i].
-
-Lemma clink_knuth_jump_proof m k : 
-  [forall i : 'I_m, clink_knuth_jump _ k (clink_knuth_jump _ k i) == i].
-Proof.
-rewrite /clink_knuth_jump.
-have [/= kO|kI] := boolP (odd k);
-     apply/forallP => i /=; apply/eqP/val_eqP; rewrite !ffunE //.
-have m_gt0 : 0 < m by apply: leq_ltn_trans (ltn_ord i).
-have [/= iO|iE] := boolP (odd i); rewrite ?(val_iadd, val_isub) /=.
-  case: ltnP => [kiLm|mLki]; last first.
-    by rewrite iO !val_iadd [k + i < m]ltnNge mLki /= [k + i < m]ltnNge mLki.
-  by rewrite oddD iO kO /= ?(val_iadd, val_isub) /= kiLm leq_addr addnC addnK.
-case: leqP => [kLi|iLk]; last first.
-  by rewrite (negPf iE) !val_isub [k <= i]leqNgt iLk /= [k <= i]leqNgt iLk.
-rewrite oddB // (negPf iE) kO /= ?(val_iadd, val_isub) /= kLi.
-by rewrite addnC subnK // ifT.
-Qed.
-  
-Definition knuth_jump {m} k := connector_of (clink_knuth_jump_proof m k).
-
-Lemma cfun_knuth_jump n k (t : n.-tuple A) : 
-  odd k ->
-  cfun (knuth_jump k) t = 
-  [tuple
-    if odd i then min (tnth t i) (tnth t (iadd k i))
-    else max (tnth t i) (tnth t (isub k i)) | i < n].
-Proof.
-move=> kO; apply: eq_from_tnth => i /=.
-rewrite /knuth_jump /cfun /=.
-rewrite !tnth_map /= !tnth_ord_tuple.
-rewrite /clink_knuth_jump kO ffunE.
-have [iO|iE] := boolP (odd i).
-  by rewrite ifT // val_iadd; case: ltnP => // *; apply: leq_addl.
-rewrite val_isub; case: (leqP k) => [kLi|iLk]; last first.
-  suff -> : isub k i = i by rewrite minxx maxxx if_same.
-  by apply/val_eqP; rewrite /= val_isub leqNgt iLk.
-rewrite ifN // -ltnNge ltn_subLR //.
-by case: (k) kO => // k1 _; rewrite addSn ltnS leq_addl.
-Qed.
-
-
 Fixpoint knuth_jump_rec m k r : network m :=
-  if k is k1.+1 then (@knuth_jump m r) :: knuth_jump_rec m k1 (uphalf r).-1
+  if k is k1.+1 then (@codd_jump m r) :: knuth_jump_rec m k1 (uphalf r).-1
   else [::].
 
 Lemma size_knuth_jump_rec m k : size (knuth_jump_rec m k ((`2^ k).-1)) = k.
@@ -189,143 +144,6 @@ rewrite (negPf iE) /= uphalf_half (negPf iE) /= add0n.
 by rewrite teE toE !nth_cat_seqT -/a  -/c geq_max; do 2 case: leqP => ?.
 Qed.
 
-Lemma sorted_knuth_jump m (t : (m + m).-tuple bool) i k :
-  odd k -> i <= (uphalf k).*2 ->
-  sorted <=%O (tetake t) -> sorted <=%O (totake t) -> 
-  noF (tetake t) = noF (totake t) + i ->
-  let j := i - uphalf k in  
-  let t1 := cfun (knuth_jump k) t in
-  [/\ sorted <=%O (tetake t1), 
-      sorted <=%O (totake t1) & 
-      noF (tetake t1) = noF (totake t1) + (i - j.*2)].
-Proof.
-rewrite !isorted_noFT.
-set a := noF (totake t); set b := noT (tetake t) => 
-         kO iL2k /eqP teE /eqP toE nt1E j t1.
-rewrite nt1E in teE.
-have ntoE : noT (totake t) = b + i.
-  apply: (@addnI a);rewrite size_noFT.
-  by rewrite size_tuple -(size_tuple (tetake t)) teE size_cat 
-             !size_nseq addnAC addnA.
-rewrite ntoE in toE.
-have jLi : j <= i by apply: leq_subr.
-have aibC : a + i + b = a + (b + i) by rewrite [b + _]addnC addnA.
-have aibE : a + i + b = m by rewrite aibC -ntoE size_noFT size_tuple.
-have aijbjE : a + i - j + (b + j) = m.
-  by rewrite [b + j]addnC -addnBA // addnA -[_ + j]addnA subnK.
-have ajbijE : a + j + (b + i - j) = m.
-  by rewrite addnAC -addnA subnK ?(leq_trans _ (leq_addl _ _)) // -aibC.
-suff t1E : t1 = eocat (nseq (a + i - j) false ++ nseq (b + j) true)
-                      (nseq (a + j) false ++ nseq (b + i - j) true) :> seq _.
-  rewrite tetakeE totakeE t1E otakeK ?etakeK.
-    rewrite !isorted_noFT !noE !eqxx /= -addnn subnDA addnAC.
-    rewrite -addnA subnK; first by rewrite -addnBA //.
-    have [|k2Li] := leqP i (uphalf k); first by rewrite /j -subn_eq0 => /eqP->.
-    by rewrite subKn ?leq_subLR ?addnn // ltnW.
-  by rewrite !(size_cat, size_nseq) ajbijE.
-apply: (@eq_from_nth _ true) => [|v].
-  by rewrite /= [LHS]size_tuple card_ord size_eocat size_cat !size_nseq aijbjE.
-rewrite [X in _ < X -> _]size_tuple => iLab.
-pose x := Ordinal iLab.
-rewrite /t1 cfun_knuth_jump //= (nth_map x) /= -[v]/(x : nat); last first.
-  by rewrite -enum_ord size_enum_ord.
-rewrite -enum_ord !nth_ord_enum.
-rewrite nth_eocat; last first.
-  by rewrite !size_cat !size_nseq aijbjE.
-rewrite !(tnth_nth true) [t]eocat_tetake_totake /=.
-rewrite !nth_eocat /=; try by rewrite !size_tuple.
-have v2Lab : v./2 < a + i + b.
-  by rewrite ltn_halfl -addnn -nt1E size_noFT size_tuple.
-have [vO|vE] := boolP (odd _).
-  rewrite !nth_cat_seqT.
-  have i_gt0 : 0 < v by case: (v) vO.
-  rewrite val_iadd /=.
-  case: leqP => [kvLaib|aibLc].
-    rewrite vO toE nth_cat_seqT minxx.
-    case: leqP => [aLv2|v2La]; last first.
-      by rewrite leqNgt (leq_trans v2La (leq_addr _ _)).
-    rewrite geq_halfr -addnn.
-    case: (leqP (uphalf k) i) => [k2Li|iLk2].
-      have i2E : i.*2 = j.*2 + k.+1.
-        rewrite doubleB - [X in _ + X]odd_double_half oddS kO subnK //.
-        by rewrite leq_double.
-      rewrite -(leq_add2l k.+1) addnn addnC doubleD -addnA -i2E -doubleD.
-      rewrite (leq_trans (leq_addr b.*2 _)) // -doubleD -addnn.
-      by rewrite aibE (leq_trans kvLaib) // leq_add2r.
-    have -> : j = 0 by apply/eqP; rewrite subn_eq0 ltnW.
-    by rewrite addn0 addnn -geq_halfr.
-  rewrite oddD kO vO /= teE toE !nth_cat_seqT.
-  case: leqP => [aLv2|v2La]; last first.
-    by rewrite minFb leqNgt (leq_trans v2La (leq_addr _ _)).
-  rewrite minTb.
-  case: (leqP i (uphalf k)) => [iLk2|k2Li].
-    have /eqP jE0 : j == 0 by rewrite subn_eq0.
-    rewrite jE0 addn0 aLv2 /=.
-    have -> : (k + v)./2 = (k.+1 + v)./2.
-      by rewrite addSn -uphalfE uphalf_half oddD kO vO.
-    by rewrite geq_halfr addnC doubleD leq_add // -geq_halfr.
-  have j_gt0 : 0 < j by rewrite subn_gt0.
-  case: leqP => H1.
-    rewrite geq_halfr in H1.
-      rewrite geq_halfr doubleD doubleB addnBA.
-      rewrite leq_subLR -doubleD (leq_trans H1) // leq_add2r.
-      by rewrite -ltnS -[X in X <= _]odd_double_half oddS kO.
-    by rewrite leq_double ltnW // -subn_gt0.
-  rewrite halfD kO vO addnA /= in H1.
-  rewrite addnBA //; last by apply : ltnW.
-  by rewrite leq_subLR uphalf_half kO leqNgt H1.
-rewrite val_isub /=.
-case: leqP => [kLv|vLk].
-  rewrite oddB // (negPf vE) /= kO teE toE !nth_cat_seqT.
-  case: (leqP i (uphalf k)) => [iLk2|k2Li].
-    have /eqP jE0 : j == 0 by rewrite subn_eq0.
-    rewrite jE0 subn0.
-    case: leqP => [aiLv2|v2Lai]; first by rewrite maxTb.
-    rewrite maxFb; apply/idP/negP; rewrite -ltnNge -(ltn_add2r i).
-    rewrite (leq_ltn_trans _ v2Lai) //.
-    rewrite -{2}(subnK kLv) halfD oddB // kO (negPf vE) /=.
-    by rewrite addnCA leq_add2l -[1]/(true : nat) -kO -uphalf_half.
-  have j_gt0 : 0 < j by rewrite subn_gt0.
-  case: (leqP (a + i - j) v./2) => [aijLv2|v2Laij]; last first.
-    rewrite leqNgt (leq_trans v2Laij (leq_subr _ _)) maxFb.
-    rewrite leqNgt -(ltn_add2r (uphalf k)) {1}uphalf_half kO addnCA /=.
-    rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in v2Laij.
-    by rewrite (leq_trans v2Laij) // -addnBA // leq_add2l subKn // ltnW.
-  rewrite -addnBA //subKn in aijLv2; last by apply: ltnW.
-  rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in aijLv2.
-  rewrite addnCA -[1]/(true : nat) -kO -uphalf_half leq_add2r in aijLv2.
-  by rewrite aijLv2 maxbT.
-rewrite (negPf vE) maxxx teE !nth_cat_seqT.
-case: (leqP i (uphalf k)) => [iLk2|k2Li].
-  have /eqP-> : j == 0 by rewrite subn_eq0.
-  by rewrite subn0.
-have j_gt0 : 0 < j by rewrite subn_gt0.
-  rewrite -addnBA // subKn; last by apply: ltnW.
-case: leqP => [aiLv2|v2Lai].
-  by rewrite (leq_trans _ aiLv2) // leq_add2l ltnW.
-rewrite leqNgt ltn_halfl (leq_trans vLk) // doubleD.
-rewrite (leq_trans _ (leq_addl _ _)) //.
-by rewrite -[X in X <= _]odd_double_half uphalf_half kO doubleD !addSn.
-Qed.
-
-Lemma sorted_tetake_totake m (t : (m + m).-tuple bool) (b : bool) :
-  sorted <=%O (tetake t) ->
-  sorted <=%O (totake t) ->
-  noF (tetake t) = noF (totake t) + b ->
-  sorted <=%O t.
-Proof. 
-rewrite tetakeE totakeE.
-move => /isorted_boolP [[a1 a2] teE] /isorted_boolP [[b1 b2] toE] noTE.
-have : size (tetake t) = size (totake t) by rewrite !size_tuple.
-move: noTE.
-rewrite [X in sorted _ (tval X)]eocat_tetake_totake /= {}teE {}toE !noE.
-rewrite !(size_cat, size_nseq) => ->/eqP.
-rewrite -addnA eqn_add2l => /eqP<-.
-rewrite [_ + b]addnC.
-apply/isorted_boolP; exists (b + b1.*2,b + a2.*2).
-case: b; rewrite !(add0n, addSn); first by rewrite eocat_nseq_catDS !addnn.
-by rewrite eocat_nseq_catD !addnn.
-Qed.
 
 Lemma sorted_knuth_jump_rec m (t : (m + m).-tuple bool) k :
   sorted <=%O (tetake t) -> sorted <=%O (totake t) ->
@@ -353,7 +171,7 @@ have k2O : odd (`2^ k.+1).-1.
 have uhE : (uphalf (`2^ k.+1).-1).*2 = `2^ k.+1.
   by rewrite uphalfE prednK ?e2n_gt0 // e2Sn addnn doubleK -addnn.
 have iLuh : i <= (uphalf (`2^ k.+1).-1).*2 by rewrite uhE.
-have [] := sorted_knuth_jump k2O iLuh teS toS.
+have [] := sorted_odd_jump k2O iLuh teS toS.
   by rewrite addnC subnK.
 rewrite doubleB uhE -/cf => te1S to1S nteE.
 move: @t1; rewrite -e2Sn.
@@ -378,7 +196,7 @@ Lemma sorted_nfun_knuth_exchange m (t : (`2^ m).-tuple bool) :
 Proof.
 elim: m t => [t|m IH t] /=; first by apply: tsorted01.
 rewrite nfun_cat /= nfun_eodup.
-set v := [tuple of _]; have [||ste sto nto] := (@sorted_eswap _ v).
+set v := teocat _ _; have [||ste sto nto] := (@sorted_eswap _ v).
 - by rewrite tetakeK IH.
 - by rewrite totakeK IH.
 apply: sorted_knuth_jump_rec => //.
@@ -1323,11 +1141,10 @@ have <- : s5 = eotake p.+1 (`2^ p + i) s1.
     have iL2p1 : i < `2^ p.+1 by rewrite (leq_trans iL2p (leq_addr _ _)).
     have kqpLss2 : k + `2^ (q - p.+1) < size s2.
       by rewrite s2E size_cat !size_nseq; lia.
-    have := gtn_size_eotake iL2p1 kqpLss2. 
-    have : (`2^ (q -p.+1) * `2^ p.+1) = `2^ q by rewrite -e2nD subnK // ltnW.
     rewrite -e2Sn.
-    move=> {kLs xiLpq s5S s4S a1B a1b1E ss2E ss3E dE s3E s2E p2Dq2}//. 
-    by nia.
+    have <- : (`2^ (q -p.+1) * `2^ p.+1) = `2^ q by rewrite -e2nD subnK // ltnW.
+    rewrite [_ * `2^ p.+1]mulnC -addnA -mulnDr.
+    by apply: gtn_size_eotake iL2p1 kqpLss2.
   rewrite -[i](modn_small (_ : _ < `2^ p.+1)); last first.
     by rewrite e2Sn; lia.
   rewrite -e2Sn -(subnK pLq) e2nD -addnA [_ * k]mulnC -mulnDl mulnC.

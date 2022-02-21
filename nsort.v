@@ -504,8 +504,7 @@ Implicit Types n : network m.
 
 Lemma cfun_eomerge (c1 : connector m) (c2 : connector m) 
                    (t : (m + m).-tuple A) : 
-  cfun (ceomerge c1 c2) t = [tuple of eocat (cfun c1 (tetake t)) 
-                                            (cfun c2 (totake t))].
+  cfun (ceomerge c1 c2) t = teocat (cfun c1 (tetake t)) (cfun c2 (totake t)).
 Proof.
 apply: eq_from_tnth => i.
 have iLm : i < m + m by apply: ltn_ord.
@@ -539,7 +538,7 @@ by rewrite -F {1}F leq_double.
 Qed.
 
 Lemma cfun_eodup (c : connector m) (t : (m + m).-tuple A) :
-  cfun (ceodup c) t = [tuple of eocat (cfun c (tetake t)) (cfun c (totake t))].
+  cfun (ceodup c) t = teocat (cfun c (tetake t)) (cfun c (totake t)).
 Proof. by apply: cfun_eomerge. Qed.
 
 Definition neomerge m (n1 : network m) (n2 : network m) := 
@@ -548,10 +547,182 @@ Definition neomerge m (n1 : network m) (n2 : network m) :=
 Definition neodup m (n : network m) : network (m + m) := neomerge n n.
 
 Lemma nfun_eodup (n : network m) (t : (m + m).-tuple A) : 
-  nfun (neodup n) t = [tuple of eocat (nfun n (tetake t)) (nfun n (totake t))].
+  nfun (neodup n) t = teocat (nfun n (tetake t)) (nfun n (totake t)).
 Proof.
 elim: n t => /= [t|c n IH t]; first by rewrite -eocat_tetake_totake.
 by rewrite IH !cfun_eodup tetakeK totakeK.
 Qed.
 
 End EOMerge.
+
+Section OddJump.
+
+Variable d : unit.
+Variable A : orderType d.
+
+Definition clink_odd_jump m k : {ffun 'I_m -> 'I_m} :=
+  if odd k then 
+    [ffun i : 'I_ _ => if odd i then iadd k i else isub k i]
+  else [ffun i => i].
+
+Lemma clink_odd_jump_proof m k : 
+  [forall i : 'I_m, clink_odd_jump _ k (clink_odd_jump _ k i) == i].
+Proof.
+rewrite /clink_odd_jump.
+have [/= kO|kI] := boolP (odd k);
+     apply/forallP => i /=; apply/eqP/val_eqP; rewrite !ffunE //.
+have m_gt0 : 0 < m by apply: leq_ltn_trans (ltn_ord i).
+have [/= iO|iE] := boolP (odd i); rewrite ?(val_iadd, val_isub) /=.
+  case: ltnP => [kiLm|mLki]; last first.
+    by rewrite iO !val_iadd [k + i < m]ltnNge mLki /= [k + i < m]ltnNge mLki.
+  by rewrite oddD iO kO /= ?(val_iadd, val_isub) /= kiLm leq_addr addnC addnK.
+case: leqP => [kLi|iLk]; last first.
+  by rewrite (negPf iE) !val_isub [k <= i]leqNgt iLk /= [k <= i]leqNgt iLk.
+rewrite oddB // (negPf iE) kO /= ?(val_iadd, val_isub) /= kLi.
+by rewrite addnC subnK // ifT.
+Qed.
+  
+Definition codd_jump {m} k := connector_of (clink_odd_jump_proof m k).
+
+Lemma cfun_odd_jump n k (t : n.-tuple A) : 
+  odd k ->
+  cfun (codd_jump k) t = 
+  [tuple
+    if odd i then min (tnth t i) (tnth t (iadd k i))
+    else max (tnth t i) (tnth t (isub k i)) | i < n].
+Proof.
+move=> kO; apply: eq_from_tnth => i /=.
+rewrite /codd_jump /cfun /=.
+rewrite !tnth_map /= !tnth_ord_tuple.
+rewrite /clink_odd_jump kO ffunE.
+have [iO|iE] := boolP (odd i).
+  by rewrite ifT // val_iadd; case: ltnP => // *; apply: leq_addl.
+rewrite val_isub; case: (leqP k) => [kLi|iLk]; last first.
+  suff -> : isub k i = i by rewrite minxx maxxx if_same.
+  by apply/val_eqP; rewrite /= val_isub leqNgt iLk.
+rewrite ifN // -ltnNge ltn_subLR //.
+by case: (k) kO => // k1 _; rewrite addSn ltnS leq_addl.
+Qed.
+
+End OddJump.
+
+Lemma sorted_odd_jump m (t : (m + m).-tuple bool) i k :
+  odd k -> i <= (uphalf k).*2 ->
+  sorted <=%O (tetake t) -> sorted <=%O (totake t) -> 
+  noF (tetake t) = noF (totake t) + i ->
+  let j := i - uphalf k in  
+  let t1 := cfun (codd_jump k) t in
+  [/\ sorted <=%O (tetake t1), 
+      sorted <=%O (totake t1) & 
+      noF (tetake t1) = noF (totake t1) + (i - j.*2)].
+Proof.
+rewrite !isorted_noFT.
+set a := noF (totake t); set b := noT (tetake t) => 
+         kO iL2k /eqP teE /eqP toE nt1E j t1.
+rewrite nt1E in teE.
+have ntoE : noT (totake t) = b + i.
+  apply: (@addnI a);rewrite size_noFT.
+  by rewrite size_tuple -(size_tuple (tetake t)) teE size_cat 
+             !size_nseq addnAC addnA.
+rewrite ntoE in toE.
+have jLi : j <= i by apply: leq_subr.
+have aibC : a + i + b = a + (b + i) by rewrite [b + _]addnC addnA.
+have aibE : a + i + b = m by rewrite aibC -ntoE size_noFT size_tuple.
+have aijbjE : a + i - j + (b + j) = m.
+  by rewrite [b + j]addnC -addnBA // addnA -[_ + j]addnA subnK.
+have ajbijE : a + j + (b + i - j) = m.
+  by rewrite addnAC -addnA subnK ?(leq_trans _ (leq_addl _ _)) // -aibC.
+suff t1E : t1 = eocat (nseq (a + i - j) false ++ nseq (b + j) true)
+                      (nseq (a + j) false ++ nseq (b + i - j) true) :> seq _.
+  rewrite tetakeE totakeE t1E otakeK ?etakeK.
+    rewrite !isorted_noFT !noE !eqxx /= -addnn subnDA addnAC.
+    rewrite -addnA subnK; first by rewrite -addnBA //.
+    have [|k2Li] := leqP i (uphalf k); first by rewrite /j -subn_eq0 => /eqP->.
+    by rewrite subKn ?leq_subLR ?addnn // ltnW.
+  by rewrite !(size_cat, size_nseq) ajbijE.
+apply: (@eq_from_nth _ true) => [|v].
+  by rewrite /= [LHS]size_tuple card_ord size_eocat size_cat !size_nseq aijbjE.
+rewrite [X in _ < X -> _]size_tuple => iLab.
+pose x := Ordinal iLab.
+rewrite /t1 cfun_odd_jump //= (nth_map x) /= -[v]/(x : nat); last first.
+  by rewrite -enum_ord size_enum_ord.
+rewrite -enum_ord !nth_ord_enum.
+rewrite nth_eocat; last first.
+  by rewrite !size_cat !size_nseq aijbjE.
+rewrite !(tnth_nth true) [t]eocat_tetake_totake /=.
+rewrite !nth_eocat /=; try by rewrite !size_tuple.
+have v2Lab : v./2 < a + i + b.
+  by rewrite ltn_halfl -addnn -nt1E size_noFT size_tuple.
+have [vO|vE] := boolP (odd _).
+  rewrite !nth_cat_seqT.
+  have i_gt0 : 0 < v by case: (v) vO.
+  rewrite val_iadd /=.
+  case: leqP => [kvLaib|aibLc].
+    rewrite vO toE nth_cat_seqT minxx.
+    case: leqP => [aLv2|v2La]; last first.
+      by rewrite leqNgt (leq_trans v2La (leq_addr _ _)).
+    rewrite geq_halfr -addnn.
+    case: (leqP (uphalf k) i) => [k2Li|iLk2].
+      have i2E : i.*2 = j.*2 + k.+1.
+        rewrite doubleB - [X in _ + X]odd_double_half oddS kO subnK //.
+        by rewrite leq_double.
+      rewrite -(leq_add2l k.+1) addnn addnC doubleD -addnA -i2E -doubleD.
+      rewrite (leq_trans (leq_addr b.*2 _)) // -doubleD -addnn.
+      by rewrite aibE (leq_trans kvLaib) // leq_add2r.
+    have -> : j = 0 by apply/eqP; rewrite subn_eq0 ltnW.
+    by rewrite addn0 addnn -geq_halfr.
+  rewrite oddD kO vO /= teE toE !nth_cat_seqT.
+  case: leqP => [aLv2|v2La]; last first.
+    by rewrite minFb leqNgt (leq_trans v2La (leq_addr _ _)).
+  rewrite minTb.
+  case: (leqP i (uphalf k)) => [iLk2|k2Li].
+    have /eqP jE0 : j == 0 by rewrite subn_eq0.
+    rewrite jE0 addn0 aLv2 /=.
+    have -> : (k + v)./2 = (k.+1 + v)./2.
+      by rewrite addSn -uphalfE uphalf_half oddD kO vO.
+    by rewrite geq_halfr addnC doubleD leq_add // -geq_halfr.
+  have j_gt0 : 0 < j by rewrite subn_gt0.
+  case: leqP => H1.
+    rewrite geq_halfr in H1.
+      rewrite geq_halfr doubleD doubleB addnBA.
+      rewrite leq_subLR -doubleD (leq_trans H1) // leq_add2r.
+      by rewrite -ltnS -[X in X <= _]odd_double_half oddS kO.
+    by rewrite leq_double ltnW // -subn_gt0.
+  rewrite halfD kO vO addnA /= in H1.
+  rewrite addnBA //; last by apply : ltnW.
+  by rewrite leq_subLR uphalf_half kO leqNgt H1.
+rewrite val_isub /=.
+case: leqP => [kLv|vLk].
+  rewrite oddB // (negPf vE) /= kO teE toE !nth_cat_seqT.
+  case: (leqP i (uphalf k)) => [iLk2|k2Li].
+    have /eqP jE0 : j == 0 by rewrite subn_eq0.
+    rewrite jE0 subn0.
+    case: leqP => [aiLv2|v2Lai]; first by rewrite maxTb.
+    rewrite maxFb; apply/idP/negP; rewrite -ltnNge -(ltn_add2r i).
+    rewrite (leq_ltn_trans _ v2Lai) //.
+    rewrite -{2}(subnK kLv) halfD oddB // kO (negPf vE) /=.
+    by rewrite addnCA leq_add2l -[1]/(true : nat) -kO -uphalf_half.
+  have j_gt0 : 0 < j by rewrite subn_gt0.
+  case: (leqP (a + i - j) v./2) => [aijLv2|v2Laij]; last first.
+    rewrite leqNgt (leq_trans v2Laij (leq_subr _ _)) maxFb.
+    rewrite leqNgt -(ltn_add2r (uphalf k)) {1}uphalf_half kO addnCA /=.
+    rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in v2Laij.
+    by rewrite (leq_trans v2Laij) // -addnBA // leq_add2l subKn // ltnW.
+  rewrite -addnBA //subKn in aijLv2; last by apply: ltnW.
+  rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in aijLv2.
+  rewrite addnCA -[1]/(true : nat) -kO -uphalf_half leq_add2r in aijLv2.
+  by rewrite aijLv2 maxbT.
+rewrite (negPf vE) maxxx teE !nth_cat_seqT.
+case: (leqP i (uphalf k)) => [iLk2|k2Li].
+  have /eqP-> : j == 0 by rewrite subn_eq0.
+  by rewrite subn0.
+have j_gt0 : 0 < j by rewrite subn_gt0.
+  rewrite -addnBA // subKn; last by apply: ltnW.
+case: leqP => [aiLv2|v2Lai].
+  by rewrite (leq_trans _ aiLv2) // leq_add2l ltnW.
+rewrite leqNgt ltn_halfl (leq_trans vLk) // doubleD.
+rewrite (leq_trans _ (leq_addl _ _)) //.
+by rewrite -[X in X <= _]odd_double_half uphalf_half kO doubleD !addSn.
+Qed.
+
+
