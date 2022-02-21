@@ -156,7 +156,8 @@ set t1 := nfun _ _.
 suff [te1S to1S noFE] : [/\ sorted <=%O (tetake t1), 
                           sorted <=%O (totake t1) & 
                           noF (tetake t1) = noF (totake t1) + odd i].
-  by apply: sorted_tetake_totake noFE.
+  apply: sorted_tetake_totake => //.
+  by rewrite noFE; case: odd; rewrite !(addn1, addn0) leqnn leqnSn.
 move: teS toS @i @t1 noI iL2k.
 elim: k t => [|k IH] t teS toS i;
       rewrite [nfun _ _]/= => t1 nt2Lnt1 iL2k.

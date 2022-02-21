@@ -840,22 +840,26 @@ Proof.
 by apply/val_eqP; rewrite /= totakeE /= otake_eocat // !size_tuple.
 Qed.
 
-Lemma sorted_tetake_totake m (t : (m + m).-tuple bool) (b : bool) :
+Lemma sorted_tetake_totake m (t : (m + m).-tuple bool) :
   sorted <=%O (tetake t) ->
   sorted <=%O (totake t) ->
-  noF (tetake t) = noF (totake t) + b ->
+  noF (totake t) <= noF (tetake t) <= (noF (totake t)).+1 ->
   sorted <=%O t.
 Proof. 
 rewrite tetakeE totakeE.
-move => /isorted_boolP [[a1 a2] teE] /isorted_boolP [[b1 b2] toE] noTE.
+move => /isorted_boolP [[a1 a2] teE] /isorted_boolP [[b1 b2] toE] 
+        /andP[noFeLnoFo noFoLnoFe].
 have : size (tetake t) = size (totake t) by rewrite !size_tuple.
-move: noTE.
+move: noFeLnoFo noFoLnoFe.
 rewrite [X in sorted _ (tval X)]eocat_tetake_totake /= {}teE {}toE !noE.
-rewrite !(size_cat, size_nseq) => ->/eqP.
-rewrite -addnA eqn_add2l => /eqP<-.
-rewrite [_ + b]addnC.
-apply/isorted_boolP; exists (b + b1.*2,b + a2.*2).
-case: b; rewrite !(add0n, addSn); first by rewrite eocat_nseq_catDS !addnn.
+rewrite !(size_cat, size_nseq).
+case: (ltngtP a1 b1) => // [a1Lb1 | <-] _ b1La1 a1a2E.
+  have b1E : a1 = b1.+1 by case: (ltngtP a1 b1.+1) b1La1 a1Lb1.
+  have ->: b2 = a2.+1 by apply: (@addnI a1); rewrite addnS a1a2E b1E.
+  rewrite b1E; apply/isorted_boolP; exists (b1.*2.+1, a2.*2.+1).
+  by rewrite eocat_nseq_catDS !addnn.
+have ->: b2 = a2 by apply: (@addnI a1).
+apply/isorted_boolP; exists (a1.*2, a2.*2).
 by rewrite eocat_nseq_catD !addnn.
 Qed.
 

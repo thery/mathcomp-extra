@@ -108,10 +108,9 @@ pose i := noF (tetake t) - noF (totake t).
 have i_le2 : i <= 2 by rewrite leq_subLR addn2.
 have nFE : noF (tetake t) = noF (totake t) + i by rewrite addnC subnK.
 have [ceS coF ncFE] := sorted_odd_jump (isT : odd 1) i_le2 eS oS nFE.
-set  u := i - _ in ncFE; suff uE : u = (u != 0).
-  rewrite uE in ncFE.
-  by apply: sorted_tetake_totake ncFE.
-by rewrite /u; case: (i) i_le2 => // [] [|[]].
+apply: sorted_tetake_totake => //.
+rewrite ncFE leq_addr -[X in _ <= X]addn1 leq_add2l /=.
+by rewrite leq_subLR addnC -leq_subLR -addnn leq_addr.
 Qed.
  
 (* This is the big proof could be improved : lots of repetitions *)
