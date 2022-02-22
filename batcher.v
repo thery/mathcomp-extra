@@ -23,7 +23,7 @@ Section Batcher.
 Variable d : unit.
 Variable A : orderType d.
 
-Definition batcher_merge {m} := @codd_jump m 1.
+Definition batcher_merge {m} : connector m := codd_jump 1.
 
 Lemma cfun_batcher_merge n (t : n.-tuple A) : 
   cfun batcher_merge t = 
@@ -72,31 +72,6 @@ Qed.
 
 End Batcher.
 
-Lemma cfun_batcher_sorted_even m (t : m.-tuple bool) :
-  sorted <=%O t -> ~~ odd m -> cfun batcher_merge t = t. 
-Proof.
-rewrite isorted_noFT => /eqP tE.
-have mE : m = noF t + noT t.
-  by rewrite -[LHS](size_tuple t) tE size_cat !size_nseq !noE addnC.
-rewrite [X in odd X]mE oddD negb_add => /eqP odd_noE.
-rewrite cfun_batcher_merge.
-apply: eq_from_tnth => i.
-have m_gt0 : 0 < m by apply: leq_ltn_trans (ltn_ord i).
-rewrite !(tnth_nth true) /= tE nth_cat !nth_nseq /= size_nseq.
-rewrite !if_same -enum_ord !(nth_map i) ?size_enum_ord //.
-rewrite !nth_ord_enum !(tnth_nth false) /=.
-rewrite tE !nth_cat !nth_nseq /= ?size_nseq val_inext val_ipred !noE !if_same.
-have [iLF|FLi] := ltnP i.
-  by rewrite minFb (_ : i.-1 < noF _) ?if_same ?(leq_ltn_trans (leq_pred _) _).
-rewrite ltn_subLR // -mE ltn_ord /= maxTb minTb.
-have FLm : noF t < m by apply: leq_ltn_trans (ltn_ord i).
-case: eqP => [->|/eqP iDm1].
-  rewrite prednK // leqNgt FLm /= ltn_subLR; last by rewrite -ltnS prednK.
-  by rewrite -mE prednK // leqnn if_same.
-rewrite ltnNge (leq_trans FLi) //= ltn_subLR ?(leq_trans FLi) //.
-rewrite -mE [X in if _ then X else _]ifT ?if_same //.
-by rewrite ltn_neqAle ltn_ord -[X in _ != X]prednK // eqSS iDm1.
-Qed.
 
 Lemma sorted_batcher_merge  (m : nat) (t : (m + m).-tuple bool) :
  noF (totake t) <= noF (tetake t) <= (noF (totake t)).+2 ->
@@ -251,6 +226,6 @@ apply: sorted_nfun_batcher_merge_rec.
 by rewrite nfun_dup; rewrite tdropK; apply: IH.
 Qed.
 
-Lemma sorted_batcher m : batcher m \is sorting.
+Lemma sorting_batcher m : batcher m \is sorting.
 Proof. apply/forallP => x; apply: sorted_nfun_batcher. Qed.
 

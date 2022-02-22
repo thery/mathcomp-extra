@@ -62,7 +62,7 @@ by case: (i : nat) => //= i1; rewrite ltnn.
 Qed.
 
 Fixpoint knuth_jump_rec m k r : network m :=
-  if k is k1.+1 then (@codd_jump m r) :: knuth_jump_rec m k1 (uphalf r).-1
+  if k is k1.+1 then codd_jump r :: knuth_jump_rec _ k1 (uphalf r).-1
   else [::].
 
 Lemma size_knuth_jump_rec m k : size (knuth_jump_rec m k ((`2^ k).-1)) = k.
@@ -144,22 +144,21 @@ rewrite (negPf iE) /= uphalf_half (negPf iE) /= add0n.
 by rewrite teE toE !nth_cat_seqT -/a  -/c geq_max; do 2 case: leqP => ?.
 Qed.
 
-
 Lemma sorted_knuth_jump_rec m (t : (m + m).-tuple bool) k :
   sorted <=%O (tetake t) -> sorted <=%O (totake t) ->
-  let i := noF (tetake t) - noF (totake t) in
-  noF (totake t) <= noF (tetake t) -> i <= `2^ k ->
+  noF (totake t) <= noF (tetake t) <= noF (totake t) + `2^ k ->
   sorted <=%O (nfun (knuth_jump_rec (m + m) k (`2^ k).-1) t).
 Proof.
-move=> teS toS i noI iL2k.
+move=> teS toS /andP[noL noI].
 set t1 := nfun _ _.
+pose i := noF (tetake t) - noF (totake t).
 suff [te1S to1S noFE] : [/\ sorted <=%O (tetake t1), 
                           sorted <=%O (totake t1) & 
                           noF (tetake t1) = noF (totake t1) + odd i].
   apply: sorted_tetake_totake => //.
   by rewrite noFE; case: odd; rewrite !(addn1, addn0) leqnn leqnSn.
-move: teS toS @i @t1 noI iL2k.
-elim: k t => [|k IH] t teS toS i;
+have : i <= `2^ k by rewrite leq_subLR.
+elim: k t teS toS @i @t1 {noI} noL => [|k IH] t teS toS i;
       rewrite [nfun _ _]/= => t1 nt2Lnt1 iL2k.
   rewrite teS toS /i.
   move: iL2k; rewrite leq_subLR addn1.
@@ -201,11 +200,12 @@ set v := teocat _ _; have [||ste sto nto] := (@sorted_eswap _ v).
 - by rewrite tetakeK IH.
 - by rewrite totakeK IH.
 apply: sorted_knuth_jump_rec => //.
-rewrite -[X in _ <= X](size_tuple (tetake (cfun ceswap v))).
-by rewrite -size_noFT (leq_trans (leq_subr _ _) (leq_addr _ _)).
+rewrite nto andTb.
+rewrite -[X in _ <= _ + X](size_tuple (tetake (cfun ceswap v))).
+by rewrite -size_noFT addnCA leq_addr.
 Qed.
 
-Lemma sorted_knuth_exchange m : knuth_exchange m \is sorting.
+Lemma sorting_knuth_exchange m : knuth_exchange m \is sorting.
 Proof. apply/forallP => x; apply: sorted_nfun_knuth_exchange. Qed.
 
 (** Iterative version *)

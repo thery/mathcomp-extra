@@ -121,10 +121,11 @@ Definition cfun c t :=
            then min (tnth t i) (tnth t (clink c i))
            else max (tnth t i) (tnth t (clink c i)) | i < m].
 
-Lemma cswap_proof (i j : 'I_m) :
-  let clink := [ffun x => if x == i then j else 
-                          if x == j then i else x]  in
-                          [forall i, clink (clink i) == i].
+Definition clink_swap (i j : 'I_m) : {ffun 'I_m -> 'I_m} :=
+  [ffun x => if x == i then j else if x == j then i else x].
+ 
+Lemma clink_swap_proof (i j : 'I_m) : 
+  [forall k, clink_swap i j (clink_swap i j k) == k].
 Proof.
 apply/forallP => /= x.
 rewrite !ffunE; case: (x =P i) => [->|/eqP xDi]; rewrite ?eqxx.
@@ -133,7 +134,7 @@ by case: (x =P j) => [->|/eqP xDj]; rewrite ?(negPf xDi, negPf xDj) !eqxx.
 Qed.
 
 (* A connector that swaps the value of two wire i1 i2 *)
-Definition cswap i j := connector_of (cswap_proof i j).
+Definition cswap i j := connector_of (clink_swap_proof i j).
 
 Lemma cswapE_neq t i j k : 
   k != i -> k != j ->  tnth (cfun (cswap i j) t) k = tnth t k.
@@ -724,5 +725,3 @@ rewrite leqNgt ltn_halfl (leq_trans vLk) // doubleD.
 rewrite (leq_trans _ (leq_addl _ _)) //.
 by rewrite -[X in X <= _]odd_double_half uphalf_half kO doubleD !addSn.
 Qed.
-
-
