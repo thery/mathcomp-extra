@@ -53,6 +53,8 @@ Some extra material for mathcomp
 
   [A fun puzzle about a tricky integer function ](./puzzleFF.v)
 
+A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
+
 ## Meta
 
 - Author(s):

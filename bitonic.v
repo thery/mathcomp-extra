@@ -102,13 +102,13 @@ Qed.
   
 Definition half_cleaner m := connector_of (clink_half_cleaner_proof m).
 
-Lemma cfun_half_cleaner n (t : (n + n).-tuple A) : 
-  cfun (half_cleaner n) t = 
+Lemma cfun_half_cleaner m (t : (m + m).-tuple A) : 
+  cfun (half_cleaner m) t = 
   [tuple
     match split i with 
-    | inl x => min (tnth t i) (tnth t (rshift n x))  
-    | inr x => max (tnth t (lshift n x)) (tnth t i)
-    end | i < n + n].
+    | inl x => min (tnth t i) (tnth t (rshift m x))  
+    | inr x => max (tnth t (lshift m x)) (tnth t i)
+    end | i < m + m].
 Proof.
 apply: eq_from_tnth => i /=.
 rewrite /half_cleaner /cfun /=.
