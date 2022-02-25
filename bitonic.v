@@ -100,7 +100,8 @@ apply/forallP => i; rewrite !ffunE; case: (splitP i) => [j iE|k iE].
 by rewrite split_lshift; apply/eqP/val_eqP/eqP.
 Qed.
   
-Definition half_cleaner m := connector_of (clink_half_cleaner_proof m).
+Definition half_cleaner m :=
+  connector_of (clink_half_cleaner_proof m) (cflip_default _ false).
 
 Lemma cfun_half_cleaner m (t : (m + m).-tuple A) : 
   cfun (half_cleaner m) t = 
@@ -112,7 +113,7 @@ Lemma cfun_half_cleaner m (t : (m + m).-tuple A) :
 Proof.
 apply: eq_from_tnth => i /=.
 rewrite /half_cleaner /cfun /=.
-rewrite !tnth_map /= !tnth_ord_tuple ffunE.
+rewrite !tnth_map /= !tnth_ord_tuple !ffunE.
 case: splitP => /= [j iE|k iE]; first by rewrite iE leq_addl.
 rewrite ifN 1?maxC //=.
 by rewrite -ltnNge (leq_trans (ltn_ord _) _) // iE leq_addr.
@@ -394,7 +395,8 @@ Lemma clink_rhalf_cleaner_proof m :
   [forall i : 'I_(m + m), clink_rhalf_cleaner _ (clink_rhalf_cleaner _ i) == i].
 Proof. by apply/forallP => i; rewrite !ffunE rev_ordK. Qed.
   
-Definition rhalf_cleaner m := connector_of (clink_rhalf_cleaner_proof m).
+Definition rhalf_cleaner m :=
+  connector_of (clink_rhalf_cleaner_proof m) (cflip_default _ false).
 
 Lemma cfun_rhalf_cleaner n (t : (n + n).-tuple A) : 
   cfun (rhalf_cleaner n) t = 
@@ -405,7 +407,7 @@ Lemma cfun_rhalf_cleaner n (t : (n + n).-tuple A) :
     end | i < n + n].
 Proof.
 apply: eq_from_tnth => i /=.
-rewrite /rhalf_cleaner /cfun /= !tnth_map /= tnth_ord_tuple ffunE.
+rewrite /rhalf_cleaner /cfun /= !tnth_map /= tnth_ord_tuple !ffunE.
 case: splitP => [j iE|k iE]; rewrite /= iE.
   rewrite leq_subRL ?(leq_trans (ltn_ord _)) ?leq_addr //.
   rewrite leq_add // 1?ltnW //.

@@ -50,11 +50,20 @@ by apply: (iffP forallP) => [H x|H x]; [rewrite (eqP (H x)) | rewrite H].
 Qed.
 
 (* In connector c, a wire i is connected to the wire (clink c i) *)
+(* with polarity (cflip i) *                                     *)
 (* A wire is not connected if clink c i = i                      *)
 
 Record connector (m : nat):= connector_of {
   clink : {ffun 'I_m -> 'I_m};
-  cfinv : [forall i, clink (clink i) == i]}.
+  cflip : {ffun 'I_m -> bool};
+  cfinv : [forall i, clink (clink i) == i];
+  cflipinv : [forall i, cflip (clink i) == cflip i]}.
+
+(* Default flip *)
+
+Lemma cflip_default m (clink : {ffun 'I_m -> 'I_m}) (b : bool) :
+  [forall i, [ffun => b] (clink i) == [ffun => b] i].
+Proof. by apply/forallP=> i; rewrite !ffunE. Qed.
 
 Definition clink_merge m1 m2 (c1 : connector m1) (c2 : connector m2) :=
   [ffun i => match split i with 
@@ -71,8 +80,25 @@ rewrite !ffunE; case: (splitP i) => [j iE|k iE]; apply/eqP/val_eqP/eqP=> /=.
 by rewrite split_rshift (eqP (forallP (cfinv c2) k)).
 Qed.
 
+
+Definition cflip_merge m1 m2 (c1 : connector m1) (c2 : connector m2) :=
+  [ffun i => match split i with 
+             | inl x => cflip c1 x
+             | inr x => cflip c2 x
+             end].
+
+Lemma cflip_merge_proof m1 m2 (c1 : connector m1) (c2 : connector m2) :
+  [forall i, cflip_merge c1 c2 (clink_merge c1 c2 i) == cflip_merge c1 c2 i].
+Proof.
+apply/forallP=> i /=.
+rewrite !ffunE; case: (splitP i) => [j iE|k iE].
+  by rewrite split_lshift (forallP (cflipinv c1) j).
+by rewrite split_rshift (forallP (cflipinv c2) k).
+Qed.
+  
+
 Definition cmerge m1 m2 (c1 : connector m1) (c2 : connector m2) := 
-  connector_of (clink_merge_proof c1 c2).
+  connector_of (clink_merge_proof c1 c2) (cflip_merge_proof c1 c2).
 
 Definition cdup m (c : connector m) := cmerge c c.
 
@@ -91,8 +117,21 @@ rewrite eliftK val_elift /= odd_double /= (eqP (forallP (cfinv c1) _)).
 by rewrite idiv2K_even.
 Qed.
 
+Definition cflip_eomerge m (c1 : connector m) (c2 : connector m) :=
+  [ffun i : 'I_(m + m) => 
+    if odd i then cflip c2 (idiv2 i) else cflip c1 (idiv2 i)].
+
+Lemma cflip_eomerge_proof m (c1  c2 : connector m) :
+  [forall i, cflip_eomerge c1 c2 (clink_eomerge c1 c2 i) == cflip_eomerge c1 c2 i].
+Proof.
+apply/forallP=> i /=.
+rewrite !ffunE /=; have [iO|iE] := boolP (odd i).
+  by rewrite oliftK val_olift /= odd_double /= (eqP (forallP (cflipinv c2) _)).
+by rewrite eliftK val_elift /= odd_double /= (eqP (forallP (cflipinv c1) _)).
+Qed.
+
 Definition ceomerge m (c1 : connector m) (c2 : connector m) := 
-  connector_of (clink_eomerge_proof c1 c2).
+  connector_of (clink_eomerge_proof c1 c2) (cflip_eomerge_proof c1 c2).
 
 Definition ceodup m (c : connector m) := ceomerge c c.
 
@@ -117,9 +156,11 @@ Implicit Types n : network.
 
 (* Applying a connector to a tuple *)
 Definition cfun c t :=
-    [tuple if i <= clink c i 
-           then min (tnth t i) (tnth t (clink c i))
-           else max (tnth t i) (tnth t (clink c i)) | i < m].
+    [tuple let min := min (tnth t i) (tnth t (clink c i)) in
+           let max := max (tnth t i) (tnth t (clink c i)) in
+           if i <= clink c i 
+           then if cflip c i then max else min
+           else if cflip c i then min else max| i < m].
 
 Definition clink_swap (i j : 'I_m) : {ffun 'I_m -> 'I_m} :=
   [ffun x => if x == i then j else if x == j then i else x].
@@ -133,8 +174,22 @@ rewrite !ffunE; case: (x =P i) => [->|/eqP xDi]; rewrite ?eqxx.
 by case: (x =P j) => [->|/eqP xDj]; rewrite ?(negPf xDi, negPf xDj) !eqxx.
 Qed.
 
+Definition cflip_swap (i j : 'I_m) : {ffun 'I_m -> bool} :=
+  [ffun x => if x == i then (j < i) else if x == j then (j < i) else false].
+ 
+Lemma cflip_swap_proof (i j : 'I_m) : 
+  [forall k, cflip_swap i j (clink_swap i j k) ==  cflip_swap i j k].
+Proof.
+apply/forallP => /= x.
+rewrite !ffunE; case: (x =P i) => [|/eqP xDi].
+  by rewrite eqxx if_same eqxx.
+case: (x =P j) => [|/eqP xDj]; first by rewrite !eqxx.
+by rewrite (negPf xDi) (negPf xDj).
+Qed.
+
 (* A connector that swaps the value of two wire i1 i2 *)
-Definition cswap i j := connector_of (clink_swap_proof i j).
+Definition cswap i j :=
+  connector_of (clink_swap_proof i j) (cflip_swap_proof i j).
 
 Lemma cswapE_neq t i j k : 
   k != i -> k != j ->  tnth (cfun (cswap i j) t) k = tnth t k.
@@ -145,23 +200,15 @@ by rewrite (negPf kDi) (negPf kDj) leqnn minxx.
 Qed.
 
 Lemma cswapE_min t (i j : 'I_m) :
-  i <= j -> tnth (cfun (cswap i j) t) i = min (tnth t i) (tnth t j).
-Proof. by move=> iLj; rewrite tnth_map !ffunE tnth_ord_tuple eqxx iLj. Qed.
+  tnth (cfun (cswap i j) t) i = min (tnth t i) (tnth t j).
+Proof. by rewrite tnth_map !ffunE tnth_ord_tuple /= eqxx; case: leqP. Qed.
 
 Lemma cswapE_max t (i j : 'I_m) :
-  i <= j -> tnth (cfun (cswap i j) t) j = max (tnth t i) (tnth t j).
+  tnth (cfun (cswap i j) t) j = max (tnth t i) (tnth t j).
 Proof. 
-move=> iLj; rewrite tnth_map !ffunE tnth_ord_tuple eqxx.
-case: (j =P i) => [->|/val_eqP /= jDi]; first by rewrite leqnn minxx maxxx.
-by rewrite leq_eqVlt (negPf jDi) /= ltnNge iLj //= maxC.
-Qed.
-
-Lemma cswapC i j : cfun (cswap i j) =1 cfun (cswap j i).
-Proof.
-move=> t; apply: eq_from_tnth => k.
-rewrite !tnth_map !ffunE tnth_ord_tuple.
-case: (k =P i) => [->|/eqP kDi]; first by case: (i =P j) => [->|].
-by case: (k =P j) => [->|/eqP kDj].
+rewrite tnth_map !ffunE tnth_ord_tuple eqxx /=.
+case: (j =P i) => [->|/val_eqP /= jDi]; first by rewrite leqnn ltnn minxx maxxx.
+by rewrite leq_eqVlt (negPf jDi) /=; case: leqP; rewrite maxC.
 Qed.
 
 Lemma perm_cfun c t : perm_eq (cfun c t) t.
@@ -170,23 +217,41 @@ apply/tuple_permP.
 pose cfunS c t :=
     [fun i =>
            if (i : 'I_m) <= clink c i 
-           then if (tnth t i <= tnth t (clink c i))%O then i else (clink c i)
-           else if (tnth t (clink c i) <= tnth t i)%O then i else (clink c i)].
+           then if (tnth t i <= tnth t (clink c i))%O then 
+                     if cflip c i then (clink c i) else i 
+                else if cflip c i then i else (clink c i)
+           else if (tnth t (clink c i) <= tnth t i)%O then
+                   if cflip c i then (clink c i) else i 
+                else if cflip c i then i else (clink c i)].
 have cI : involutive (cfunS c t).
   move=> i /=.
   have cIE x :  clink c (clink c x) = x by have /forallP/(_ x)/eqP := cfinv c.
+  have cfIE x : cflip c (clink c x) = cflip c x.
+    by have /forallP/(_ x)/eqP := cflipinv c.
   case: (leqP i) => [iLc|cLi].
-    case: (leP (tnth t i)) => [tiLtc|tcLti]; first by rewrite iLc tiLtc.
-    rewrite cIE (ltW tcLti); case: leqP => [|cLi].
+    case: (leP (tnth t i)) => [tiLtc|tcLti].
+      case: (boolP (cflip c i)) => [|/negPf->]; last by rewrite iLc tiLtc.
+      rewrite !cfIE cIE => ->.
+      case: ltngtP iLc => // [|/eqP/val_eqP <-]; first by rewrite tiLtc.
+      by rewrite if_same.
+    case: (boolP (cflip c i)) => [->|]; first by rewrite iLc leNgt tcLti.
+    rewrite cfIE cIE => /negPf-> /=.
+    rewrite (ltW tcLti); case: leqP => [|cLi].
       by case: ltngtP iLc => // *; apply/val_eqP/eqP.
     by rewrite leNgt tcLti.
   case: (leP _ (tnth t i)) => [tcLti|tiLtc].
-    by rewrite (leqNgt i) cLi /= tcLti.
-  by rewrite cIE ltnW // leNgt tiLtc.
+    case: (boolP (cflip c i)) => [|/negPf->].
+      rewrite cfIE cIE => ->.
+      by rewrite (ltnW cLi) tcLti.
+    by rewrite leqNgt cLi tcLti.
+  case: (boolP (cflip c i)) => [->|].
+    by rewrite leqNgt cLi /= leNgt tiLtc.
+  rewrite cIE cfIE => /negPf-> /=.
+  by rewrite (ltnW cLi) /= leNgt tiLtc.
 exists (perm (inv_inj cI)).
 apply/eqP/val_eqP; apply: eq_from_tnth => i.
 rewrite !tnth_map tnth_ord_tuple /= permE /=.
-by case: leqP => iLc; case: leP.
+by case: leqP => iLc; case: (cflip c i); case: leP.
 Qed.
 
 (* turn a network into a function *)
@@ -287,7 +352,7 @@ Lemma tmap_connector (c : connector m) :
 Proof.
 move=> Hm t ; apply: eq_from_tnth => i.
 rewrite /cfun !tnth_map !tnth_ord_tuple -(min_homo Hm) -(max_homo Hm).
-by case: leqP.
+by case: leqP; case: (cflip c i).
 Qed.
 
 Lemma tmap_network (n : network m) : 
@@ -355,17 +420,22 @@ Section Transposition.
 
 Definition ctransp {m} (c : connector m) := 
   [forall i, (clink c i != i) ==>
-            ((clink c i == i.+1 :> nat) || (clink c i == i.-1 :> nat))]. 
+            ((clink c i == i.+1 :> nat) || (clink c i == i.-1 :> nat))] && 
+  [forall i, ~~(cflip c i)].
 
 Lemma ctranspP {m} (c : connector m) :
   reflect 
-    (forall i, (clink c i != i) ->
+    ((forall i, (clink c i != i) ->
             ((clink c i = i.+1 :> nat) \/ (clink c i = i.-1 :> nat)))
+    /\ (forall i, cflip c i = false))
     (ctransp c).
 Proof.
-apply: (iffP forallP) => H i; have := H i.
-  by case: eqP => //= _ /orP[] /eqP-> _; [left | right].
-by case: eqP => //= _ [] // ->; rewrite eqxx // orbT.
+apply: (iffP andP) => [[/forallP Hl /forallP Hf]|[Hl Hf]].
+  split=> i.
+    by move=> /(implyP (Hl i))/orP[] /eqP->; [left|right].
+  by rewrite (negPf (Hf i)).
+split; last by apply/forallP=> i; rewrite Hf.
+by apply/forallP=> i; apply/implyP => /Hl[]->; rewrite eqxx // orbT.
 Qed.
 
 Definition ntransp m (n : network m) := all ctransp n.
@@ -382,14 +452,14 @@ Lemma leqt_cfun m (c : connector m) :
 Proof.
 (* This proof is slightly more complicate in our setting because 
    a connector can contain simultaneous transposition *)
-move=> /ctranspP cT t1 t2 /leqtP t1Lt2; apply/leqtP => a b.
+move=> /ctranspP [cTl cTf] t1 t2 /leqtP t1Lt2; apply/leqtP => a b.
 rewrite leq_eqVlt => /orP[/val_eqP<-//|aLb].
 have b_gt0 : 0 < b by case: (nat_of_ord b) aLb.
 have aLLb : a <= b by apply: ltnW.
 rewrite !tnth_map !tnth_ord_tuple //.
-have [->|/eqP cD] := clink c a =P a; last case: (cT _ cD) => cE.
-- rewrite leqnn !minxx.
-  have [->|/eqP /cT[] cE] := clink c b =P b.
+have [->|/eqP cD] := clink c a =P a; last case: (cTl _ cD) => cE.
+- rewrite !cTf leqnn !minxx.
+  have [->|/eqP /cTl[] cE] := clink c b =P b.
   - by rewrite leqnn !minxx; apply/t1Lt2.
   - rewrite cE leqnSn.
     have aLc : a <= clink c b by rewrite cE -ltnS (leq_trans aLb) // ltnW.
@@ -408,8 +478,8 @@ have [->|/eqP cD] := clink c a =P a; last case: (cT _ cD) => cE.
   case: (ltP (tnth t1 b)) => C1.
     by rewrite le_maxr=>/(t1Lt2 _ _ aLc) ->; rewrite orbT.
   by rewrite le_maxr=>/(t1Lt2 _ _ (ltnW aLb)) ->.
-- rewrite cE leqnSn /=.
-  have [->|/eqP /cT[] c1E] := clink c b =P b.
+- rewrite !cTf cE leqnSn /=.
+  have [->|/eqP /cTl[] c1E] := clink c b =P b.
   - rewrite leqnn !minxx.
     case: (ltP (tnth t1 a)); rewrite le_minl.
       by move=> _ /t1Lt2-> //; apply: ltnW.
@@ -434,8 +504,8 @@ have [->|/eqP cD] := clink c a =P a; last case: (cT _ cD) => cE.
   rewrite !(le_minl, le_maxr) -orbA => /or4P[] /t1Lt2->//; 
       rewrite ?(orbT, cE, c1E) //.  
   by rewrite ltn_neqAle -c1E aD c1E.
-rewrite leqNgt ltn_neqAle cD cE leq_pred /=.
-have [->|/eqP /cT[] c1E] := clink c b =P b.
+rewrite leqNgt ltn_neqAle cD cE leq_pred !cTf /=.
+have [->|/eqP /cTl[] c1E] := clink c b =P b.
 - rewrite leqnn !minxx.
   case: (ltP (tnth t1 a)); rewrite le_maxl.
     move=> t1aLt1c t1cLtb; rewrite !t1Lt2 //.
@@ -583,7 +653,8 @@ rewrite oddB // (negPf iE) kO /= ?(val_iadd, val_isub) /= kLi.
 by rewrite addnC subnK // ifT.
 Qed.
   
-Definition codd_jump {m} k := connector_of (clink_odd_jump_proof m k).
+Definition codd_jump {m} k := 
+  connector_of (clink_odd_jump_proof m k) (cflip_default _ false).
 
 Lemma cfun_odd_jump n k (t : n.-tuple A) : 
   odd k ->
@@ -595,7 +666,7 @@ Proof.
 move=> kO; apply: eq_from_tnth => i /=.
 rewrite /codd_jump /cfun /=.
 rewrite !tnth_map /= !tnth_ord_tuple.
-rewrite /clink_odd_jump kO ffunE.
+rewrite /clink_odd_jump kO !ffunE.
 have [iO|iE] := boolP (odd i).
   by rewrite ifT // val_iadd; case: ltnP => // *; apply: leq_addl.
 rewrite val_isub; case: (leqP k) => [kLi|iLk]; last first.
