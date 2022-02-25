@@ -327,14 +327,20 @@ Proof. by apply: cfun_merge. Qed.
 Definition nmerge m1 m2 (n1 : network m1) (n2 : network m2) := 
     [seq cmerge i.1 i.2 | i <- zip n1 n2].
 
+Lemma nfun_merge (n1 n2 : network m) (t : (m + m).-tuple A) :
+  size n1 = size n2 -> 
+  nfun (nmerge n1 n2) t = [tuple of nfun n1 (ttake t) ++ nfun n2 (tdrop t)].
+Proof.
+elim: n1 n2 t => /= [[]//= t sn1Esn2|c1 n1 IH [|c2 n2]// t [sn1Esn2]].
+  by apply: cat_ttake_tdrop.
+by rewrite /= IH // !cfun_merge ttakeK tdropK.
+Qed.
+
 Definition ndup m (n : network m) : network (m + m) := nmerge n n.
 
 Lemma nfun_dup (n : network m) (t : (m + m).-tuple A) : 
   nfun (ndup n) t = [tuple of nfun n (ttake t) ++ nfun n (tdrop t)].
-Proof.
-elim: n t => /= [t|c n IH t]; first by apply: cat_ttake_tdrop.
-by rewrite IH !cfun_dup ttakeK tdropK.
-Qed.
+Proof. by apply: nfun_merge. Qed.
 
 End Merge.
 
