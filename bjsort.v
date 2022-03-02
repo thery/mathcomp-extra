@@ -43,7 +43,8 @@ have [iE1 | /eqP iD] := (i : nat) =P m.-1.
 by rewrite oddS (negPf iE) /= /= val_ipred /= val_inext /= (negPf iD).
 Qed.
   
-Definition ceswap {m} := connector_of (clink_eswap_proof m).
+Definition ceswap {m} :=
+  connector_of (clink_eswap_proof m) (cflip_default _ false).
 
 Lemma cfun_eswap n (t : n.-tuple A) : 
   cfun ceswap t = 
@@ -53,7 +54,7 @@ Lemma cfun_eswap n (t : n.-tuple A) :
 Proof.
 apply: eq_from_tnth => i /=.
 rewrite /ceswap /cfun /=.
-rewrite !tnth_map /= !tnth_ord_tuple ffunE.
+rewrite !tnth_map /= !tnth_ord_tuple !ffunE.
 have [iO|iE] := boolP (odd i); last by rewrite ifT // val_inext; case: eqP.
 case: leqP => [iLip|] //.
 suff -> : ipred i = i by rewrite maxxx minxx.
