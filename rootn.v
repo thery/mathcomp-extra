@@ -27,14 +27,11 @@ Lemma rootn_rec_bound k r n :
 Proof.
 case: k => // k _.
 have F : 1 < 2 ^ k.+1 by rewrite -{1}[1](exp1n k.+1) ltn_exp2r.
-elim: n r => [[] //=|n IH [|[|r]] rLn /=].
-- by rewrite exp0n // exp1n.
-- by rewrite exp0n // exp1n.
-- rewrite divn_small //=.
-  have -> : rootn_rec k.+1 0 n = 0by case: (n).
+elim: n r => [[] //=|n IH [|[|r]] rLn /=]; rewrite ?(exp0n, exp1n) //.
+  rewrite divn_small //=.
+  have -> : rootn_rec k.+1 0 n = 0 by case: (n).
   by rewrite exp1n /= exp1n.
-set x := _ %/ _.
-set u := rootn_rec _ _ _.
+set x := _ %/ _; set u := rootn_rec _ _ _.
 have /IH : x <= n.
   apply: leq_trans (rLn : _ < n).
   have /mulnK H : 0 < 2 ^ k.+1 by rewrite expn_gt0.
