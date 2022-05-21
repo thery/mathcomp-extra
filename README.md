@@ -51,7 +51,9 @@ Some extra material for mathcomp
 
   [A formalisation of Knuth exchange sort](./bjsort.v) 
 
-  [A fun puzzle about a tricky integer function ](./puzzleFF.v)
+  [A fun puzzle about a tricky integer function](./puzzleFF.v)
+
+  [A port to mathcomp of the elliptic curve of CoqPrime](./elliptic.v)
 
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 

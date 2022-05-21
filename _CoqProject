@@ -22,3 +22,4 @@ bitonic.v
 batcher.v
 bjsort.v
 puzzleFF.v
+elliptic.v
