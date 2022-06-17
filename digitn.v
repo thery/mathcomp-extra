@@ -101,9 +101,6 @@ Proof.
 by rewrite rdigitnSMl // -muln2 -addn1 modnMDl mul1n divnMDl // addn0.
 Qed.
 
-Lemma rdigitn0 b n : rdigitn b n 0 = 0.
-Proof. by rewrite rdigitnE big1 // => i; rewrite digit0n mul0n. Qed.
-
 Lemma rdigitnK b n m : m < b ^ n -> rdigitn b n (rdigitn b n m) = m.
 Proof.
 have [|b_gt0] := leqP b 0.
