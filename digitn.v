@@ -2,6 +2,14 @@ From mathcomp Require Import all_ssreflect.
 
 From mathcomp Require Import all_algebra.
 
+(******************************************************************************)
+(*                                                                            *)
+(* digitn b n m  ==  returns the m^th digit of n in base b                    *)
+(* rdigitn b n m ==  the bit-reversal for base b of m with bit length n       *)
+(*     bin_lucas ==  Lucas theorem for binomial                               *)
+(*                                                                            *)
+(******************************************************************************)
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -37,7 +45,7 @@ Lemma digitn_uniq b n k (f : {ffun 'I_k -> 'I_b}) i :
   n < b ^ k -> n = (\sum_(i < k) f i * b ^ i)%N -> 
   f i = digitn b n i :> nat.
 Proof.
-elim: k n f i => [[|] f [] //|k IH n f i nLb].
+elim: k n f i => [n f [] //|k IH n f i nLb].
 have b_pos : 0 < b by case: (b) nLb => //; rewrite exp0n.
 rewrite big_ord_recl /= muln1 => nE.
 have f0E : f ord0 = n %% b :> nat.
@@ -57,6 +65,71 @@ rewrite digitnS.
 have <- := H (Ordinal (Hj : j < k)).
   by rewrite ffunE /=; congr (f _); apply/val_eqP.
 by rewrite ltn_divLR // mulnC -expnS.
+Qed.
+
+Definition rdigitn b n m :=
+  reducebig 0 (index_iota 0 n) 
+   (fun i : nat => BigBody i addn true (digitn b m (n.-1 - i) * b ^ i)).
+
+Compute map (rdigitn 2 3) (iota 0 8).
+
+Lemma rdigitnE b n m : 
+  rdigitn b n m = \sum_(i < n) digitn b m (n.-1 - i) * b ^ i.
+Proof. 
+have <- := (big_mkord xpredT (fun i : nat => digitn b m (n.-1 - i) * b ^ i)).
+by rewrite unlock.
+Qed.
+
+Lemma rdigitn0 b n : rdigitn b n 0 = 0.
+Proof. by rewrite rdigitnE big1 // => i; rewrite digit0n mul0n. Qed.
+
+Lemma rdigitnSMl b m n :
+ 0 < b -> rdigitn b n.+1 m = (m %% b) * b ^ n + rdigitn b n (m %/ b).
+Proof.
+move=> b_gt0.
+rewrite !rdigitnE big_ord_recr addnC /= subnn digitn0; congr (_ + _).
+apply: eq_bigr => i _.
+have n_gt0 : 0 < n by apply: leq_ltn_trans (_ : i < n)%N.
+by rewrite -[X in X - i](prednK n_gt0) subSn ?digitnS // -ltnS prednK.
+Qed.
+
+Lemma rdigitn_even m n : rdigitn 2 n.+1 m.*2 = rdigitn 2 n m.
+Proof. by rewrite rdigitnSMl // -muln2 mulnK // modnMl. Qed.
+
+Lemma rdigitn_odd m n : rdigitn 2 n.+1 m.*2.+1 = 2 ^ n + rdigitn 2 n m.
+Proof.
+by rewrite rdigitnSMl // -muln2 -addn1 modnMDl mul1n divnMDl // addn0.
+Qed.
+
+Lemma rdigitn0 b n : rdigitn b n 0 = 0.
+Proof. by rewrite rdigitnE big1 // => i; rewrite digit0n mul0n. Qed.
+
+Lemma rdigitnK b n m : m < b ^ n -> rdigitn b n (rdigitn b n m) = m.
+Proof.
+have [|b_gt0] := leqP b 0.
+  by case: b; case: n; case: m => //= [n|n m]; rewrite exp0n.
+move=> mLbn.
+rewrite {1}rdigitnE [RHS](digitnE mLbn).
+apply: eq_bigr => i _; congr (_ * _).
+rewrite rdigitnE.
+pose f1 := [ffun i : 'I_n => (Ordinal (@ltn_pdigit b m (n.-1 - i) b_gt0)) ].
+have G : \sum_(i < n) digitn b m (n.-1 - i) * b ^ i = 
+         \sum_(i < n) (f1 i * b ^ i).
+  by apply: eq_bigr => j _; rewrite ffunE.
+have n_gt0 : 0 < n by case: i; case: (n).
+have FF : n.-1 - i < n.
+  apply: leq_ltn_trans (leq_subr _ _) _.
+  by rewrite prednK.
+have <- := digitn_uniq (Ordinal FF) _ G.
+  rewrite ffunE /= subnA //; first by rewrite subnn.
+  by rewrite -ltnS prednK.
+move: n.-1 => u; elim: {i f1 G mLbn n_gt0 FF}n => [|n IH].
+  by rewrite big_ord0 expn0.
+rewrite big_ord_recr /= -addSn.
+have -> : b ^ n.+1 = b ^ n + b.-1 * b ^ n.
+  by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
+rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
+by rewrite ltn_pdigit.
 Qed.
 
 Import GRing.Theory.
