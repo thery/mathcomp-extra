@@ -1,4 +1,5 @@
 From mathcomp Require Import all_ssreflect all_algebra ssrnum.
+Require Import digitn.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -21,7 +22,8 @@ Variable R : ringType.
 
 Implicit Type p : {poly R}.
 
-(* Even part of a polynomial *)
+(* Even part of a polynomial                                                  *)
+
 Definition even_poly p : {poly R} := \poly_(i < uphalf (size p)) p`_i.*2.
 
 Lemma size_even_poly p : (size (even_poly p) <= uphalf (size p))%N.
@@ -36,13 +38,8 @@ case: odd; first by rewrite !add1n ltn_double.
 by rewrite leq_double.
 Qed.
 
-Lemma uphalf_leq m n : (m <= n -> uphalf m <= uphalf n)%N.
-Proof.
-move/subnK <-; rewrite !uphalf_half oddD halfD !addnA.
-by do 2 case: odd => //=; apply: leq_addl.
-Qed.
+(* Odd part of a polynomial                                                   *)
 
-(* Odd part of a polynomial *)
 Definition odd_poly p : {poly R} := \poly_(i < uphalf (size p)) p`_i.*2.+1.
 
 Lemma size_odd_poly p : (size (odd_poly p) <= uphalf (size p))%N.
@@ -57,7 +54,7 @@ case: odd; first by rewrite !add1n ltnS leq_double => /ltnW.
 by rewrite -leq_double => /leq_trans->.
 Qed.
 
-(* Auxillary lemmas for _ \Po X'X^n *)
+(* Auxillary lemmas for _ \Po X'X^n                                           *)
 Lemma comp_polyXn (p : {poly R}) n :
   (0 < n)%N -> 
   p \Po 'X^n = \poly_(i < size p * n) (if (n %| i)%N then p`_(i %/ n) else 0).
@@ -104,8 +101,9 @@ elim/poly_ind: p => [|p c IH]; first by rewrite horner0 comp_poly0 horner0.
 by rewrite comp_poly_MXaddC !hornerD !hornerC hornerMX hornerMXn IH.
 Qed.
 
-(* Decomposiiton in odd and even part *)
+(* Decomposiiton in odd and even part                                         *)
 Lemma odd_even_polyE p :
+
   p = (even_poly p \Po 'X^2) + (odd_poly p \Po 'X^2) * 'X.
 Proof.
 apply/polyP=> i.
@@ -115,46 +113,155 @@ case: (odd i); rewrite !(add1n, add0n, oddS, odd_double, doubleK, add0r) //=.
 by case: i => [|[|i]]; rewrite ?addr0 //= odd_double /= addr0.
 Qed.
 
-(* The algorithm *)
+(* The recursive algorithm                                                    *)
 Fixpoint fft n w p : {poly R} := 
   if n is n1.+1 then
   let ev := fft n1 (w * w) (even_poly p) in
   let ov := fft n1 (w * w) (odd_poly p) in
   \poly_(i < 2 ^ n1.+2)
-    let j := (i %% 2^n1.+1)%N in ev`_j + ov`_ j * w ^+ i 
+    let j := (i %% 2 ^  n1.+1)%N in ev`_j + ov`_ j * w ^+ i 
   else \poly_(i < 2) p.[w ^+ i].
 
-(* Its correctness *)
+Lemma size_fft n w p : (size (fft n w p) <= 2 ^ n.+1)%N.
+Proof. by case: n => [|n] /=; apply: size_poly. Qed.
+
+Fact half_exp2n n : (uphalf (2 ^ n.+1) = 2 ^ n)%N.
+Proof.
+by rewrite uphalf_half !expnS !mul2n doubleK odd_double add0n.
+Qed.
+
+Fact size_odd_poly_exp2n n p : 
+  (size p <= 2 ^ n.+1 -> size (odd_poly p) <= 2 ^ n)%N.
+Proof.
+move=> Hs; apply: leq_trans (size_odd_poly _) _.
+by rewrite -half_exp2n uphalf_leq.
+Qed.
+
+Fact size_even_poly_exp2n n p : 
+  (size p <= 2 ^ n.+1 -> size (even_poly p) <= 2 ^ n)%N.
+Proof.
+move=> Hs; apply: leq_trans (size_even_poly _) _.
+by rewrite -half_exp2n uphalf_leq.
+Qed.
+
+(* Its correctness                                                            *)
 Lemma fftE n (w : R) p : 
   (size p <= 2 ^ n.+1)%N -> w ^+ (2 ^ n) = -1 ->
-  (fft n w p) = \poly_(i < 2 ^ n.+1) p.[w ^+ i].
+  fft n w p = \poly_(i < 2 ^ n.+1) p.[w ^+ i].
 Proof.
 elim: n w p => [// |n IH w p sL wE /=].
 apply/polyP => i; rewrite !coef_poly; case: leqP => // iL.
 have imL : (i %% 2 ^ n.+1 < 2 ^ n.+1)%N by apply/ltn_pmod/expn_gt0.
 have n2P : (0 < 2 ^ n.+2)%N by rewrite expn_gt0.
-have n2P_halfE : (2 ^ n.+1 = uphalf (2 ^ n.+2))%N.
-  by rewrite uphalf_half !expnS !mul2n doubleK odd_double add0n.
-rewrite !IH ?coef_poly ?imL //.
-- rewrite [p in RHS]odd_even_polyE.
-  rewrite !(hornerD, horner_comp_polyXn, hornerMX, hornerX).
-  suff -> : (w * w) ^+ (i %% 2 ^ n.+1) = w ^+ i * w ^+ i by [].
-  rewrite -!expr2 -!exprM.
-  have [iLm|mLi] := leqP (2 ^ n.+1) i; last by rewrite modn_small // mulnC.
-  have -> : (i %% 2 ^ n.+1 = i - 2 ^ n.+1)%N.
-    rewrite -[in LHS](subnK iLm) modnDr modn_small //.
-    by rewrite ltn_psubLR ?expn_gt0 // addnn -mul2n -expnS.
-  have -> : (i * 2 = 2 * (i - 2 ^ n.+1) + 2 ^ n.+2)%N.
-    by rewrite mulnC mulnBr -expnS subnK // expnS leq_mul2l.
-  rewrite exprD.
-  suff -> : w ^+ (2 ^ n.+2) = 1 by rewrite mulr1.
-  by rewrite expnS mulnC exprM wE expr2 mulrN1 opprK.
-- apply: leq_trans (size_odd_poly _) _.
-  by rewrite n2P_halfE uphalf_leq.
-- by rewrite -expr2 -exprM -expnS.
-- apply: leq_trans (size_even_poly _) _.
-  by rewrite n2P_halfE uphalf_leq.
-by rewrite -expr2 -exprM -expnS.
+have wwE : (w * w) ^+ (2 ^ n) = -1 by rewrite -expr2 -exprM -expnS.
+rewrite !IH ?coef_poly ?imL ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
+rewrite [p in RHS]odd_even_polyE.
+rewrite !(hornerD, horner_comp_polyXn, hornerMX, hornerX).
+suff -> : (w * w) ^+ (i %% 2 ^ n.+1) = w ^+ i * w ^+ i by [].
+rewrite -!expr2 -!exprM.
+have [iLm|mLi] := leqP (2 ^ n.+1) i; last by rewrite modn_small // mulnC.
+have -> : (i %% 2 ^ n.+1 = i - 2 ^ n.+1)%N.
+  rewrite -[in LHS](subnK iLm) modnDr modn_small //.
+  by rewrite ltn_psubLR ?expn_gt0 // addnn -mul2n -expnS.
+have -> : (i * 2 = 2 * (i - 2 ^ n.+1) + 2 ^ n.+2)%N.
+  by rewrite mulnC mulnBr -expnS subnK // expnS leq_mul2l.
+rewrite exprD.
+suff -> : w ^+ (2 ^ n.+2) = 1 by rewrite mulr1.
+by rewrite expnS mulnC exprM wE expr2 mulrN1 opprK.
+Qed.
+
+(* The algorithm with explicitely the butterfly                               *)
+Fixpoint fft1 n w p : {poly R} := 
+  if n is n1.+1 then
+  let ev := fft1 n1 (w * w) (even_poly p) in
+  let ov := fft1 n1 (w * w) (odd_poly p) in
+  \sum_(j < 2 ^ n1.+1)
+    ((ev`_j + ov`_ j * w ^+ j) *: 'X^j +
+     (ev`_j - ov`_ j * w ^+ j) *: 'X^(j + 2 ^ n1.+1)) 
+  else \poly_(i < 2) p.[w ^+ i].
+
+Lemma fft1E n (w : R) p : 
+  (size p <= 2 ^ n.+1)%N -> w ^+ (2 ^ n) = -1 -> fft n w p = fft1 n w p.
+Proof.
+elim: n w p => [// |n IH w p sL wE /=].
+have wwE : (w * w) ^+ (2 ^ n) = -1 by rewrite -expr2 -exprM -expnS.
+rewrite poly_def -(@big_mkord _ (0 : {poly R}) +%R (2 ^ n.+2) xpredT
+   (fun (i : nat) => 
+      ((fft n (w * w) (even_poly p))`_(i %% 2 ^ n.+1) +
+    (fft n (w * w) (odd_poly p))`_(i %% 2 ^ n.+1) * w ^+ i) *: 'X^i)).
+have F : (2 ^ n.+1 <= 2 ^ n.+2)%N by rewrite leq_exp2l.
+rewrite (big_cat_nat _ _ _ _ F) //=.
+rewrite big_nat; under eq_bigr do rewrite modn_small // ; rewrite -big_nat /=.
+rewrite -(add0n (2 ^ n.+1)%N) big_addn add0n.
+rewrite [(2 ^ n.+2)%N]expnS mul2n -addnn addnK.
+rewrite big_split /= big_mkord; congr (_ + _).
+  by apply: eq_bigr => i _;
+      rewrite !IH ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
+rewrite big_nat; under eq_bigr do
+    rewrite modnDr modn_small // exprD wE mulrN1 mulrN; rewrite -big_nat /=.
+rewrite big_mkord; apply: eq_bigr => i _.
+by rewrite !IH ?size_even_poly_exp2n ?size_odd_poly_exp2n.
+Qed.
+
+Lemma leq_uphalf m n : (uphalf m <= n)%N = (m <= n.*2)%N.
+Proof.
+rewrite -[X in (X <= _.*2)%N]odd_double_half uphalf_half.
+by case: odd ; [rewrite !add1n ltn_double | rewrite leq_double].
+Qed.
+
+Definition reverse_poly n (p : {poly R}) :=
+  \poly_(i < 2 ^ n) p`_(rdigitn 2 n i).
+
+Lemma size_reverse_poly  n p : (size (reverse_poly n p) <= 2 ^ n)%N.
+Proof. by rewrite size_poly. Qed.
+
+Lemma reverse_poly0 p : reverse_poly 0 p = (p`_0)%:P.
+Proof. by apply/polyP => [] [|i]; rewrite coef_poly coefC. Qed.
+
+Lemma reverse_polyS n p : 
+  reverse_poly n.+1 p = 
+  reverse_poly n (even_poly p) + reverse_poly n (odd_poly p) * 'X^(2 ^ n).
+Proof.
+rewrite /reverse_poly /even_poly /odd_poly.
+under [X in X + _]eq_poly do rewrite coef_poly.
+under [X in _ + X * _]eq_poly do rewrite coef_poly.
+apply/polyP => i.
+rewrite coefD coefMXn !coef_poly.
+have [tnLi|iLtn] := leqP (2 ^ n) i.
+  rewrite ltn_subLR // addnn -mul2n -expnS add0r.
+  case: leqP => [//|iLtSn].
+  suff Hf : (rdigitn 2 n.+1 i) = (rdigitn 2 n (i - 2 ^ n)).*2.+1.
+    case: leqP => [iLn|nLi]; last by rewrite Hf.
+    suff/leq_sizeP-> : (size p <= rdigitn 2 n.+1 i)%N by [].
+    rewrite leq_uphalf in iLn.
+    by rewrite (leq_trans iLn) // Hf.
+  rewrite !rdigitnE big_ord_recl /= subn0 muln1 /bump /= .
+  rewrite {1}/digitn -{1}(subnK tnLi).
+  rewrite divnDr ?dvdnn // divnn expn_gt0 /= divn_small ?add1n; last first.
+    by rewrite ltn_subLR // addnn -mul2n -expnS.
+  under eq_bigr do rewrite add1n; congr (_.+1).
+  under eq_bigr do rewrite expnS mulnCA.
+  rewrite -big_distrr /= mul2n; congr (_.*2).
+  apply: eq_bigr => j _; congr (_ * _)%N.
+  have ->: (n.-1 - j = n - j.+1)%N.
+    rewrite subnS.
+    by case: (n) j => //= n1 j; rewrite subSn // -ltnS.
+  rewrite /digitn -{1}(subnK tnLi) -[X in (_ + 2 ^ X)%N](subnK (ltn_ord j)).
+  rewrite expnD mulnC divnDMl ?expn_gt0 //.
+  by rewrite -modnDm // expnS modnMr addn0 modn_mod.
+rewrite addr0 ifT; last by rewrite (leq_trans iLtn) // leq_exp2l.
+suff Hf : (rdigitn 2 n.+1 i) = (rdigitn 2 n i).*2.
+  case: leqP => [iLn|nLi]; last by rewrite Hf.
+  suff/leq_sizeP-> : (size p <= rdigitn 2 n.+1 i)%N by [].
+  rewrite leq_uphalf in iLn.
+  by rewrite (leq_trans iLn) // Hf.
+rewrite !rdigitnE big_ord_recl /= subn0 muln1 /bump /= .
+rewrite {1}/digitn divn_small // add0n.
+under eq_bigr do rewrite add1n expnS mulnCA.
+rewrite -big_distrr /= mul2n; congr (_.*2).
+apply: eq_bigr => j _; congr (_ _ _ * _)%N.
+rewrite subnS.
+by case: (n) j => //= n1 j; rewrite subSn // -ltnS.
 Qed.
 
 End FFT.
@@ -163,15 +270,15 @@ Section iFFT.
 
 Local Open Scope ring_scope.
 
-(* Arbitrary field *)
+(* Arbitrary field                                                            *)
 Variable F : fieldType.
 
 Implicit Type p : {poly F}.
 
-(* The inverse algorithm  *)
+(* The inverse algorithm                                                      *)
 Definition ifft n w p : {poly F} := (2^ n.+1)%:R^-1%:P * (fft n w^-1 p).
 
-(* Its correctness *)
+(* Its correctness                                                            *)
 Lemma fftK n (w : F) p : 
   2%:R != 0 :> F -> (size p <= 2 ^ n.+1)%N -> (2 ^ n.+1).-primitive_root w ->
   ifft n w (fft n w p) = p.

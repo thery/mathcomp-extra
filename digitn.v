@@ -83,6 +83,9 @@ Qed.
 Lemma rdigitn0 b n : rdigitn b n 0 = 0.
 Proof. by rewrite rdigitnE big1 // => i; rewrite digit0n mul0n. Qed.
 
+Lemma rdigit0n b m : rdigitn b 0 m = 0.
+Proof. by rewrite rdigitnE big_ord0. Qed.
+
 Lemma rdigitnSMl b m n :
  0 < b -> rdigitn b n.+1 m = (m %% b) * b ^ n + rdigitn b n (m %/ b).
 Proof.
@@ -127,6 +130,17 @@ have -> : b ^ n.+1 = b ^ n + b.-1 * b ^ n.
   by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
 rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
 by rewrite ltn_pdigit.
+Qed.
+
+Lemma ltn_rdigitn b n m : 0 < b -> rdigitn b n m < b ^ n.
+Proof.
+move=> b_gt0.
+elim: n m => [n |n IH m]; first by rewrite rdigit0n.
+rewrite rdigitnSMl // -addnS addnC.
+have -> : b ^ n.+1 = b ^ n + b.-1 * b ^ n.
+  by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
+rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
+by rewrite ltn_mod.
 Qed.
 
 Import GRing.Theory.

@@ -111,7 +111,7 @@ Lemma adde_lem1 x1 y1 :
   let x3 := l ^+ 2 - 2%:R * x1  in
   (- y1 - l * (x3 - x1)) ^+ 2 = x3 ^+ 3 + A * x3 + B.
 Proof.
-move=> y1D0 y1E l x3; rewrite /x3 /l; move: y1E; field.
+move=> y1D0 y1E l x3; rewrite /x3 /l. move: y1E; field.
 by rewrite y1D0 K2D0.
 Qed.
 
