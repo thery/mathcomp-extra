@@ -337,7 +337,6 @@ Lemma fft2S n w (p : {poly R}) :
      (ev`_j - ov`_ j * w ^+ j) *: 'X^(j + 2 ^ n)).
 Proof. by []. Qed.
 
-
 Lemma fft2E n (w : R) p : 
   (size p <= 2 ^ n)%N -> ((0 < n)%N -> w ^+ (2 ^ n.-1) = -1) -> 
   fft2 n w p = fft1 n w p.
@@ -402,6 +401,52 @@ rewrite -big_distrr /= mul2n; congr (_.*2).
 apply: eq_bigr => j _; congr (_ _ _ * _)%N.
 rewrite subnS.
 by case: (n) j => //= n1 j; rewrite subSn // -ltnS.
+Qed.
+
+Fixpoint invariant_fft2 n m w p q :=
+  if n is n1.+1 then 
+  invariant_fft2 n1 m w (even_poly p) (\poly_(i < 2 ^ n1) q`_i) /\ 
+  invariant_fft2 n1 m w (odd_poly p) (\poly_(i < 2 ^ n1) q`_(i + 2 ^ n1)) 
+  else q = fft2 m w p.
+
+Lemma invariant_fft2_reverse_poly p n w :
+  (size p <= 2 ^ n)%N -> invariant_fft2 n 0 w p (reverse_poly n p).
+Proof.
+elim: n p => /= [p spL1|n IH p spLb]; first by rewrite reverse_poly0.
+split.
+  rewrite reverse_polyS poly_def.
+  under eq_bigr do rewrite coefD coefMXn ifT // addr0.
+  rewrite -poly_def.
+  have -> : \poly_(i < 2 ^ n) (reverse_poly n (even_poly p))`_i = 
+            \poly_(i < size (reverse_poly n (even_poly p)))
+                       (reverse_poly n (even_poly p))`_i.
+    apply/polyP => i; rewrite coef_poly [RHS]coef_poly.
+    case: leqP => [n2Li|iLn2].
+      by rewrite ifN // -leqNgt (leq_trans _ n2Li) // size_reverse_poly.
+    case: leqP => [epLi|iLep] => //.
+    by suff /leq_sizeP-> : (size (reverse_poly n (even_poly p)) <= i)%N by [].
+  rewrite coefK.
+  apply: IH.
+  by rewrite size_even_poly_exp2n.
+rewrite reverse_polyS poly_def.
+under eq_bigr do rewrite coefD coefMXn ltnNge leq_addl /= addnK scalerDl.
+rewrite big_split /= big1 ?add0r => [|i _]; last first.
+  suff /leq_sizeP-> : (size (reverse_poly n (even_poly p)) <= i + 2 ^ n)%N.
+  - by rewrite scale0r.
+  - by [].
+  by apply: leq_trans (size_reverse_poly _ _) (leq_addl _ _).
+rewrite -poly_def.
+have -> : \poly_(i < 2 ^ n) (reverse_poly n (odd_poly p))`_i = 
+          \poly_(i < size (reverse_poly n (odd_poly p)))
+                      (reverse_poly n (odd_poly p))`_i.
+  apply/polyP => i; rewrite coef_poly [RHS]coef_poly.
+  case: leqP => [n2Li|iLn2].
+    by rewrite ifN // -leqNgt (leq_trans _ n2Li) // size_reverse_poly.
+  case: leqP => [epLi|iLep] => //.
+  by suff /leq_sizeP-> : (size (reverse_poly n (odd_poly p)) <= i)%N by [].
+rewrite coefK.
+apply: IH.
+by rewrite size_odd_poly_exp2n.
 Qed.
 
 End FFT.
