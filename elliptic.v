@@ -95,7 +95,8 @@ Theorem curve_elt_oppe x1 x2 y1 y2 e1 e2 (x1E : x1 = x2) :
   \/ 
      @curve_elt x1 y1 e1 = oppe (@curve_elt x2 y2 e2).
 Proof.
-have /eqP : (y1 - y2) * (y1 + y2) = 0 by move: x1E e1 e2; ring.
+have /eqP : (y1 - y2) * (y1 + y2) = 0.
+  ring: x1E e1 e2.
 rewrite mulf_eq0 => /orP[] /eqP Hy.
   left; apply: curve_elt_irr => //.
   by rewrite -[y1](subrK y2) Hy; ring.
@@ -111,7 +112,7 @@ Lemma adde_lem1 x1 y1 :
   let x3 := l ^+ 2 - 2%:R * x1  in
   (- y1 - l * (x3 - x1)) ^+ 2 = x3 ^+ 3 + A * x3 + B.
 Proof.
-move=> y1D0 y1E l x3; rewrite /x3 /l. move: y1E; field.
+move=> y1D0 y1E l x3; rewrite /x3 /l; field : y1E.
 by rewrite y1D0 K2D0.
 Qed.
 
@@ -124,7 +125,7 @@ Lemma adde_lem2 x1 y1 x2 y2 :
   (- y1 - l * (x3 - x1)) ^ 2 = x3 ^ 3 + A * x3 + B.
 Proof.
 move=> /eqP x1Dx2 y1E y2E l x3; rewrite /x3 /l.
-Time move: y1E y2E; field.
+Time field: y1E y2E.
 apply: contra_neq x1Dx2 => x2Bx1.
 by rewrite -[x2](subrK x1) x2Bx1; ring.
 Qed.
@@ -136,7 +137,7 @@ Lemma adde_zero x1 x2 y1 y2 :
   y1 != - y2 -> y1 = y2.
 Proof.
 move=> x1E e1 e2 y1DNy2.
-have /eqP : (y1 - y2) * (y1 + y2) = 0 by move: x1E e1 e2; ring.
+have /eqP : (y1 - y2) * (y1 + y2) = 0 by ring: x1E e1 e2.
 rewrite mulf_eq0 => /orP[] /eqP Hy.
   by rewrite -[y1](subrK y2) Hy; ring.
 case/eqP: y1DNy2.
@@ -152,7 +153,7 @@ Proof.
 move=> x1E e1 e2 /eqP y1DNy2.
 have y1E := adde_zero x1E e1 e2 y1DNy2.
 apply: contra_neq y1DNy2.
-by rewrite -y1E; ring.
+by rewrite -y1E => y2E; ring : y2E.
 Qed.
 
 (******************************************************************************)
@@ -221,7 +222,7 @@ rewrite /adde.
 case: (x1 =P x2) => [x1Ex2 | x1Ex2].
   case: (y1 =P - y2) => [y1Ey2 | y1Ey2].
     have ->// : curve_elt e2 = oppe (curve_elt e1).
-    by apply: curve_elt_irr => //; move: y1Ey2; ring.
+    by apply: curve_elt_irr => //; ring: y1Ey2.
   have y1NZ : y1 != 0 by apply: adde_zero_diff e1 e2 _.
   have -> : curve_elt e2 = curve_elt e1.
     apply: curve_elt_irr; apply/sym_equal => //.
@@ -264,7 +265,7 @@ move=> Hip Hpi HpNp Hg p q; apply: adde_case => //.
     have /eqP : 2%:R * y1 = 0  by rewrite mulr_natl mulr2n {1}y1E; ring.
     by rewrite mulf_eq0 (negPf K2D0) (negPf y1NZ).
   - by left.
-  by move: x2E; ring.
+  by ring: x2E.
 move=> p1 x1 y1 e1 p2 x2 y2 e2 p3 x3 y3 e3 l p1E p2E p3E p3E1 x1Dx2 lE x3E y3E.
 apply: (Hg p1 x1 y1 e1 p2 x2 y2 e2 p3 x3 y3 e3 l) => //.
   apply/eqP; rewrite p1E p2E => [] [] x1Ex2.
@@ -340,7 +341,7 @@ subst y3b x3b y4b x4b => {p3bE p4bE}// _ _ _ _.
 have x2Bx1NZ : x2 - x1 != 0 by rewrite subr_eq0 eq_sym.
 have x3Bx2NZ : x3 - x2 != 0 by rewrite subr_eq0 eq_sym.
 rewrite p6E p7E; apply: curve_elt_irr; subst.
-  move: e1 e2 e3b; field => //.
+  field: e1 e2 e3b => //.
   apply/and4P; split => //.
     apply: contra x4bDx4b=> /eqP x3E.
     rewrite -subr_eq0 (_ : 0 = 0 / -((x2 - x1) ^+ 2)); last by rewrite mul0r.
@@ -350,7 +351,7 @@ rewrite p6E p7E; apply: curve_elt_irr; subst.
   rewrite -subr_eq0 (_ : 0 = 0 / -((x3 - x2) ^+ 2)); last by rewrite mul0r.
   apply/eqP; rewrite -x3E; field.
   by rewrite oppr_eq0 sqrf_eq0 x3Bx2NZ.
-move: e1 e2 e3b; field => //.
+field: e1 e2 e3b => //.
 apply/and4P; split => //.
 apply: contra x4bDx4b => /eqP x3E.
   rewrite -subr_eq0 (_ : 0 = 0 / -((x2 - x1) ^+ 2)); last by rewrite mul0r.
@@ -404,7 +405,7 @@ rewrite [in p3b = _]p3bE [in p4b = _]p4bE => [] [x3bE y3bE] [x4bE y4bE].
 subst x3b y3b x4b y4b => {p3bE p4bE}// _ _ _.
 have x2Bx1NZ : x2 - x1 != 0 by rewrite subr_eq0 eq_sym.
 subst; apply: curve_elt_irr.
-  move: e1 e2; field.
+  field: e1 e2.
   apply/and5P; split => //.
   - apply: contra x4bDx3b => /eqP polE.
     rewrite -subr_eq0 (_ : 0 = 0 / -((x2 - x1) ^+ 2)); last by rewrite mul0r.
@@ -415,7 +416,7 @@ subst; apply: curve_elt_irr.
   rewrite -subr_eq0 (_ : 0 = 0 / -((2%:R * y2) ^+ 2)); last by rewrite mul0r.
   apply/eqP; rewrite -polE; field.
   by rewrite oppr_eq0 sqrf_eq0 mulf_eq0 negb_or !y2bNZ !K2D0.
-move: e1 e2; field.
+field: e1 e2.
 apply/and5P; split => //.
 - apply: contra x4bDx3b => /eqP polE.
   rewrite -subr_eq0 (_ : 0 = 0 / -((x2 - x1) ^+ 2)); last by rewrite mul0r.
@@ -494,7 +495,7 @@ have pol2NZ : pol2 != 0.
   by rewrite oppr_eq0 sqrf_eq0 mulf_eq0 negb_or K2D0 y2bNZ.
 move=> _ _ _ _ _; rewrite p6E p7E; apply: curve_elt_irr.
   rewrite !(x6E, x7E, l2E, l4E, y4E, x4E,  x1E, y1E, l1E, lE).
-  move: e2; field.
+  field: e2.
   rewrite K2D0; apply/and5P; split => //.
     apply: contra x4bDx2b => /eqP polE.
     rewrite -subr_eq0 (_ : 0 =  0 / pol); last by rewrite mul0r.
@@ -509,7 +510,7 @@ move=> _ _ _ _ _; rewrite p6E p7E; apply: curve_elt_irr.
   apply/eqP; rewrite -polE.
   by field; rewrite y2bNZ K2D0.
 rewrite !(y6E, y7E, l2E, l4E, x6E, x7E, y4E, x4E, y1E, x1E, l1E, lE).
-move: e2; field.
+field: e2.
 rewrite y2bNZ K2D0; apply/and5P; split => //.
   apply: contra x4bDx2b => /eqP polE.
   rewrite -subr_eq0 (_ : 0 =  0 / pol); last by rewrite mul0r.
@@ -581,8 +582,8 @@ have x23E : x2 ^+ 3 = -(A * x2 + B).
   by apply/eqP; rewrite -subr_eq0 opprK addrA -e2 y2Z expf_eq0 eqxx.
 have : (x2 - x1) * (2%:R * A * x2 + 3%:R * B) == 0 .
   rewrite (_ : 0 = 0 * (((x2 - x1) ^+ 2) * x2)); last by rewrite mul0r.
-  rewrite -polE; apply/eqP; move: y2Z e1 x23E.
-  by field; rewrite subr_eq0 eq_sym.
+  rewrite -polE; apply/eqP.
+  by field: y2Z e1 x23E; rewrite subr_eq0 eq_sym.
 rewrite mulf_eq0 subr_eq0 eq_sym (negPf x1Dx2) /= addr_eq0 => /eqP Ax2E.
 have BZ : B = 0.
   rewrite -[LHS]opprK.
@@ -600,7 +601,7 @@ rewrite !mulf_eq0 (negPf K2D0) /= => /orP[/eqP AZ|/eqP x2Z].
 have : A * x1 == 0.
   apply/eqP; rewrite (_ : 0 = 0 * (x2 - x1) ^+ 2); last by rewrite mul0r.
   rewrite -polE y2Z x2Z !subr0 !sub0r.
-  by move: e1 BZ; field; rewrite oppr_eq0 -x2Z.
+  by field: e1 BZ; rewrite oppr_eq0 -x2Z.
 rewrite !mulf_eq0 => /orP[/eqP AZ|/eqP x1Z].
   by case/eqP: (NonSingular Eth); rewrite AZ BZ !expr0n !mulr0 addr0.
 by case/eqP: x1Dx2; rewrite x2Z.
@@ -780,14 +781,14 @@ suff pol1E :  (2%:R * y2  * y1) ^+ 2 -
       (x2 * A + 3%:R * x2 * x1 ^ 2 + A * x1 - x1 ^+ 3 + 2%:R * B) ^+ 2 = 0.
   rewrite (_ : 0 = 0 / (2%:R * y1) ^+ 2); last first.
     by rewrite mul0r.
-  rewrite -pol1E; move: (e1) (e2).
-  by field; rewrite y1NZ K2D0.
+  rewrite -pol1E.
+  by field: e1 e2; rewrite y1NZ K2D0.
 apply/eqP; rewrite subr_eq0; apply/eqP.
 congr (_ ^+ _).
 apply/eqP; rewrite -subr_eq0; apply/eqP.
 rewrite (_ : 0 = 0 * -(x2 - x1) ^+ 2); last by rewrite mul0r.
-rewrite -polE; move: (e1) (e2).
-by field; rewrite subr_eq0 eq_sym.
+rewrite -polE.
+by field: e1 e2; rewrite subr_eq0 eq_sym.
 Qed.
 
 
@@ -878,14 +879,14 @@ have y5E : y5 = - y2 by rewrite -Ny5E opprK.
 rewrite p1E.
 by apply: curve_elt_irr;
    rewrite ?y6E ?x6E ?l0E ?y5E ?y4E ?x5E ?x4E ?y3E ?x3E ?lE;
-   move: (e1) (e2); field;
+   field: e1 e2;
    rewrite subr_eq0 [in x2 != _]eq_sym ?x1Dx2 /=;
    apply/eqP => polE;
    case/eqP: x4Dx5;
    rewrite x4E x3E lE x5E;
    apply/eqP; rewrite -subr_eq0; apply/eqP;
    (rewrite (_ : 0 = 0 / -(x2 - x1) ^+ 2); last by rewrite mul0r);
-   rewrite -polE; move: (e1) (e2); field;
+   rewrite -polE; field: e1 e2;
    rewrite oppr_eq0 expf_eq0 /= subr_eq0 eq_sym (negPf x1Dx2).
 Qed.
 
@@ -1200,7 +1201,7 @@ Lemma adde_lem_gen  x1 x2 y1 y2 z1 z2
   let x3 := z1 * z2 * m2 - l2 * dl in
   (z2 * l2 * (m * x1 - y1 * l) - m * x3) ^+ 2 * (z1 * z2 * l3) =
   (l * x3) ^+ 3 + A * (l * x3) * (z1 * z2 * l3) ^+ 2 + B * (z1 * z2 * l3) ^+ 3.
-Proof. by move: e1 e2; ring. Qed.
+Proof. by ring: e1 e2. Qed.
 
 Lemma adde_lem_tan x1 y1 z1 
                 (e1 : y1 ^ 2 * z1 = x1 ^ 3 + A * x1 * z1 ^ 2 + B * z1 ^ 3) : 
@@ -1212,7 +1213,7 @@ Lemma adde_lem_tan x1 y1 z1
   let x3 := m2 * z1 - 2%:R * x1 * l2 in
   (l2 * (m * x1 - y1 * l) - m * x3) ^ 2 * (z1 * l3) =
   (l * x3) ^+ 3 + A * (l * x3) * (z1 * l3) ^+ 2 + B * (z1 * l3) ^+ 3.
-Proof. by move: e1; ring. Qed.
+Proof. by ring: e1. Qed.
 
 (** doubling a point *)
 
@@ -1276,7 +1277,7 @@ Lemma pe2e_lem1 x1 y1 z1
            x1 ^ 3 + A * x1 * z1 ^ 2 + B * z1 ^ 3)
       (z1NZ : z1 == 0 = false) :
       (y1 / z1) ^ 2  = (x1 / z1) ^ 3 + A * (x1 / z1) + B.
-Proof. by move: e1; field; rewrite z1NZ. Qed.
+Proof. by field: e1; rewrite z1NZ. Qed.
 
 (* Transfer function from projective to affine *)
 Definition pe2e (p : pelt) :=
@@ -1353,8 +1354,8 @@ case: eqP => x1z1E.
     rewrite e1.
     apply: etrans (_ : (y2 ^+ 2 * z2 / z2^+ 3 = _)); last by field; rewrite p1.
     rewrite e2.
-    have/eqP := x2z1E; rewrite subr_eq0 => /eqP.
-    by field; rewrite p p1.
+    have/eqP := x2z1E; rewrite subr_eq0 => /eqP He1.
+    by field: He1; rewrite p p1.
   rewrite eqf_sqr.
   have /eqP/negPf-> := y1z1E.
   rewrite GRing.eqr_div ?p ?p1 // -subr_eq0 -opprB oppr_eq0.
