@@ -68,35 +68,35 @@ license:
   identifier: MIT
 
 supported_coq_versions:
-  text: '8.15 or later'
-  opam: '{(>= "8.15")}'
+  text: '8.16 or later'
+  opam: '{(>= "8.16")}'
 
 dependencies:
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{(>= "1.14.0")}'
+    version: '{(>= "1.15.0")}'
   description: |-
-    [MathComp ssreflect 1.14 or later](https://math-comp.github.io)
+    [MathComp ssreflect 1.15 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{(>= "1.14.0")}'
+    version: '{(>= "1.15.0")}'
   description: |-
-    [MathComp ssreflect 1.14 or later](https://math-comp.github.io)
+    [MathComp ssreflect 1.15 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-fingroup
-    version: '{(>= "1.14.0")}'
+    version: '{(>= "1.15.0")}'
   description: |-
-    [MathComp fingroup 1.14 or later](https://math-comp.github.io)
+    [MathComp fingroup 1.15 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-algebra
-    version: '{(>= "1.14.0")}'
+    version: '{(>= "1.15.0")}'
   description: |-
-    [MathComp algebra 1.14 or later](https://math-comp.github.io)
+    [MathComp algebra 1.15 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-field
-    version: '{(>= "1.14.0")}'
+    version: '{(>= "1.15.0")}'
   description: |-
-    [MathComp field 1.14 or later](https://math-comp.github.io)
+    [MathComp field 1.15 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-zify
     version: '{(>= "1.2.0")}'
@@ -109,7 +109,7 @@ dependencies:
     [MathComp Algebra Tactics 1.0.0 or later](https://github.com/math-comp/algebra-tactics)
 
 tested_coq_opam_versions:
-- version: '1.14.0-coq-8.15'
+- version: '1.15.0-coq-8.16'
   repo: 'mathcomp/mathcomp'
 
 namespace: mathcomp-extra
