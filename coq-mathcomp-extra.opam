@@ -39,11 +39,23 @@ Some extra material for mathcomp
 
   [A formalisation of 2-player games](./tplayer.v) (in progress)
 
-  [A formalisation of Fast Fourier Transform](./fft.v) (in progress)
+  [A formalisation of Fast Fourier Transform](./fft.v)
 
-  [A formalisation of sorting network (bitonic sort)](./nsort.v) (in progress)
+  [More theorems about tuples](./more_tuple.v)
 
-  [A fun puzzle about a tricky integer function ](./puzzleFF.v)"""
+  [A formalisation of sorting network](./nsort.v)
+  
+  [A formalisation of bitonic sort](./bitonic.v) 
+  
+  [A formalisation of Batcher odd or even sort](./batcher.v) 
+  
+  [A formalisation of Knuth exchange sort](./bjsort.v) 
+
+  [A fun puzzle about a tricky integer function](./puzzleFF.v)
+
+  [A port to mathcomp of the elliptic curve of CoqPrime](./elliptic.v)
+
+A note about sorting network is available [here](https://hal.inria.fr/hal-03585618)."""
 
 build: [make "-j%{jobs}%"]
 install: [make "install"]
@@ -55,6 +67,7 @@ depends: [
   "coq-mathcomp-algebra" {(>= "1.14.0")}
   "coq-mathcomp-field" {(>= "1.14.0")}
   "coq-mathcomp-zify" {(>= "1.2.0")}
+  "coq-mathcomp-algebra-tactics" {(>= "1.0.0")}
 ]
 
 tags: [

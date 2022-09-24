@@ -473,7 +473,7 @@ have F1 (b : bool) c :
 have F2 (b : bool) c : 
    c <= s -> size (('X + (c%:R)%:P : {poly F})%R ^+ b) <= 2.
   case: b => cD; last by rewrite expr0 size_polyC oner_eq0.
-  rewrite (_ : 2 = maxn(size ('X : {poly F})) (size ((c%:R)%:P : {poly F}))).
+  rewrite (_ : 2%N = maxn(size ('X : {poly F})) (size ((c%:R)%:P : {poly F}))).
     by rewrite expr1 size_add.
   by rewrite size_polyX size_polyC; case: eqP.
 pose m := ([ffun i : 'I_t.+1 => i == ord0] |:
@@ -986,7 +986,7 @@ Lemma power_freeSS n k :
   power_free n k.+2 = if is_rootn k.+2 n then false else power_free n k.+1.
 Proof. by []. Qed.
 
-Compute (fun n => power_free n (up_log 2 n)) 128.
+Compute (fun n => power_free n (up_log 2 n)) 128%N.
 
 Lemma power_freePn n :
   ~~ power_free n (up_log 2 n) -> 
@@ -1099,7 +1099,7 @@ Qed.
 
 Definition aks_param n l := 
   let a := l ^ 2 in
-  let k := 2 in
+  let k := 2%N in
   let c := (l * (a ^ 2))./2  in
   if l <= 1 then nice n else aks_param_search n a k c.
 
@@ -1112,7 +1112,7 @@ Lemma aks_paramP n :
       coprime k n & (up_log 2 n) ^ 2 <= order_modn k n]
   else if aks_param n (up_log 2 n) is nice k then
   1 < n ->
-  [/\ 1 < k, if n == 2 then k == 2 
+  [/\ 1 < k, if n == 2%N then k == 2%N 
              else k <= (up_log 2 n * (up_log 2 n ^ 2) ^ 2)./2.+1,
       (k %| n)%N & forall j, 1 < j < k -> ~~ (j %| n)%N]
   else False.
@@ -1121,7 +1121,7 @@ rewrite /aks_param; case: (leqP (up_log 2 n) 1) => [l_gt1 | l_gt1].
   rewrite leq_eqVlt => /orP[/eqP<-|n_gt2].
     by split => // [] [|[|]].
   move: l_gt1; rewrite leqNgt => /negP[].
-  rewrite  -[2]/(up_log 2 3).
+  rewrite  -[2%N]/(up_log 2 3).
   by apply: leq_up_log.
 have n_gt1 : 1 < n by case: n l_gt1 => [|[|]].
 set a := up_log 2 n ^ 2.

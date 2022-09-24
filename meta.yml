@@ -102,6 +102,11 @@ dependencies:
     version: '{(>= "1.2.0")}'
   description: |-
     [MathComp zify 1.2 or later](https://github.com/math-comp/mczify)
+- opam:
+    name: coq-mathcomp-algebra-tactics
+    version: '{(>= "1.0.0")}'
+  description: |-
+    [MathComp Algebra Tactics 1.0.0 or later](https://github.com/math-comp/algebra-tactics)
 
 tested_coq_opam_versions:
 - version: '1.14.0-coq-8.15'

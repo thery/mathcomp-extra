@@ -44,11 +44,11 @@ Some extra material for mathcomp
   [More theorems about tuples](./more_tuple.v)
 
   [A formalisation of sorting network](./nsort.v)
-    
+  
   [A formalisation of bitonic sort](./bitonic.v) 
-    
+  
   [A formalisation of Batcher odd or even sort](./batcher.v) 
-
+  
   [A formalisation of Knuth exchange sort](./bjsort.v) 
 
   [A fun puzzle about a tricky integer function](./puzzleFF.v)
@@ -70,11 +70,11 @@ A note about sorting network is available [here](https://hal.inria.fr/hal-035856
   - [MathComp algebra 1.14 or later](https://math-comp.github.io)
   - [MathComp field 1.14 or later](https://math-comp.github.io)
   - [MathComp zify 1.2 or later](https://github.com/math-comp/mczify)
+  - [MathComp Algebra Tactics 1.0.0 or later](https://github.com/math-comp/algebra-tactics)
 - Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 
 ## Building and installation instructions
-To build and install manually, do:
 
 ``` shell
 git clone https://github.com/thery/mathcomp-extra.git
