@@ -17,17 +17,35 @@ Section FFT.
 
 Local Open Scope ring_scope.
 
-(* Arbitrary ring *)
-Variable R : ringType.
+(* Arbitary idomain                                                           *)
+(* In fact  it works for an arbitray ring. We ask for idomain in order to use *)
+(* primitive-root and sqr_eqf1                                                *)
+Variable R : idomainType.
 
 Implicit Type p : {poly R}.
+
+Lemma prim_exp2nS n (w : R) : (2 ^ n.+1).-primitive_root w -> w ^+ (2 ^ n) = -1.
+Proof.
+move=> Hp; have /prim_expr_order/eqP := Hp.
+rewrite expnS mulnC exprM sqrf_eq1 => /orP[]/eqP // /eqP.
+by rewrite -(prim_order_dvd Hp) dvdn_Pexp2l // ltnn.
+Qed.
+
+Lemma prim_sqr n (w : R) :
+  (2 ^ n.+1).-primitive_root w -> (2 ^ n).-primitive_root (w * w).
+Proof.
+move=> Hp.
+rewrite -expr2.
+have -> : (2 ^ n = 2 ^ n.+1 %/ (gcdn 2 (2 ^ n.+1)))%N.
+  by rewrite -(expn_min _ 1) (minn_idPl _) // expnS mulKn.
+by rewrite exp_prim_root.
+Qed.
 
 Lemma leq_uphalf_double m n : (uphalf m <= n)%N = (m <= n.*2)%N.
 Proof.
 rewrite -[X in (X <= _.*2)%N]odd_double_half uphalf_half.
 by case: odd ; [rewrite !add1n ltn_double | rewrite leq_double].
 Qed.
-
 
 (* Even part of a polynomial                                                  *)
 
@@ -215,7 +233,7 @@ Fixpoint fft n w p : {poly R} :=
     let j := (i%%  2 ^  n1)%N in ev`_j + ov`_ j * w ^+ i 
   else (p`_0)%:P.
 
-Lemma t n w p : (size (fft n w p) <= 2 ^ n)%N.
+Lemma size_fft n w p : (size (fft n w p) <= 2 ^ n)%N.
 Proof. 
 by case: n => [|n] /=; [rewrite size_polyC; case: eqP | apply: size_poly].
 Qed.
@@ -257,7 +275,7 @@ Qed.
 
 (* Its correctness                                                            *)
 Lemma fftE n (w : R) p : 
-  (size p <= 2 ^ n)%N -> ((0 < n)%N -> w ^+ (2 ^ n.-1) = -1) ->
+  (size p <= 2 ^ n)%N -> (2 ^ n).-primitive_root w ->
   fft n w p = \poly_(i < 2 ^ n) p.[w ^+ i].
 Proof.
 elim: n w p => [/= w p sL _ |n IH w p sL wE /=].
@@ -265,9 +283,7 @@ elim: n w p => [/= w p sL _ |n IH w p sL wE /=].
 apply/polyP => i; rewrite !coef_poly; case: leqP => // iL.
 have imL : (i %% 2 ^ n < 2 ^ n)%N by apply/ltn_pmod/expn_gt0.
 have n2P : (0 < 2 ^ n.+1)%N by rewrite expn_gt0.
-have wwE : (0 < n)%N -> (w * w) ^+ (2 ^ n.-1) = -1.
-  move=> nP.
-  by rewrite -expr2 -exprM -expnS prednK // wE.
+have wwE := prim_sqr wE.
 rewrite !IH ?coef_poly ?imL ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
 rewrite [p in RHS]odd_even_polyE.
 rewrite !(hornerD, horner_comp_polyXn, hornerMX, hornerX).
@@ -281,7 +297,7 @@ have -> : (i * 2 = 2 * (i - 2 ^ n) + 2 ^ n.+1)%N.
   by rewrite mulnC mulnBr -expnS subnK // expnS leq_mul2l.
 rewrite exprD.
 suff -> : w ^+ (2 ^ n.+1) = 1 by rewrite mulr1.
-by rewrite expnS mulnC exprM wE // expr2 mulrN1 opprK.
+by rewrite expnS exprM expr2 (prim_expr_order wwE).
 Qed.
 
 (* The algorithm with explicitely the butterfly                               *)
@@ -304,12 +320,11 @@ Lemma fft1S n w p :
 Proof. by []. Qed. 
 
 Lemma fft1E n (w : R) p : 
-  (size p <= 2 ^ n)%N -> ((0 < n)%N -> w ^+ (2 ^ n.-1) = -1) -> 
+  (size p <= 2 ^ n)%N -> (2 ^ n).-primitive_root w -> 
   fft n w p = fft1 n w p.
 Proof.
 elim: n w p => [// |n IH w p sL wE /=].
-have wwE : (0 < n)%N -> (w * w) ^+ (2 ^ n.-1) = -1.
-  by move=> n_gt0; rewrite -expr2 -exprM -expnS prednK // wE.
+have wwE := prim_sqr wE.
 rewrite poly_def -(@big_mkord _ (0 : {poly R}) +%R (2 ^ n.+1) xpredT
    (fun (i : nat) => 
       ((fft n (w * w) (even_poly p))`_(i %% 2 ^ n) +
@@ -323,7 +338,8 @@ rewrite big_split /= big_mkord; congr (_ + _).
   by apply: eq_bigr => i _;
       rewrite !IH ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
 rewrite big_nat; under eq_bigr do
-    rewrite modnDr modn_small // exprD wE // mulrN1 mulrN; rewrite -big_nat /=.
+    rewrite modnDr modn_small // exprD (prim_exp2nS wE) mulrN1 mulrN;
+    rewrite -big_nat /=.
 rewrite big_mkord; apply: eq_bigr => i _.
 by rewrite !IH ?size_even_poly_exp2n ?size_odd_poly_exp2n.
 Qed.
@@ -725,6 +741,20 @@ Local Open Scope ring_scope.
 (* Arbitrary field                                                            *)
 Variable F : fieldType.
 
+Lemma unity_rootJ n (w : F) : n.-unity_root w^-1 = n.-unity_root w.
+Proof.
+apply/unity_rootP/unity_rootP; rewrite exprVn => /eqP.
+  by rewrite invr_eq1 => /eqP.
+by move=> H; apply/eqP; rewrite invr_eq1.
+Qed. 
+
+Lemma primJ n (w : F) : n.-primitive_root w -> n.-primitive_root (w^-1).
+Proof.
+move/andP=> [nP /forallP H]; apply/andP; split => //.
+apply/forallP => i; apply/eqP; rewrite -(eqP (H i)).
+by apply: unity_rootJ.
+Qed.
+
 Implicit Type p : {poly F}.
 
 (* The inverse algorithm                                                      *)
@@ -735,19 +765,12 @@ Lemma fftK n (w : F) p :
   2%:R != 0 :> F -> (size p <= 2 ^ n)%N -> (2 ^ n).-primitive_root w ->
   ifft n w (fft n w p) = p.
 Proof.
-move=> char2 sL wP.
+move=> char2 sL wE.
 have wE1 : w ^+ (2 ^ n) = 1 by apply: prim_expr_order.
-have wE : (0 < n)%N -> w ^+ (2 ^ n.-1) = -1.
-  case: n {sL}wE1 wP => // n wE1 wP.
-  have /eqP := wE1; rewrite expnS mulnC exprM -subr_eq0 subr_sqr_1.
-  rewrite mulf_eq0 => /orP[]; last first.
-    by rewrite -[1]opprK subr_eq0 opprK => /eqP.
-  by rewrite subr_eq0 -(prim_order_dvd wP) dvdn_Pexp2l // ltnn.
 have wNZ : w != 0.
   apply/eqP=> wZ; move/eqP: wE1.
   by rewrite eq_sym wZ expr0n expn_eq0 /= oner_eq0.
-have wVE : (0 < n)%N -> w^-1 ^+ (2 ^ n.-1) = -1.
-  move=> n_gt0; by rewrite exprVn wE // invrN invr1.
+have wVE := primJ wE.
 have wIE : w^-1 = w ^+ (2 ^ n).-1.
   by apply: (mulfI wNZ); rewrite mulfV // -exprS prednK ?expn_gt0.
 rewrite /ifft !fftE ?size_poly //.
@@ -773,7 +796,7 @@ suff xDone : x - 1 != 0.
   apply: (mulfI xDone).
   by rewrite -subrX1 mulr0 -exprM mulnC exprM wE1 expr1n subrr.
 (* There should be a simpler way to prove this *)
-rewrite subr_eq0 -(prim_order_dvd wP).
+rewrite subr_eq0 -(prim_order_dvd wE).
 case: {x}i iL kDi => [|i] iL xDi.
   rewrite muln0 addn0; apply/negP=> /dvdn_leq.
   by rewrite lt0n leqNgt ltn_ord => /(_ xDi).
