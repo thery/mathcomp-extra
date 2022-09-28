@@ -39,23 +39,40 @@ Unset Printing Implicit Defensive.
 Lemma uphalfE n : uphalf n = n.+1./2.
 Proof. by []. Qed.
 
-Lemma ltn_halfl i a : (i./2 < a) = (i < a.*2).
+Lemma leq_half m n : (m./2 <= n) = (m <= n.*2.+1).
 Proof.
-apply/idP/idP => [|iLaa]; last first.
-  rewrite -ltn_double (leq_ltn_trans _ iLaa) //.
-  by rewrite -[X in _ <= X]odd_double_half leq_addl.
-rewrite -leq_double doubleS => /(leq_ltn_trans _) -> //.
-rewrite -add1n -[X in X <= _]odd_double_half leq_add2r.
-by case: odd.
+apply/idP/idP => [m2Ln|mLnn]; last first.
+  by rewrite -[n](half_bit_double _ true) half_leq.
+rewrite -[m](odd_double_half) -add1n.
+by apply: leq_add; [case: odd|rewrite leq_double].
 Qed.
 
-Lemma geq_halfr i a : (a <= i./2) = (a.*2 <= i).
-Proof. by rewrite leqNgt ltn_halfl -leqNgt. Qed.
-
-Lemma leq_halfl n m : n <= m.*2 -> n./2 <= m.
+Lemma geq_half m n : (m <= n./2) = (m.*2 <= n).
 Proof.
-by move => nLm2; rewrite -{1}(doubleK m); apply: half_leq.
+apply/idP/idP => [m2Ln|mLnn]; last first.
+  by rewrite -[m](half_bit_double _ false) half_leq.
+rewrite -[n](odd_double_half).
+apply: leq_trans (leq_addl _ _).
+by rewrite leq_double.
 Qed.
+
+Lemma gtn_half m n : (n < m./2) = (n.*2.+1 < m).
+Proof. by rewrite ltnNge leq_half -ltnNge. Qed.
+
+Lemma ltn_half m n : (m./2 < n) = (m < n.*2).
+Proof. by rewrite ltnNge geq_half -ltnNge. Qed.
+
+Lemma leq_uphalf m n : (uphalf m <= n) = (m <= n.*2).
+Proof. by rewrite uphalfE leq_half. Qed.
+
+Lemma geq_uphalf m n : (m <= uphalf n) = (m.*2 <= n.+1).
+Proof. by rewrite uphalfE geq_half. Qed.
+
+Lemma gtn_uphalf m n : (n < uphalf m) = (n.*2 < m).
+Proof. by rewrite uphalfE gtn_half. Qed.
+
+Lemma ltn_uphalf m n : (uphalf m < n) = (m.+1 < n.*2).
+Proof. by rewrite uphalfE ltn_half. Qed.
 
 Lemma half_gtnn n : (n./2 < n) = (n != 0).
 Proof.

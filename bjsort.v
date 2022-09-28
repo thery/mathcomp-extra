@@ -130,7 +130,7 @@ rewrite nth_eocat; last first.
   by rewrite !size_cat !size_nseq // -mEminmax.
 rewrite !(tnth_nth true) [t]eocat_tetake_totake /=.
 rewrite !nth_eocat /=; try by rewrite !size_tuple.
-have i2Lm : i./2 < m by rewrite ltn_halfl -addnn.
+have i2Lm : i./2 < m by rewrite ltn_half -addnn.
 have [iO|iE] := boolP (odd _).
   have i_gt0 : 0 < i by case: (i) iO.
   have i1E : ~~ odd i.-1 by rewrite -oddS prednK.
@@ -263,7 +263,7 @@ Proof.
 elim: p i k s => [[]// k s _|p IH i k s iLk kLs]; first by rewrite mul1n.
 rewrite /= in kLs.
 case: (boolP (odd _)) kLs => iO /IH; 
-  rewrite ?(size_otake, size_etake) ltn_halfl -addnn -e2Sn => /(_ iLk) ikLs.
+  rewrite ?(size_otake, size_etake) ltn_half -addnn -e2Sn => /(_ iLk) ikLs.
   rewrite -(odd_double_half i) iO -addSn -doubleS.
   rewrite e2Sn addnn -doubleMl -doubleD.
   rewrite -(odd_double_half (size s)).
@@ -1073,7 +1073,7 @@ have <- : s4 = eotake p.+1 i s1.
     rewrite -addnBA; last first.
       rewrite -e2Sn -(subnK pLq) e2nD mulnC leq_mul2l.
       case: e2n (e2n_gt0 p.+1) => //= _ _.
-      by rewrite subnS -e2n_div2 ?subn_gt0 // leq_halfl.
+      by rewrite subnS -e2n_div2 ?subn_gt0 // leq_half.
     rewrite [i + _ + _]addnAC [i + `2^ _]addnC.
     rewrite -e2Sn -(subnK pLq) [_ - _ + _]addnC e2nD -mulnBr.
     rewrite -[_ + i](modn_small (_ : _ < `2^ p.+1)); last by rewrite ltn_add2l.
