@@ -39,7 +39,7 @@ Some extra material for mathcomp
 
   [A formalisation of 2-player games](./tplayer.v) (in progress)
 
-  [Some decompositions for polynomials (odd, even, take, drop)(./splitpoly.v)
+  [Some decompositions for polynomials (odd, even, take, drop)](./splitpoly.v)
 
   [A formalisation of Fast Fourier Transform](./fft.v)
 
@@ -77,7 +77,6 @@ A note about sorting network is available [here](https://hal.inria.fr/hal-035856
 - Related publication(s): none
 
 ## Building and installation instructions
-
 
 To instead build and install manually, do:
 
