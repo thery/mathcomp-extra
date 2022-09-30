@@ -730,7 +730,7 @@ rewrite nth_eocat; last first.
 rewrite !(tnth_nth true) [t]eocat_tetake_totake /=.
 rewrite !nth_eocat /=; try by rewrite !size_tuple.
 have v2Lab : v./2 < a + i + b.
-  by rewrite ltn_half -addnn -nt1E size_noFT size_tuple.
+  by rewrite ltn_half_double -addnn -nt1E size_noFT size_tuple.
 have [vO|vE] := boolP (odd _).
   rewrite !nth_cat_seqT.
   have i_gt0 : 0 < v by case: (v) vO.
@@ -739,7 +739,7 @@ have [vO|vE] := boolP (odd _).
     rewrite vO toE nth_cat_seqT minxx.
     case: leqP => [aLv2|v2La]; last first.
       by rewrite leqNgt (leq_trans v2La (leq_addr _ _)).
-    rewrite geq_half -addnn.
+    rewrite geq_half_double -addnn.
     case: (leqP (uphalf k) i) => [k2Li|iLk2].
       have i2E : i.*2 = j.*2 + k.+1.
         rewrite doubleB - [X in _ + X]odd_double_half oddS kO subnK //.
@@ -748,7 +748,7 @@ have [vO|vE] := boolP (odd _).
       rewrite (leq_trans (leq_addr b.*2 _)) // -doubleD -addnn.
       by rewrite aibE (leq_trans kvLaib) // leq_add2r.
     have -> : j = 0 by apply/eqP; rewrite subn_eq0 ltnW.
-    by rewrite addn0 addnn -geq_half.
+    by rewrite addn0 addnn -geq_half_double.
   rewrite oddD kO vO /= teE toE !nth_cat_seqT.
   case: leqP => [aLv2|v2La]; last first.
     by rewrite minFb leqNgt (leq_trans v2La (leq_addr _ _)).
@@ -758,11 +758,11 @@ have [vO|vE] := boolP (odd _).
     rewrite jE0 addn0 aLv2 /=.
     have -> : (k + v)./2 = (k.+1 + v)./2.
       by rewrite addSn -uphalfE uphalf_half oddD kO vO.
-    by rewrite geq_half addnC doubleD leq_add // -geq_half.
+    by rewrite geq_half_double addnC doubleD leq_add // -geq_half_double.
   have j_gt0 : 0 < j by rewrite subn_gt0.
   case: leqP => H1.
-    rewrite geq_half in H1.
-      rewrite geq_half doubleD doubleB addnBA.
+    rewrite geq_half_double in H1.
+      rewrite geq_half_double doubleD doubleB addnBA.
       rewrite leq_subLR -doubleD (leq_trans H1) // leq_add2r.
       by rewrite -ltnS -[X in X <= _]odd_double_half oddS kO.
     by rewrite leq_double ltnW // -subn_gt0.
@@ -798,7 +798,7 @@ have j_gt0 : 0 < j by rewrite subn_gt0.
   rewrite -addnBA // subKn; last by apply: ltnW.
 case: leqP => [aiLv2|v2Lai].
   by rewrite (leq_trans _ aiLv2) // leq_add2l ltnW.
-rewrite leqNgt ltn_half (leq_trans vLk) // doubleD.
+rewrite leqNgt ltn_half_double (leq_trans vLk) // doubleD.
 rewrite (leq_trans _ (leq_addl _ _)) //.
 by rewrite -[X in X <= _]odd_double_half uphalf_half kO doubleD !addSn.
 Qed.

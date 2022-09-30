@@ -39,6 +39,8 @@ Some extra material for mathcomp
 
   [A formalisation of 2-player games](./tplayer.v) (in progress)
 
+  [Some decompositions for polynomials (odd, even, take, drop)(./splitpoly.v)
+
   [A formalisation of Fast Fourier Transform](./fft.v)
 
   [More theorems about tuples](./more_tuple.v)

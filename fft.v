@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect all_algebra ssrnum.
-Require Import digitn.
+Require Import digitn splitpoly.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -12,6 +12,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import GRing.Theory Num.Theory Order.POrderTheory Num.ExtraDef Num.
+
 
 Section FFT.
 
@@ -40,173 +41,6 @@ have -> : (2 ^ n = 2 ^ n.+1 %/ (gcdn 2 (2 ^ n.+1)))%N.
   by rewrite -(expn_min _ 1) (minn_idPl _) // expnS mulKn.
 by rewrite exp_prim_root.
 Qed.
-
-Lemma leq_uphalf m n : (uphalf m <= n)%N = (m <= n.*2)%N.
-Proof.
-rewrite -[X in (X <= _.*2)%N]odd_double_half uphalf_half.
-by case: odd ; [rewrite !add1n ltn_double | rewrite leq_double].
-Qed.
-
-(* Even part of a polynomial                                                  *)
-
-Definition even_poly p : {poly R} := \poly_(i < uphalf (size p)) p`_i.*2.
-
-Lemma even_polyE s (p : {poly R}) :
-  (size p <= s.*2)%N -> even_poly p = \poly_(i < s) p`_i.*2.
-Proof.
-move=> pLs2; apply/polyP => i.
-rewrite !coef_poly ltnNge leq_uphalf_double -ltnNge.
-have [pLi2|i2Lp] := leqP; last by rewrite -ltn_double (leq_trans i2Lp).
-by have [//|sLi] := leqP; have /leq_sizeP->// := pLi2.
-Qed.
-
-Lemma size_even_poly p : (size (even_poly p) <= uphalf (size p))%N.
-Proof. by apply: size_poly. Qed.
-
-Lemma coef_even_poly p i : (even_poly p)`_ i = p `_ i.*2.
-Proof.
-rewrite coef_poly; case: leqP => L //.
-rewrite nth_default // -(odd_double_half (size p)) .
-move: L; rewrite uphalf_half.
-by case: odd; [rewrite !add1n ltn_double | rewrite leq_double].
-Qed.
-
-Lemma even_polyZ k p : even_poly (k *: p) = k *: even_poly p.
-Proof. by apply/polyP => i; rewrite !(coefZ, coef_even_poly). Qed.
-
-Lemma even_polyD p q : even_poly (p + q) = even_poly p + even_poly q.
-Proof.
-apply/polyP => i.
-pose s := uphalf (maxn (size p) (size q)).
-have pLs2 : (size p <= s.*2)%N.
-  by rewrite -leq_uphalf_double uphalf_leq // leq_maxl.
-have qLs2 : (size q <= s.*2)%N.
-  by rewrite -leq_uphalf_double uphalf_leq // leq_maxr.
-have pqLs2 : (size (p + q)%R <= s.*2)%N.
-  by rewrite (leq_trans (size_add _ _)) // -leq_uphalf_double.
-rewrite (even_polyE pqLs2) (even_polyE pLs2) (even_polyE qLs2).
-by rewrite coefD !coef_poly; case: leqP; [rewrite add0r | rewrite coefD].
-Qed.
-
-Fact even_poly_is_linear : linear even_poly.
-Proof. by move=> k p q; rewrite even_polyD even_polyZ. Qed.
-
-Canonical even_poly_additive := Additive even_poly_is_linear.
-Canonical even_poly_linear := Linear even_poly_is_linear.
-
-Lemma even_polyC (c : R) : even_poly c%:P = c%:P.
-Proof. by apply/polyP => i; rewrite coef_even_poly !coefC; case: i. Qed.
-
-(* Odd part of a polynomial                                                   *)
-
-Definition odd_poly p : {poly R} := \poly_(i < (size p)./2) p`_i.*2.+1.
-
-Lemma size_odd_poly p : (size (odd_poly p) <= (size p)./2)%N.
-Proof. by apply: size_poly. Qed.
-
-Lemma coef_odd_poly p i : (odd_poly p)`_ i = p `_ i.*2.+1.
-Proof.
-rewrite coef_poly; case: leqP => L //.
-rewrite nth_default // -(odd_double_half (size p)) -add1n.
-by apply: leq_add; [case: odd | rewrite leq_double].
-Qed.
-
-Lemma odd_polyC (c : R) : odd_poly c%:P = 0.
-Proof. by apply/polyP => i; rewrite coef_odd_poly !coefC; case: i. Qed.
-
-Lemma leq_half m n : ((m./2 <= n) = (m <= n.*2.+1))%N.
-Proof.
-apply/idP/idP => [m2Ln|mLnn]; last first.
-  by rewrite -[n](half_bit_double _ true) half_leq.
-rewrite -[m](odd_double_half) -add1n.
-by apply: leq_add; [case: odd|rewrite leq_double].
-Qed.
-
-Lemma odd_polyE s (p : {poly R}) :
-  ((size p) <= s.*2.+1)%N -> odd_poly p = \poly_(i < s) p`_i.*2.+1.
-Proof.
-move=> pLs2; apply/polyP => i; rewrite !coef_poly.
-have [pLi2|i2Lp] := leqP; have [sLi|iLs] := leqP;
-    rewrite // nth_default // -[size _]odd_double_half -add1n;
-    (apply: leq_add; [case: odd => // | rewrite leq_double //]).
-rewrite leq_half.
-apply: leq_trans pLs2 _.
-by rewrite ltnS leq_double.
-Qed.
-
-Lemma odd_polyZ k p : odd_poly (k *: p) = k *: odd_poly p.
-Proof. by apply/polyP => i; rewrite !(coefZ, coef_odd_poly). Qed.
-
-Lemma odd_polyD p q : odd_poly (p + q) = odd_poly p + odd_poly q.
-Proof.
-apply/polyP => i; pose s := (maxn (size p) (size q))./2.
-have pLs2 : (size p <= s.*2.+1)%N.
-  by rewrite -leq_half half_leq // leq_maxl.
-have qLs2 : (size q <= s.*2.+1)%N.
-  by rewrite -leq_half half_leq // leq_maxr.
-have pqLs2 : (size (p + q)%R <= s.*2.+1)%N.
-  by rewrite (leq_trans (size_add _ _)) //  geq_max pLs2.
-rewrite (odd_polyE pqLs2) (odd_polyE pLs2) (odd_polyE qLs2).
-by rewrite coefD !coef_poly; case: leqP; [rewrite add0r | rewrite coefD].
-Qed.
-
-Fact odd_poly_is_linear : linear odd_poly.
-Proof. by move=> k p q; rewrite odd_polyD odd_polyZ. Qed.
-
-Canonical odd_poly_additive := Additive odd_poly_is_linear.
-Canonical odd_poly_linear := Linear odd_poly_is_linear.
-
-Lemma odd_polyX p : odd_poly (p * 'X) = even_poly p.
-Proof.
-have [->|/eqP p_neq0] := p =P 0; first by rewrite mul0r even_polyC odd_polyC.
-apply/polyP => i.
-by rewrite !coef_poly size_mulX // -[_./2]/(uphalf _) coefMX.
-Qed.
-
-Lemma even_polyX p : even_poly (p * 'X) = odd_poly p * 'X.
-Proof.
-have [->|/eqP p_neq0] := p =P 0.
-  by rewrite mul0r even_polyC odd_polyC mul0r.
-by apply/polyP => [] [|i]; rewrite !(coefMX, coef_poly, if_same, size_mulX).
-Qed.
-
-(* Auxillary lemmas for _ \Po X'X^n                                           *)
-
-Lemma coef_comp_polyXn (p : {poly R}) n i :
-  (0 < n)%N -> (p \Po 'X^n)`_i = if (n %| i)%N then p`_(i %/ n) else 0.
-Proof.
-move=> nP; rewrite coef_comp_poly.
-under eq_bigr do rewrite -exprM coefXn.
-have [sLi|iLs] := leqP (size p) (i %/n).
-  rewrite nth_default // if_same big1 // => j _.
-  case: eqP =>[iE |]; last by rewrite mulr0.
-  by rewrite iE mulKn // leqNgt ltn_ord in sLi.
-rewrite (bigD1 (Ordinal iLs)) //= big1 => [|j].
-  rewrite addr0 dvdn_eq [(n * _)%N]mulnC eq_sym.
-  by case: eqP => []; rewrite !(mulr1, mulr0).
-case: (i =P _) => [iE /eqP[]|]; last by rewrite mulr0.
-by apply/val_eqP; rewrite /= iE mulKn.
-Qed.
-
-Lemma comp_polyXn (p : {poly R}) n :
-  (0 < n)%N -> 
-  p \Po 'X^n = \poly_(i < size p * n) (if (n %| i)%N then p`_(i %/ n) else 0).
-Proof.
-move=> nP; apply/polyP=> i.
-rewrite coef_comp_polyXn // coef_poly.
-by case: leqP => // sLi; rewrite nth_default ?if_same // leq_divRL.
-Qed.
-
-(* Decomposiiton in odd and even part                                         *)
-Lemma odd_even_polyE p :
-  p = (even_poly p \Po 'X^2) + (odd_poly p \Po 'X^2) * 'X.
-Proof.
-apply/polyP=> i.
-rewrite coefD coefMX !coef_comp_polyXn // coef_even_poly coef_odd_poly.
-rewrite !divn2 !dvdn2 -(odd_double_half i).
-case: (odd i); rewrite !(add1n, add0n, oddS, odd_double, doubleK, add0r) //=.
-by case: i => [|[|i]]; rewrite ?addr0 //= odd_double /= addr0.
-Qed.
  
 (* The recursive algorithm                                                    *)
 Fixpoint fft (n : nat) (w : R) (p : {poly R}) : {poly R} := 
@@ -221,16 +55,16 @@ Proof.
 by case: n => [|n] /=; [rewrite size_polyC; case: eqP | apply: size_poly].
 Qed.
 
-Fact half_exp2n n : (uphalf (2 ^ n.+1) = 2 ^ n)%N.
-Proof.
-by rewrite uphalf_half !expnS !mul2n doubleK odd_double add0n.
-Qed.
-
 Fact size_odd_poly_exp2n n p : 
   (size p <= 2 ^ n.+1 -> size (odd_poly p) <= 2 ^ n)%N.
 Proof.
 move=> Hs; apply: leq_trans (size_odd_poly _) _.
-by rewrite leq_half (leq_trans Hs) // -mul2n -expnS.
+by rewrite leq_half_double (leq_trans Hs) // -mul2n -expnS.
+Qed.
+
+Fact half_exp2n n : (uphalf (2 ^ n.+1) = 2 ^ n)%N.
+Proof.
+by rewrite uphalf_half !expnS !mul2n doubleK odd_double add0n.
 Qed.
 
 Fact size_even_poly_exp2n n p : 
@@ -327,105 +161,6 @@ rewrite big_mkord; apply: eq_bigr => i _.
 by rewrite !IH ?size_even_poly_exp2n ?size_odd_poly_exp2n.
 Qed.
 
-Definition left_poly m (p : {poly R}) := \poly_(i < m) p`_i.
-Definition right_poly m (p : {poly R}) := \poly_(i < m) p`_(i + m).
-
-Lemma coef_left_poly m p i : 
-  (left_poly m p)`_ i = if (i < m)%N then p`_ i else 0.
-Proof. by rewrite coef_poly. Qed.
-
-Lemma coef_right_poly m p i : 
-  (right_poly m p)`_ i = if (i < m)%N then p`_ (i + m) else 0.
-Proof. by rewrite coef_poly. Qed.
-
-Lemma left_poly_id m p : (size p <= m)%N -> left_poly m p = p.
-Proof.
-move=> Hs; apply/polyP => i.
-rewrite coef_poly; case: leqP => // Hs1.
-by apply/sym_equal/nth_default/(leq_trans Hs).
-Qed.
-
-Lemma left_polyMXn m p : left_poly m ('X^ m * p) = 0.
-Proof.
-apply/polyP => i.
-rewrite -[_ * p]commr_polyXn coef_poly coefMXn coef0.
-by case: leqP.
-Qed.
-
-Lemma left_poly_add m (p q : {poly R}) :
-  left_poly m (p + q) = left_poly m p + left_poly m q.
-Proof.
-apply/polyP => i; rewrite !(coefD, coef_poly).
-by case: leqP; rewrite ?add0r.
-Qed.
-
-Lemma left_poly0 m : left_poly m 0 = 0.
-Proof. by apply/polyP => i; rewrite coef_poly coef0 if_same. Qed.
-
-Lemma left_poly_sum m n (p : 'I_n -> {poly R}) :
-  left_poly m (\sum_(i < n) p i) = \sum_(i < n) (left_poly m (p i)).
-Proof.
-have F (q : nat -> _) : 
-       left_poly m (\sum_(i < n) q i) = \sum_(i < n) (left_poly m (q i)).
-  elim: n {p}q => [|n IH] q; first by rewrite !big_ord0 left_poly0.
-  by rewrite !big_ord_recr /= left_poly_add IH.
-case: n p F => [|n] p F; first by rewrite !big_ord0 left_poly0.
-have := F (fun x => p (inord x)).
-under eq_bigr do rewrite inord_val.
-by under [X in _ = X -> _]eq_bigr do rewrite inord_val.
-Qed.
-
-Lemma right_poly_size_0 m p : (size p <= m)%N -> right_poly m p = 0.
-Proof.
-move=> Hs; apply/polyP => i.
-rewrite coef_poly coef0; case: leqP => // Hs1.
-apply: nth_default.
-by apply: leq_trans Hs (leq_addl _ _).
-Qed.
-
-Lemma right_polyMXn m p : (size p <= m)%N -> right_poly m ('X^ m * p) = p.
-Proof.
-move=> Hs; apply/polyP => i.
-rewrite -[_ * p]commr_polyXn coef_poly coefMXn addnK.
-rewrite [(_ + _ < _)%N]ltnNge leq_addl /=.
-case: leqP => // mLi.
-by apply/sym_equal/nth_default/(leq_trans _ mLi).
-Qed.
-
-Lemma right_poly_add m (p q : {poly R}) :
-  right_poly m (p + q) = right_poly m p + right_poly m q.
-Proof.
-apply/polyP => i; rewrite !(coefD, coef_poly).
-by case: leqP; rewrite ?add0r.
-Qed.
-
-Lemma right_poly0 m : right_poly m 0 = 0.
-Proof. by apply/polyP => i; rewrite coef_poly !coef0 if_same. Qed.
-
-Lemma right_poly_sum m n (p : 'I_n -> {poly R}) :
-  right_poly m (\sum_(i < n) p i) = \sum_(i < n) (right_poly m (p i)).
-Proof.
-have F (q : nat -> _) : 
-       right_poly m (\sum_(i < n) q i) = \sum_(i < n) (right_poly m (q i)).
-  elim: n {p}q => [|n IH] q; first by rewrite !big_ord0 right_poly0.
-  by rewrite !big_ord_recr /= right_poly_add IH.
-case: n p F => [|n] p F; first by rewrite !big_ord0 right_poly0.
-have := F (fun x => p (inord x)).
-under eq_bigr do rewrite inord_val.
-by under [X in _ = X -> _]eq_bigr do rewrite inord_val.
-Qed.
-
-Lemma left_right_polyE m p :
-  (size p <= m.*2)%N -> p = left_poly m p + right_poly m p * 'X^m.
-Proof.
-move=> sL2m; apply/polyP => i.
-rewrite coefD coefMXn !coef_poly.
-case: leqP => HlP; last by rewrite addr0.
-case: leqP => H1lP; last by rewrite subnK ?add0r.
-rewrite add0r nth_default //.
-apply: leq_trans sL2m _.
-by rewrite -addnn -leq_subRL.
-Qed.
 
 Definition step m n w (p : {poly R}) :=
   \sum_(l < 2 ^ m)
@@ -473,13 +208,13 @@ apply: leq_trans (_ : 2 ^ n + 2 ^ n + i *2 ^ n.+1 <= _ )%N.
 by rewrite addnn -mul2n -expnS -mulSn -addnS expnD leq_mul2r expn_eq0 /=.
 Qed.
 
-Lemma left_step m n w (p : {poly R}) :
+Lemma take_step m n w (p : {poly R}) :
   (size p <= 2 ^ (m + n).+2)%N ->
-  left_poly (2 ^ (m + n).+1) (step m.+1 n w p) =
-  step m n w (left_poly (2 ^ (m + n).+1) p).
+  take_poly (2 ^ (m + n).+1) (step m.+1 n w p) =
+  step m n w (take_poly (2 ^ (m + n).+1) p).
 Proof.
 move=> pLmn; rewrite stepE.
-apply/polyP=> i; rewrite coef_left_poly.
+apply/polyP=> i; rewrite coef_take_poly.
 case: leqP => [mnLi|iLmn].
   rewrite nth_default //.
   by apply: leq_trans (size_step _ _ _ _) _.
@@ -502,13 +237,13 @@ have F1 : (k + j * 2 ^ n.+1 + 2 ^ n < 2 ^ (m + n).+1)%N.
 by rewrite !coef_poly F F1.
 Qed.
 
-Lemma right_step m n w (p : {poly R}) :
+Lemma drop_step m n w (p : {poly R}) :
   (size p <= 2 ^ (m + n).+2)%N ->
-  right_poly (2 ^ (m + n).+1) (step m.+1 n w p) =
-  step m n w (right_poly (2 ^ (m + n).+1) p).
+  drop_poly (2 ^ (m + n).+1) (step m.+1 n w p) =
+  step m n w (drop_poly (2 ^ (m + n).+1) p).
 Proof.
 move=> pLmn.
-apply/polyP=> i; rewrite coef_right_poly.
+apply/polyP=> i; rewrite coef_drop_poly.
 case: leqP => [mnLi|iLmn].
   rewrite nth_default //.
   by apply: leq_trans (size_step _ _ _ _) _.
@@ -577,7 +312,7 @@ have [tnLi|iLtn] := leqP (2 ^ n) i.
     case: leqP => [iLn|nLi]; last by rewrite Hf.
     suff/leq_sizeP-> : (size p <= rdigitn 2 n.+1 i)%N by [].
     rewrite Hf.
-    by rewrite leq_half in iLn.
+    by rewrite leq_half_double in iLn.
   rewrite !rdigitnE big_ord_recl /= subn0 muln1 /bump /= .
   rewrite {1}/digitn -{1}(subnK tnLi).
   rewrite divnDr ?dvdnn // divnn expn_gt0 /= divn_small ?add1n; last first.
@@ -610,14 +345,14 @@ Qed.
 
 Fixpoint invariant_fft1 n m w p q :=
   if n is n1.+1 then 
-  invariant_fft1 n1 m w (even_poly p) (left_poly (2 ^ (m + n1)) q) /\ 
-  invariant_fft1 n1 m w (odd_poly p) (right_poly (2 ^ (m + n1)) q) 
+  invariant_fft1 n1 m w (even_poly p) (take_poly (2 ^ (m + n1)) q) /\ 
+  invariant_fft1 n1 m w (odd_poly p) (drop_poly (2 ^ (m + n1)) q) 
   else q = fft1 m w p.
 
 Lemma invariantS_fft1 n m w p q :
   invariant_fft1 n.+1 m w p q <->
-  invariant_fft1 n m w (even_poly p) (left_poly (2 ^ (m + n)) q) /\ 
-  invariant_fft1 n m w (odd_poly p) (right_poly (2 ^ (m + n)) q).
+  invariant_fft1 n m w (even_poly p) (take_poly (2 ^ (m + n)) q) /\ 
+  invariant_fft1 n m w (odd_poly p) (drop_poly (2 ^ (m + n)) q).
 Proof. by []. Qed.
 
 Lemma invariant_fft1_reverse_poly p n w :
@@ -626,7 +361,7 @@ Proof.
 elim: n p => /= [p spL1|n IH p spLb].
   by rewrite reverse_poly0 -poly_size1.
 split.
-  rewrite /left_poly reverse_polyS poly_def.
+  rewrite /take_poly reverse_polyS poly_def.
   under eq_bigr do rewrite coefD coefMXn ifT // addr0.
   rewrite -poly_def.
   have -> : \poly_(i < 2 ^ n) (reverse_poly n (even_poly p))`_i = 
@@ -640,7 +375,7 @@ split.
   rewrite coefK.
   apply: IH.
   by rewrite size_even_poly_exp2n.
-rewrite /right_poly reverse_polyS poly_def.
+rewrite /drop_poly reverse_polyS poly_def.
 under eq_bigr do rewrite coefD coefMXn ltnNge leq_addl /= addnK scalerDl.
 rewrite big_split /= big1 ?add0r => [|i _]; last first.
   suff /leq_sizeP-> : (size (reverse_poly n (even_poly p)) <= i + 2 ^ n)%N.
@@ -673,12 +408,12 @@ Proof.
 elim: m n w p p1; last first.
   move=> m IH n w p p1 Hsp Hsp1/invariantS_fft1[H2 H3].
   apply/invariantS_fft1; split.
-    rewrite [(_ + m)%N]addnC addnS left_step //.
+    rewrite [(_ + m)%N]addnC addnS take_step //.
     apply: IH => //.
     - by apply: size_even_poly_exp2n.
     - by rewrite size_poly.
     by rewrite [(m + _)%N]addnC -addnS.
-  rewrite addnC addnS right_step //.
+  rewrite addnC addnS drop_step //.
   apply: IH => //.
   - by apply: size_odd_poly_exp2n.
   - by rewrite size_poly.
