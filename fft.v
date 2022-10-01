@@ -33,10 +33,9 @@ by rewrite -(prim_order_dvd Hp) dvdn_Pexp2l // ltnn.
 Qed.
 
 Lemma prim_sqr n (w : R) :
-  (2 ^ n.+1).-primitive_root w -> (2 ^ n).-primitive_root (w * w).
+  (2 ^ n.+1).-primitive_root w -> (2 ^ n).-primitive_root (w ^+ 2).
 Proof.
 move=> Hp.
-rewrite -expr2.
 have -> : (2 ^ n = 2 ^ n.+1 %/ (gcdn 2 (2 ^ n.+1)))%N.
   by rewrite -(expn_min _ 1) (minn_idPl _) // expnS mulKn.
 by rewrite exp_prim_root.
@@ -45,8 +44,8 @@ Qed.
 (* The recursive algorithm                                                    *)
 Fixpoint fft (n : nat) (w : R) (p : {poly R}) : {poly R} := 
   if n is n1.+1 then
-    let ev := fft n1 (w * w) (even_poly p) in
-    let ov := fft n1 (w * w) (odd_poly p) in
+    let ev := fft n1 (w ^+ 2) (even_poly p) in
+    let ov := fft n1 (w ^+ 2) (odd_poly p) in
     \poly_(i < 2 ^ n1.+1) let j := (i %% 2 ^ n1)%N in ev`_j + ov`_ j * w ^+ i 
   else (p`_0)%:P.
 
@@ -104,7 +103,7 @@ have wwE := prim_sqr wE.
 rewrite !IH ?coef_poly ?imL ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
 rewrite [p in RHS]odd_even_polyE.
 rewrite !(hornerD, horner_comp, hornerMX, hornerX).
-suff -> : (w * w) ^+ (i %% 2 ^ n) = w ^+ i * w ^+ i by [].
+suff -> : (w ^+ 2) ^+ (i %% 2 ^ n) = w ^+ i * w ^+ i by [].
 rewrite -!expr2 -!exprM.
 have [iLm|mLi] := leqP (2 ^ n) i; last by rewrite modn_small // mulnC.
 have -> : (i %% 2 ^ n = i - 2 ^ n)%N.
@@ -114,14 +113,14 @@ have -> : (i * 2 = 2 * (i - 2 ^ n) + 2 ^ n.+1)%N.
   by rewrite mulnC mulnBr -expnS subnK // expnS leq_mul2l.
 rewrite exprD.
 suff -> : w ^+ (2 ^ n.+1) = 1 by rewrite mulr1.
-by rewrite expnS exprM expr2 (prim_expr_order wwE).
+by rewrite expnS exprM (prim_expr_order wwE).
 Qed.
 
 (* The algorithm with explicitely the butterfly                               *)
 Fixpoint fft1 n w p : {poly R} := 
   if n is n1.+1 then
-  let ev := fft1 n1 (w * w) (even_poly p) in
-  let ov := fft1 n1 (w * w) (odd_poly p) in
+  let ev := fft1 n1 (w ^+ 2) (even_poly p) in
+  let ov := fft1 n1 (w ^+ 2) (odd_poly p) in
   \sum_(j < 2 ^ n1)
     ((ev`_j + ov`_ j * w ^+ j) *: 'X^j +
      (ev`_j - ov`_ j * w ^+ j) *: 'X^(j + 2 ^ n1)) 
@@ -129,8 +128,8 @@ Fixpoint fft1 n w p : {poly R} :=
 
 Lemma fft1S n w p : 
   fft1 n.+1 w p = 
-  let ev := fft1 n (w * w) (even_poly p) in
-  let ov := fft1 n (w * w) (odd_poly p) in
+  let ev := fft1 n (w ^+ 2) (even_poly p) in
+  let ov := fft1 n (w ^+ 2) (odd_poly p) in
   \sum_(j < 2 ^ n)
     ((ev`_j + ov`_ j * w ^+ j) *: 'X^j +
      (ev`_j - ov`_ j * w ^+ j) *: 'X^(j + 2 ^ n)).
@@ -144,8 +143,8 @@ elim: n w p => [// |n IH w p sL wE /=].
 have wwE := prim_sqr wE.
 rewrite poly_def -(@big_mkord _ (0 : {poly R}) +%R (2 ^ n.+1) xpredT
    (fun (i : nat) => 
-      ((fft n (w * w) (even_poly p))`_(i %% 2 ^ n) +
-    (fft n (w * w) (odd_poly p))`_(i %% 2 ^ n) * w ^+ i) *: 'X^i)).
+      ((fft n (w ^+ 2) (even_poly p))`_(i %% 2 ^ n) +
+    (fft n (w ^+ 2) (odd_poly p))`_(i %% 2 ^ n) * w ^+ i) *: 'X^i)).
 have F : (2 ^ n <= 2 ^ n.+1)%N by rewrite leq_exp2l.
 rewrite (big_cat_nat _ _ _ _ F) //=.
 rewrite big_nat; under eq_bigr do rewrite modn_small // ; rewrite -big_nat /=.
@@ -402,7 +401,7 @@ Proof. by apply/polyP => i; rewrite coef_poly coefC; case: i. Qed.
 Lemma invariant_fft1_step m n w p p1 :
   (size p <= 2 ^ (m + n).+1)%N ->
   (size p1 <= 2 ^ (m + n).+1)%N ->
-  invariant_fft1 m.+1 n (w * w) p p1 ->
+  invariant_fft1 m.+1 n (w ^+ 2) p p1 ->
   invariant_fft1 m n.+1 w p (step m n w p1).
 Proof.
 elim: m n w p p1; last first.
@@ -447,7 +446,7 @@ apply: IH; first by rewrite addnS.
   rewrite addnS.
   by apply: size_step.
 apply: invariant_fft1_step => //.
-by rewrite -exprD addnn -mul2n -expnS.
+by rewrite -exprM mulnC -expnS.
 Qed.
 
 End FFT.
