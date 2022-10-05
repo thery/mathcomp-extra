@@ -1,5 +1,6 @@
 From mathcomp Require Import all_ssreflect all_algebra.
 
+
 (******************************************************************************)
 (*                                                                            *)
 (*          Polynomial decomposition                                          *)
@@ -147,47 +148,56 @@ have [->|/eqP p_neq0] := p =P 0.
 by apply/polyP => [] [|i]; rewrite !(coefMX, coef_poly, if_same, size_mulX).
 Qed.
 
-Lemma comp_polyXn (p : {poly R}) n :
+Lemma comp_polyXn (p : {poly R}) n : 'X^n \Po p = p ^+ n.
+Proof.
+apply/polyP=> i.
+rewrite coef_comp_poly size_polyXn.
+rewrite (bigD1 (Ordinal (leqnn n.+1))) //= coefXn eqxx big1 ?addr0 ?mul1r //.
+by move=> j /eqP/val_eqP/= jDn; rewrite coefXn (negPf jDn) mul0r.
+Qed.
+
+Lemma coef_comp_polyXnr (p : {poly R}) n i :
+  (0 < n)%N -> (p \Po 'X^n)`_i = if (n %| i)%N then p`_(i %/ n) else 0.
+Proof.
+move=> nP.
+rewrite coef_comp_poly.
+under eq_bigr do rewrite -exprM coefXn mulr_natr mulrb.
+rewrite -big_mkcond /=.
+case: (boolP (_ %| _)%N) => [/dvdnP[j ->]|n_div]; last first.
+  rewrite big_pred0 // => j; apply: contraNF n_div => /eqP->.
+  exact: dvdn_mulr.
+under eq_bigl do rewrite mulnC eqn_mul2l gtn_eqF //= eq_sym.
+rewrite mulnK //.
+case: (leqP (size p) j) => [j_big|j_small]; last first.
+  by rewrite (big_pred1_eq _ (Ordinal _)).
+rewrite big_pred0 ?nth_default // => k.
+by apply: contra_leqF j_big => /eqP<-.
+Qed.
+
+Lemma comp_polyXnr (p : {poly R}) n :
   (0 < n)%N -> 
   p \Po 'X^n = \poly_(i < size p * n) (if (n %| i)%N then p`_(i %/ n) else 0).
 Proof.
 move=> nP.
 apply/polyP=> i.
-rewrite coef_comp_poly coef_poly.
-under [LHS] eq_bigr do rewrite -exprM coefXn.
-have [/dvdnP[j ->]|NiDn] := boolP (n %| i)%N; last first.
-  rewrite if_same big1 // => j _; case: eqP; rewrite (mulr0, mulr1) // => iE.
-  by case/negP: NiDn; rewrite iE dvdn_mulr.
-rewrite mulnK //.
-have [sLj|jLs] := leqP (size p) j.
-  rewrite nth_default // if_same big1 // => l _.
-  rewrite mulnC eqn_mul2l (negPf (lt0n_neq0 nP)) /=.
-  case: eqP=> [jE|_]; rewrite (mulr0, mulr1) //.
-  by have := ltn_ord l; rewrite -jE ltnNge sLj.
-rewrite ifT; last by rewrite ltn_mul2r nP.
-rewrite (bigD1 (Ordinal jLs)) //= mulnC eqxx mulr1.
-rewrite big1 ?addr0 // => /= [] [l /= lLs] /eqP/val_eqP/= lDj.
-by rewrite eqn_mul2l (negPf (lt0n_neq0 nP)) eq_sym (negPf lDj) mulr0.
+rewrite coef_comp_polyXnr // coef_poly.
+case: dvdnP=> [[k ->]|]; last by rewrite if_same.
+rewrite mulnK // ltn_mul2r nP.
+by case: ltnP => ? //; rewrite nth_default.
 Qed.
 
-Lemma coef_comp_polyXn (p : {poly R}) n i :
-  (0 < n)%N -> (p \Po 'X^n)`_i = if (n %| i)%N then p`_(i %/ n) else 0.
-Proof.
-move=> nP; rewrite comp_polyXn // coef_poly.
-case: (_ %| _)%N; last by rewrite if_same.
-by case: leqP => snLi; rewrite // nth_default // leq_divRL.
-Qed.
-
-(* Decomposiiton in odd and even part                                         *)
+(* Decomposition in odd and even part                                         *)
 Lemma odd_even_polyE p :
   p = (even_poly p \Po 'X^2) + (odd_poly p \Po 'X^2) * 'X.
 Proof.
 apply/polyP=> i.
-rewrite coefD coefMX !coef_comp_polyXn // coef_even_poly coef_odd_poly.
+rewrite coefD coefMX !coef_comp_polyXnr // coef_even_poly coef_odd_poly.
 rewrite !divn2 !dvdn2 -(odd_double_half i).
 case: (odd i); rewrite !(add1n, add0n, oddS, odd_double, doubleK, add0r) //=.
 by case: i => [|[|i]]; rewrite ?addr0 //= odd_double /= addr0.
 Qed.
+
+(* take and drop for polynomials                                              *)
 
 Definition take_poly m (p : {poly R}) := \poly_(i < m) p`_i.
 Definition drop_poly m (p : {poly R}) := \poly_(i < m) p`_(i + m).
@@ -207,75 +217,79 @@ rewrite coef_poly; case: leqP => // Hs1.
 by apply/sym_equal/nth_default/(leq_trans Hs).
 Qed.
 
-Lemma take_polyMXn m p : take_poly m ('X^ m * p) = 0.
+Lemma take_polyMXn m p : take_poly m (p * 'X^ m) = 0.
 Proof.
-apply/polyP => i.
-rewrite -[_ * p]commr_polyXn coef_poly coefMXn coef0.
-by case: leqP.
+by apply/polyP => i; rewrite coef_poly coefMXn coef0; case: leqP.
 Qed.
 
-Lemma take_poly_add m (p q : {poly R}) :
+Lemma take_polyD m (p q : {poly R}) :
   take_poly m (p + q) = take_poly m p + take_poly m q.
 Proof.
 apply/polyP => i; rewrite !(coefD, coef_poly).
 by case: leqP; rewrite ?add0r.
 Qed.
 
+Lemma take_polyZ k m p : take_poly m (k *: p) = k *: take_poly m p.
+Proof.
+apply/polyP => i; rewrite !(coefZ, coef_take_poly); case: leqP => //.
+by rewrite mulr0.
+Qed.
+
+Fact take_poly_is_linear m : linear (take_poly m).
+Proof. by move=> k p q; rewrite take_polyD take_polyZ. Qed.
+
+Canonical take_poly_additive m := Additive (take_poly_is_linear m).
+Canonical take_poly_linear m := Linear (take_poly_is_linear m).
+
 Lemma take_poly0 m : take_poly m 0 = 0.
-Proof. by apply/polyP => i; rewrite coef_poly coef0 if_same. Qed.
+Proof. by rewrite linear0. Qed.
 
 Lemma take_poly_sum m n (p : 'I_n -> {poly R}) :
   take_poly m (\sum_(i < n) p i) = \sum_(i < n) (take_poly m (p i)).
-Proof.
-have F (q : nat -> _) : 
-       take_poly m (\sum_(i < n) q i) = \sum_(i < n) (take_poly m (q i)).
-  elim: n {p}q => [|n IH] q; first by rewrite !big_ord0 take_poly0.
-  by rewrite !big_ord_recr /= take_poly_add IH.
-case: n p F => [|n] p F; first by rewrite !big_ord0 take_poly0.
-have := F (fun x => p (inord x)).
-under eq_bigr do rewrite inord_val.
-by under [X in _ = X -> _]eq_bigr do rewrite inord_val.
-Qed.
+Proof. by rewrite linear_sum. Qed.
 
-Lemma drop_poly_size_0 m p : (size p <= m)%N -> drop_poly m p = 0.
+Lemma drop_poly_eq0 m p : (size p <= m)%N -> drop_poly m p = 0.
 Proof.
-move=> Hs; apply/polyP => i.
+move=> sLm; apply/polyP => i.
 rewrite coef_poly coef0; case: leqP => // Hs1.
 apply: nth_default.
-by apply: leq_trans Hs (leq_addl _ _).
+by apply: leq_trans sLm (leq_addl _ _).
 Qed.
 
-Lemma drop_polyMXn m p : (size p <= m)%N -> drop_poly m ('X^ m * p) = p.
+Lemma drop_polyMXn m p : (size p <= m)%N -> drop_poly m (p * 'X^ m) = p.
 Proof.
 move=> Hs; apply/polyP => i.
-rewrite -[_ * p]commr_polyXn coef_poly coefMXn addnK.
-rewrite [(_ + _ < _)%N]ltnNge leq_addl /=.
+rewrite coef_poly coefMXn addnK [(_ + _ < _)%N]ltnNge leq_addl /=.
 case: leqP => // mLi.
 by apply/sym_equal/nth_default/(leq_trans _ mLi).
 Qed.
 
-Lemma drop_poly_add m (p q : {poly R}) :
+Lemma drop_polyD m (p q : {poly R}) :
   drop_poly m (p + q) = drop_poly m p + drop_poly m q.
 Proof.
 apply/polyP => i; rewrite !(coefD, coef_poly).
 by case: leqP; rewrite ?add0r.
 Qed.
 
+Lemma drop_polyZ k m p : drop_poly m (k *: p) = k *: drop_poly m p.
+Proof.
+apply/polyP => i; rewrite !(coefZ, coef_drop_poly); case: leqP => //.
+by rewrite mulr0.
+Qed.
+
+Fact drop_poly_is_linear m : linear (drop_poly m).
+Proof. by move=> k p q; rewrite drop_polyD drop_polyZ. Qed.
+
+Canonical drop_poly_additive m := Additive (drop_poly_is_linear m).
+Canonical drop_poly_linear m := Linear (drop_poly_is_linear m).
+
+
 Lemma drop_poly0 m : drop_poly m 0 = 0.
-Proof. by apply/polyP => i; rewrite coef_poly !coef0 if_same. Qed.
+Proof. by rewrite linear0. Qed.
 
 Lemma drop_poly_sum m n (p : 'I_n -> {poly R}) :
   drop_poly m (\sum_(i < n) p i) = \sum_(i < n) (drop_poly m (p i)).
-Proof.
-have F (q : nat -> _) : 
-       drop_poly m (\sum_(i < n) q i) = \sum_(i < n) (drop_poly m (q i)).
-  elim: n {p}q => [|n IH] q; first by rewrite !big_ord0 drop_poly0.
-  by rewrite !big_ord_recr /= drop_poly_add IH.
-case: n p F => [|n] p F; first by rewrite !big_ord0 drop_poly0.
-have := F (fun x => p (inord x)).
-under eq_bigr do rewrite inord_val.
-by under [X in _ = X -> _]eq_bigr do rewrite inord_val.
-Qed.
+Proof. by rewrite linear_sum. Qed.
 
 Lemma left_drop_polyE m p :
   (size p <= m.*2)%N -> p = take_poly m p + drop_poly m p * 'X^m.
@@ -290,3 +304,4 @@ by rewrite -addnn -leq_subRL.
 Qed.
 
 End Poly.
+
