@@ -456,13 +456,11 @@ Qed.
 (* Refined version of step 1                                                  *)
 Definition step1 m n w (p : {poly R}) :=
   \poly_(i < 2 ^ (m + n).+1)
-    let l := (i %/ 2 ^ n.+1)%N in 
     let j := (i %% 2 ^ n.+1)%N in
-    let j1 := (j %% 2 ^ n)%N  in
     if (j < 2 ^ n)%N then 
-      p`_(j1 + l * 2 ^ n.+1) + p`_(j1 + l * 2 ^ n.+1 + 2 ^ n) * w ^+ j1
+      p`_i + p`_(i + 2 ^ n) * w ^+ j
     else 
-      p`_(j1 + l * 2 ^ n.+1) - p`_(j1 + l * 2 ^ n.+1 + 2 ^ n) * w ^+ j1.
+      p`_(i - 2 ^ n) - p`_i * w ^+ (j - 2 ^ n).
 
 Lemma step1E m n w p : step1 m n w p = step m n w p.
 Proof.
@@ -501,7 +499,7 @@ case: leqP => H.
     by rewrite ltn_subLR // addnn -mul2n -expnS ltn_pmod ?expn_gt0.
   have F2 : ((i %% 2 ^ n.+1) %% 2 ^ n = i %% 2 ^ n.+1 - 2 ^ n)%N.
     by rewrite -[in LHS](subnK H) modnDr modn_small.
-  rewrite F2 (bigD1 (Ordinal F1)) //= ?big1.
+  rewrite (bigD1 (Ordinal F1)) //= ?big1.
     rewrite addr0 coefD !coefZ !coefXn.
     rewrite addnBAC // F subnK // eqxx mulr1 gtn_eqF; last first.
       by rewrite ltn_subLR // (ltn_add2r _ 0) expn_gt0.
@@ -512,7 +510,6 @@ case: leqP => H.
   rewrite -F addnAC !eqn_add2r gtn_eqF ?mulr0 ?add0r; last first.
     by apply: leq_trans H.
   by rewrite -(subnK H) eqn_add2r eq_sym (negPf Hi1) mulr0.
-rewrite modn_small // F.
 rewrite (bigD1 (Ordinal H)) //= ?big1.
   rewrite addr0 coefD !coefZ !coefXn F.
   rewrite eqxx mulr1 ltn_eqF ?mulr0 ?addr0 // ?(ltn_add2l _ 0) ?expn_gt0 //.
