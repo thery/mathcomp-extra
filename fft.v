@@ -147,17 +147,16 @@ Lemma fft1S n w p :
      (ev`_j - ov`_ j * w ^+ j) *: 'X^(j + 2 ^ n)).
 Proof. by []. Qed. 
 
-Lemma fft1E n (w : R) p : 
-  (size p <= 2 ^ n)%N -> (2 ^ n).-primitive_root w -> 
-  fft n w p = fft1 n w p.
+Lemma fft1E n (w : R) p : (2 ^ n).-primitive_root w -> fft1 n w p = fft n w p.
 Proof.
-elim: n w p => [// |n IH w p sL wE /=].
+elim: n w p => [// |n IH w p wE /=].
 have wwE := prim_sqr wE.
 rewrite poly_def -(@big_mkord _ (0 : {poly R}) +%R (2 ^ n.+1) xpredT
    (fun (i : nat) => 
       ((fft n (w ^+ 2) (even_poly p))`_(i %% 2 ^ n) +
     (fft n (w ^+ 2) (odd_poly p))`_(i %% 2 ^ n) * w ^+ i) *: 'X^i)).
 have F : (2 ^ n <= 2 ^ n.+1)%N by rewrite leq_exp2l.
+apply: sym_equal.
 rewrite (big_cat_nat _ _ _ _ F) //=.
 rewrite big_nat; under eq_bigr do rewrite modn_small // ; rewrite -big_nat /=.
 rewrite -(add0n (2 ^ n)%N) big_addn add0n.
@@ -253,9 +252,6 @@ Lemma drop_step m n w (p : {poly R}) :
 Proof.
 move=> pLmn.
 apply/polyP=> i; rewrite coef_drop_poly.
-case: leqP => [mnLi|iLmn].
-  rewrite nth_default //.
-  by apply: leq_trans (size_step _ _ _ _) _.
 rewrite !stepE !coef_sum expnS mul2n -addnn big_split_ord /=.
 rewrite [X in X + _ = _]big1 ?add0r => [|j _]; last first.
   rewrite coefMXn ifN; last first.
@@ -278,17 +274,14 @@ rewrite !coefMXn addnC mulnDl -expnD addnS ltn_add2l.
 case: leqP => // jLi; rewrite subnDl.
 congr ((_ : {poly R}) `_ _).
 apply: eq_bigr => k _.
-have F : (k + j * 2 ^ n.+1 < 2 ^ (m + n).+1)%N.
-  apply: leq_trans (bound_step (ltn_ord j) (ltn_ord k)).
-  by rewrite ltnS leq_addr.
-have F1 : (k + j * 2 ^ n.+1 + 2 ^ n < 2 ^ (m + n).+1)%N.
-  by apply: bound_step.
-have F2 : (k + (2 ^ (m + n).+1 + j * 2 ^ n.+1) = 
-              k + j * 2 ^ n.+1 + 2 ^ (m + n).+1)%N by rewrite addnAC addnA. 
-have F3 : (k + j * 2 ^ n.+1 + 2 ^ (m + n).+1 + 2 ^ n =
-           k + j * 2 ^ n.+1 + 2 ^ n + 2 ^ (m + n).+1)%N.
-     by rewrite -!addnA [(_ + 2 ^ n)%N]addnC.
-by rewrite !coef_poly F F1 F2 F3.
+have F : (k + j * 2 ^ n.+1 + 2 ^ (m + n).+1 = 
+          k + (2 ^ (m + n).+1 + j * 2 ^ n.+1))%N.
+  by rewrite addnAC addnA.
+have F1 : 
+  ((k + j * 2 ^ n.+1 + 2 ^ n + 2 ^ (m + n).+1) =
+    (k + (2 ^ (m + n).+1 + j * 2 ^ n.+1) + 2 ^ n))%N.
+  by rewrite !addnA [(k + _ + _)%N in RHS]addnAC [(_ + 2 ^ n)%N in RHS]addnAC. 
+by rewrite !(coef_drop_poly, coef_poly) ltn_ord // F F1.
 Qed.
 
 Definition reverse_poly n (p : {poly R}) :=
@@ -378,7 +371,14 @@ split.
   rewrite coefK.
   apply: IH.
   by rewrite size_even_poly_exp2n.
-rewrite /drop_poly reverse_polyS poly_def.
+rewrite add0n.
+have -> : drop_poly (2 ^ n) (reverse_poly n.+1 p) =
+         \poly_(i < 2 ^ n) (reverse_poly n.+1 p)`_(i + 2 ^ n).
+  apply/polyP=> i; rewrite coef_drop_poly coef_poly.
+  case: leqP => // nLn; rewrite nth_default //.
+  apply: leq_trans (size_reverse_poly _ _) _.
+  by rewrite expnS mul2n -addnn leq_add2r.
+rewrite reverse_polyS poly_def.
 under eq_bigr do rewrite coefD coefMXn ltnNge leq_addl /= addnK scalerDl.
 rewrite big_split /= big1 ?add0r => [|i _]; last first.
   suff /leq_sizeP-> : (size (reverse_poly n (even_poly p)) <= i + 2 ^ n)%N.
@@ -419,13 +419,14 @@ elim: m n w p p1; last first.
   rewrite addnC addnS drop_step //.
   apply: IH => //.
   - by apply: size_odd_poly_exp2n.
-  - by rewrite size_poly.
+  - apply: leq_trans (size_drop_poly _ _) _.
+    by rewrite leq_subLR addnn -mul2n -expnS.
   by rewrite [(m + _)%N]addnC -addnS.
 move=> n p w p1; rewrite add0n => Hp Hp1 [H1 H2].
 rewrite /= -H1 -H2.
 rewrite /step big_ord1 mul0n !addn0.
 apply: eq_bigr => /= i _.
-by rewrite !coef_poly !addn0.
+by rewrite !coef_drop_poly !coef_poly !addn0 ltn_ord.
 Qed.
 
 Fixpoint istep_aux m n w p :=

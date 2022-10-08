@@ -61,6 +61,7 @@ Variable R : ringType.
 
 Implicit Type p : {poly R}.
 
+
 (* Even part of a polynomial                                                  *)
 
 Definition even_poly p : {poly R} := \poly_(i < uphalf (size p)) p`_i.*2.
@@ -103,7 +104,7 @@ Proof. by apply/polyP => i; rewrite coef_even_poly !coefC; case: i. Qed.
 Definition odd_poly p : {poly R} := \poly_(i < (size p)./2) p`_i.*2.+1.
 
 Lemma size_odd_poly p : (size (odd_poly p) <= (size p)./2)%N.
-Proof. by apply: size_poly. Qed.
+Proof. exact: size_poly. Qed.
 
 Lemma coef_odd_poly p i : (odd_poly p)`_ i = p `_ i.*2.+1.
 Proof.
@@ -114,7 +115,7 @@ Lemma odd_polyC (c : R) : odd_poly c%:P = 0.
 Proof. by apply/polyP => i; rewrite coef_odd_poly !coefC; case: i. Qed.
 
 Lemma odd_polyE s (p : {poly R}) :
-  ((size p) <= s.*2.+1)%N -> odd_poly p = \poly_(i < s) p`_i.*2.+1.
+  (size p <= s.*2.+1)%N -> odd_poly p = \poly_(i < s) p`_i.*2.+1.
 Proof.
 move=> pLs2; apply/polyP => i; rewrite !coef_poly gtn_half_double.
 have [pLi2|i2Lp] := leqP; have [sLi|iLs] := leqP; rewrite // nth_default //.
@@ -125,7 +126,6 @@ Lemma odd_polyZ k p : odd_poly (k *: p) = k *: odd_poly p.
 Proof. by apply/polyP => i; rewrite !(coefZ, coef_odd_poly). Qed.
 
 Lemma odd_polyD p q : odd_poly (p + q) = odd_poly p + odd_poly q.
-Proof.
 Proof. by apply/polyP => i; rewrite !(coef_odd_poly, coefD). Qed.
 
 Fact odd_poly_is_linear : linear odd_poly.
@@ -186,6 +186,7 @@ rewrite mulnK // ltn_mul2r nP.
 by case: ltnP => ? //; rewrite nth_default.
 Qed.
 
+
 (* Decomposition in odd and even part                                         *)
 Lemma odd_even_polyE p :
   p = (even_poly p \Po 'X^2) + (odd_poly p \Po 'X^2) * 'X.
@@ -200,14 +201,21 @@ Qed.
 (* take and drop for polynomials                                              *)
 
 Definition take_poly m (p : {poly R}) := \poly_(i < m) p`_i.
-Definition drop_poly m (p : {poly R}) := \poly_(i < m) p`_(i + m).
+Definition drop_poly m (p : {poly R}) := \poly_(i < size p - m) p`_(i + m).
+
+Lemma size_take_poly m p : (size (take_poly m p) <= m)%N.
+Proof. by exact: size_poly. Qed.
+
+Lemma size_drop_poly m p : (size (drop_poly m p) <= size p - m)%N.
+Proof. by exact: size_poly. Qed.
+
+Lemma coef_drop_poly m p i : (drop_poly m p)`_ i = p`_ (i + m).
+Proof.
+by rewrite coef_poly ltn_subRL addnC; case: leqP => // /(nth_default _).
+Qed.
 
 Lemma coef_take_poly m p i : 
   (take_poly m p)`_ i = if (i < m)%N then p`_ i else 0.
-Proof. by rewrite coef_poly. Qed.
-
-Lemma coef_drop_poly m p i : 
-  (drop_poly m p)`_ i = if (i < m)%N then p`_ (i + m) else 0.
 Proof. by rewrite coef_poly. Qed.
 
 Lemma take_poly_id m p : (size p <= m)%N -> take_poly m p = p.
@@ -215,11 +223,6 @@ Proof.
 move=> Hs; apply/polyP => i.
 rewrite coef_poly; case: leqP => // Hs1.
 by apply/sym_equal/nth_default/(leq_trans Hs).
-Qed.
-
-Lemma take_polyMXn m p : take_poly m (p * 'X^ m) = 0.
-Proof.
-by apply/polyP => i; rewrite coef_poly coefMXn coef0; case: leqP.
 Qed.
 
 Lemma take_polyD m (p q : {poly R}) :
@@ -241,12 +244,26 @@ Proof. by move=> k p q; rewrite take_polyD take_polyZ. Qed.
 Canonical take_poly_additive m := Additive (take_poly_is_linear m).
 Canonical take_poly_linear m := Linear (take_poly_is_linear m).
 
-Lemma take_poly0 m : take_poly m 0 = 0.
+Lemma take_poly0l p : take_poly 0 p = 0.
+Proof.
+by apply/eqP; rewrite -size_poly_leq0 (leq_trans (size_take_poly _ _)).
+Qed.
+
+Lemma take_poly0r m : take_poly m 0 = 0.
 Proof. by rewrite linear0. Qed.
 
-Lemma take_poly_sum m n (p : 'I_n -> {poly R}) :
-  take_poly m (\sum_(i < n) p i) = \sum_(i < n) (take_poly m (p i)).
+Lemma take_poly_sum m n (p : 'I_n -> {poly R}) P :
+  take_poly m (\sum_(i < n | P i) p i) = \sum_(i < n| P i) (take_poly m (p i)).
 Proof. by rewrite linear_sum. Qed.
+
+Lemma take_polyMXn m n p :
+  take_poly m (p * 'X^ n) = take_poly (m - n) p * 'X^n.
+Proof.
+have [->|/eqP p_neq0] := p =P 0; first by rewrite !(mul0r, take_poly0r).
+apply/polyP => i.
+rewrite !(coef_take_poly, coefMXn).
+by case: (leqP n) => iLn; rewrite ?if_same // ltn_subRL addnC subnK.
+Qed.
 
 Lemma drop_poly_eq0 m p : (size p <= m)%N -> drop_poly m p = 0.
 Proof.
@@ -256,26 +273,12 @@ apply: nth_default.
 by apply: leq_trans sLm (leq_addl _ _).
 Qed.
 
-Lemma drop_polyMXn m p : (size p <= m)%N -> drop_poly m (p * 'X^ m) = p.
-Proof.
-move=> Hs; apply/polyP => i.
-rewrite coef_poly coefMXn addnK [(_ + _ < _)%N]ltnNge leq_addl /=.
-case: leqP => // mLi.
-by apply/sym_equal/nth_default/(leq_trans _ mLi).
-Qed.
+Lemma drop_polyZ k m p : drop_poly m (k *: p) = k *: drop_poly m p.
+Proof. by apply/polyP => i; rewrite coefZ !coef_drop_poly coefZ. Qed.
 
 Lemma drop_polyD m (p q : {poly R}) :
   drop_poly m (p + q) = drop_poly m p + drop_poly m q.
-Proof.
-apply/polyP => i; rewrite !(coefD, coef_poly).
-by case: leqP; rewrite ?add0r.
-Qed.
-
-Lemma drop_polyZ k m p : drop_poly m (k *: p) = k *: drop_poly m p.
-Proof.
-apply/polyP => i; rewrite !(coefZ, coef_drop_poly); case: leqP => //.
-by rewrite mulr0.
-Qed.
+Proof. by apply/polyP => i; rewrite coefD !coef_drop_poly coefD. Qed.
 
 Fact drop_poly_is_linear m : linear (drop_poly m).
 Proof. by move=> k p q; rewrite drop_polyD drop_polyZ. Qed.
@@ -283,24 +286,46 @@ Proof. by move=> k p q; rewrite drop_polyD drop_polyZ. Qed.
 Canonical drop_poly_additive m := Additive (drop_poly_is_linear m).
 Canonical drop_poly_linear m := Linear (drop_poly_is_linear m).
 
+Lemma drop_poly0l p : drop_poly 0 p = p.
+Proof.
+apply/polyP => i; rewrite coef_poly subn0 addn0.
+by case: leqP => // /(nth_default _)->.
+Qed.
 
-Lemma drop_poly0 m : drop_poly m 0 = 0.
+Lemma drop_poly0r m : drop_poly m 0 = 0.
 Proof. by rewrite linear0. Qed.
 
-Lemma drop_poly_sum m n (p : 'I_n -> {poly R}) :
-  drop_poly m (\sum_(i < n) p i) = \sum_(i < n) (drop_poly m (p i)).
+Lemma drop_poly_sum m n (p : 'I_n -> {poly R}) P :
+  drop_poly m (\sum_(i < n | P i) p i) = \sum_(i < n | P i) (drop_poly m (p i)).
 Proof. by rewrite linear_sum. Qed.
 
-Lemma left_drop_polyE m p :
-  (size p <= m.*2)%N -> p = take_poly m p + drop_poly m p * 'X^m.
+Lemma size_mulXn n p : p != 0 -> size (p * 'X^n) = (n + size p)%N.
 Proof.
-move=> sL2m; apply/polyP => i.
+elim: n p => [p p_neq0| n IH p p_neq0]; first by rewrite mulr1.
+by rewrite exprS mulrA IH -?size_poly_eq0 size_mulX // addnS.
+Qed.
+
+Lemma drop_polyMXn m n p :
+  drop_poly m (p * 'X^ n) = drop_poly (m - n) p * 'X^ (n - m).
+Proof.
+have [->|/eqP p_neq0] := p =P 0; first by rewrite mul0r !drop_poly0r mul0r.
+apply/polyP => i.
+have [mLn|/ltnW nLm]:= leqP m n. 
+  have -> : (m - n = 0)%N by apply/eqP; rewrite subn_eq0.
+  rewrite drop_poly0l coef_drop_poly !coefMXn !ltn_subRL.
+  by rewrite [(m + i)%N]addnC //= ?subnBA.
+have -> : (n - m = 0)%N by apply/eqP; rewrite subn_eq0.
+rewrite mulr1 !coef_drop_poly coefMXn addnBA // ifN // -leqNgt.
+by apply: leq_trans (leq_addl _ _).
+Qed.
+
+Lemma take_drop_polyE m p : p = take_poly m p + drop_poly m p * 'X^m.
+Proof.
+apply/polyP => i.
 rewrite coefD coefMXn !coef_poly.
 case: leqP => HlP; last by rewrite addr0.
 case: leqP => H1lP; last by rewrite subnK ?add0r.
-rewrite add0r nth_default //.
-apply: leq_trans sL2m _.
-by rewrite -addnn -leq_subRL.
+by rewrite add0r nth_default // -(subnK HlP) addnC -leq_subLR.
 Qed.
 
 End Poly.
