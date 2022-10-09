@@ -339,20 +339,20 @@ rewrite subnS.
 by case: (n) j => //= n1 j; rewrite subSn // -ltnS.
 Qed.
 
-Fixpoint invariant_fft1 n m w p q :=
+Fixpoint all_results_fft1 n m w p q :=
   if n is n1.+1 then 
-  invariant_fft1 n1 m w (even_poly p) (take_poly (2 ^ (m + n1)) q) /\ 
-  invariant_fft1 n1 m w (odd_poly p) (drop_poly (2 ^ (m + n1)) q) 
+  all_results_fft1 n1 m w (even_poly p) (take_poly (2 ^ (m + n1)) q) /\ 
+  all_results_fft1 n1 m w (odd_poly p) (drop_poly (2 ^ (m + n1)) q) 
   else q = fft1 m w p.
 
-Lemma invariantS_fft1 n m w p q :
-  invariant_fft1 n.+1 m w p q <->
-  invariant_fft1 n m w (even_poly p) (take_poly (2 ^ (m + n)) q) /\ 
-  invariant_fft1 n m w (odd_poly p) (drop_poly (2 ^ (m + n)) q).
+Lemma all_resultsS_fft1 n m w p q :
+  all_results_fft1 n.+1 m w p q <->
+  all_results_fft1 n m w (even_poly p) (take_poly (2 ^ (m + n)) q) /\ 
+  all_results_fft1 n m w (odd_poly p) (drop_poly (2 ^ (m + n)) q).
 Proof. by []. Qed.
 
-Lemma invariant_fft1_reverse_poly p n w :
-  (size p <= 2 ^ n)%N -> invariant_fft1 n 0 w p (reverse_poly n p).
+Lemma all_results_fft1_reverse_poly p n w :
+  (size p <= 2 ^ n)%N -> all_results_fft1 n 0 w p (reverse_poly n p).
 Proof.
 elim: n p => /= [p spL1|n IH p spLb].
   by rewrite reverse_poly0 -poly_size1.
@@ -402,31 +402,30 @@ Qed.
 Lemma poly1 (s : nat -> R) : \poly_(i < 1) s i = (s 0%N)%:P.
 Proof. by apply/polyP => i; rewrite coef_poly coefC; case: i. Qed.
 
-Lemma invariant_fft1_step m n w p p1 :
+Lemma all_results_fft1_step m n w (p q : {poly R}):
   (size p <= 2 ^ (m + n).+1)%N ->
-  (size p1 <= 2 ^ (m + n).+1)%N ->
-  invariant_fft1 m.+1 n (w ^+ 2) p p1 ->
-  invariant_fft1 m n.+1 w p (step m n w p1).
+  (size q <= 2 ^ (m + n).+1)%N ->
+  all_results_fft1 m.+1 n (w ^+ 2) p q ->
+  all_results_fft1 m n.+1 w p (step m n w q).
 Proof.
-elim: m n w p p1; last first.
-  move=> m IH n w p p1 Hsp Hsp1/invariantS_fft1[H2 H3].
-  apply/invariantS_fft1; split.
-    rewrite [(_ + m)%N]addnC addnS take_step //.
-    apply: IH => //.
-    - by apply: size_even_poly_exp2n.
-    - by rewrite size_poly.
-    by rewrite [(m + _)%N]addnC -addnS.
-  rewrite addnC addnS drop_step //.
+elim: m n w p q => [n p w q|
+                    m IH n w p q Hsp Hsp1/all_resultsS_fft1[H2 H3]].
+  rewrite add0n => Hp Hq [H1 H2].
+  rewrite /= -H1 -H2 /step big_ord1 mul0n !addn0.
+  apply: eq_bigr => /= i _.
+  by rewrite !coef_drop_poly !coef_poly !addn0 ltn_ord.
+apply/all_resultsS_fft1; split.
+  rewrite [(_ + m)%N]addnC addnS take_step //.
   apply: IH => //.
-  - by apply: size_odd_poly_exp2n.
-  - apply: leq_trans (size_drop_poly _ _) _.
-    by rewrite leq_subLR addnn -mul2n -expnS.
+  - by apply: size_even_poly_exp2n.
+  - by rewrite size_poly.
   by rewrite [(m + _)%N]addnC -addnS.
-move=> n p w p1; rewrite add0n => Hp Hp1 [H1 H2].
-rewrite /= -H1 -H2.
-rewrite /step big_ord1 mul0n !addn0.
-apply: eq_bigr => /= i _.
-by rewrite !coef_drop_poly !coef_poly !addn0 ltn_ord.
+rewrite addnC addnS drop_step //.
+apply: IH => //.
+- by apply: size_odd_poly_exp2n.
+- apply: leq_trans (size_drop_poly _ _) _.
+  by rewrite leq_subLR addnn -mul2n -expnS.
+by rewrite [(m + _)%N]addnC -addnS.
 Qed.
 
 Fixpoint istep_aux m n w p :=
@@ -440,17 +439,17 @@ move=> Hs.
 suff /(_ n 0%N): forall m1 n1 (p1 q1 : {poly R}), 
     (size p1 <= 2 ^ (m1 + n1))%N ->
     (size q1 <= 2 ^ (m1 + n1))%N ->
-    invariant_fft1 m1 n1 (w ^+ (2 ^ m1)) p1 q1 -> 
-    invariant_fft1 0 (m1 + n1) w p1 (istep_aux m1 n1 w q1).
+    all_results_fft1 m1 n1 (w ^+ (2 ^ m1)) p1 q1 -> 
+    all_results_fft1 0 (m1 + n1) w p1 (istep_aux m1 n1 w q1).
   rewrite addn0 /=.
    apply => //; first by apply: size_reverse_poly.
-  by apply: invariant_fft1_reverse_poly.
+  by apply: all_results_fft1_reverse_poly.
 elim => [//| m1 IH] n1 p1 q1 Hs1 Hs2 H1.
 rewrite /istep_aux -/istep_aux addSnnS.
 apply: IH; first by rewrite addnS.
   rewrite addnS.
   by apply: size_step.
-apply: invariant_fft1_step => //.
+apply: all_results_fft1_step => //.
 by rewrite -exprM mulnC -expnS.
 Qed.
 
