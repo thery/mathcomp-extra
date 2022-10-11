@@ -28,6 +28,7 @@ Import GRing.Theory Num.Theory Order.POrderTheory Num.ExtraDef Num.
 
 Section FFT.
 
+Check comp_polyX.
 Local Open Scope ring_scope.
 
 (* Arbitary idomain                                                           *)
@@ -113,7 +114,7 @@ have imL : (i %% 2 ^ n < 2 ^ n)%N by apply/ltn_pmod/expn_gt0.
 have n2P : (0 < 2 ^ n.+1)%N by rewrite expn_gt0.
 have wwE := prim_sqr wE.
 rewrite !IH ?coef_poly ?imL ?size_even_poly_exp2n ?size_odd_poly_exp2n //.
-rewrite [p in RHS]odd_even_polyE.
+rewrite -[p in RHS]poly_even_odd.
 rewrite !(hornerD, horner_comp, hornerMX, hornerX).
 suff -> : (w ^+ 2) ^+ (i %% 2 ^ n) = w ^+ i * w ^+ i by [].
 rewrite -!expr2 -!exprM.
@@ -423,7 +424,7 @@ apply/all_resultsS_fft1; split.
 rewrite addnC addnS drop_step //.
 apply: IH => //.
 - by apply: size_odd_poly_exp2n.
-- apply: leq_trans (size_drop_poly _ _) _.
+- rewrite size_drop_poly.
   by rewrite leq_subLR addnn -mul2n -expnS.
 by rewrite [(m + _)%N]addnC -addnS.
 Qed.
