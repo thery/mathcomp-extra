@@ -4,9 +4,11 @@
 (*     Checking and Solving Sudokus                                           *)
 (*                               thery@sophia.inria.fr                        *)
 (*     Definitions:                                                           *)
-(*      sudoku, check, find_one, find_all                                     *)
+(*      sudoku, check, find_one, find_just_one, find_all                      *)
 (*                                      (2022)                                *)
+(*  This is a port to mathcomp of the initial sudoku contribution (2006)      *)
 (******************************************************************************)
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -25,16 +27,16 @@ Section sudoku.
 (* the initial grid is then composed of (hw * hw) cells                       *)
 (* For example for the usual sudoku                                           *)
 (*   h = 3, w = 3, hw = 9, the grid = 81 cells                                *)
-(* The grid is represented by a seq of (hw * hw) cells                       *)
-(* at the position (x,y) of the seq (i.e at the index (x * hw + y))          *)
+(* The grid is represented by a seq of (hw * hw) cells                        *)
+(* at the position (x,y) of the seq (i.e at the index (x * hw + y))           *)
 (* if the cell is empty it contains 0, otherwise its contains one of          *)
 (* the numbers 1,2, ; auto., hw                                               *)
 (******************************************************************************)
 
-(* Height h and width w *)
+(* Height h and width w                                                       *)
 Variable h w : nat.
 
-(* Size *)
+(* Number of cells in a little rectangle                                      *)
 Definition hw := h * w.
 
 Lemma h_pos x : x < hw -> 0 < h.
@@ -72,68 +74,74 @@ Proof.
 by move=> x1Lhw z1Lh; apply: hw_MwD; [apply: hw_modh|apply: hw_modw].
 Qed.
 
-(* The reference seq [1; 2; ; auto.; hw] *)
+(* The reference seq [1; 2; ; ...; hw]                                        *)
 Definition sref := iota 1 hw.
-
-Lemma sref_uniq : uniq sref.
-Proof. apply: iota_uniq. Qed.
 
 Lemma size_sref : size sref = hw.
 Proof. by rewrite size_iota. Qed. 
 
-(* The position indexes [0; 1; 2; ; hw -1] *)
+Lemma sref_uniq : uniq sref.
+Proof. apply: iota_uniq. Qed.
+
+(* The position indexes [0; 1; 2; ; hw -1]                                    *)
 Definition indexes := iota 0 hw.
 
 Lemma size_indexes : size indexes = hw.
 Proof. by rewrite size_iota. Qed.
 
-(* Defines the indices *)
-Lemma in_indexes i : (i \in indexes) = (i < hw).
+Lemma mem_indexes i : (i \in indexes) = (i < hw).
 Proof. by rewrite mem_iota. Qed.
 
-(* An element outside the sref *)
+(* An element outside the sref                                                *)
 Definition out := 0.
 
 Lemma out_not_in_refl : out \notin sref.
 Proof. by rewrite mem_iota /out; lia. Qed.
 
-(* Empty grid (initial grid) *)
-Definition init := nseq (hw * hw) out.
-
-(* Its size is hw * hw *)
-Lemma size_init : size init = hw * hw.
-Proof. by rewrite size_nseq. Qed.
-
 (******************************************************************************)
 (*    Positions (x, y)                                                        *)
 (******************************************************************************)
 
-(* Define a position *)
+(* Define a position                                                          *)
 Definition pos := (nat * nat)%type.
 
 Implicit Types p : pos.
 
-(* Shift a position *)
+(* Shift a position                                                           *)
 Definition shift p x y : pos := (x + p.1, y + p.2).
 
-(* A position is valid if it is inside the board *)
+(* A position is valid if it represents a cell of the grid                    *)
 Definition valid_pos p := (p.1 < hw) && (p.2 < hw).
 
-(* Turn a position into a drop *)
+(* Turn a position into a number:                                             *) 
+(* we number the grid from top to bottom and left to right, i.e.              *)
+(* (0,0) -> 0, (0,1) -> 1, ..., (hw.-1,hw.-1) -> hw * hw).-1                  *)
+
+(* From pos to nat                                                            *)
 Definition pos2n p := p.1 * hw + p.2.
 
 Lemma pos2n00  : pos2n (0, 0) = 0.
 Proof. by []. Qed.
 
-Lemma pos2nK n : n < hw * hw -> pos2n (n %/ hw, n %% hw) = n.
+(* The converse                                                               *)
+Definition n2pos n : pos := (n %/ hw, n %% hw).
+
+Lemma pos2nK n : n < hw * hw -> pos2n (n2pos n) = n.
 Proof.
-by rewrite /pos2n; case: hw => // hw1 _; rewrite /pos2n /= -divn_eq.
+by rewrite /pos2n /n2pos; case: hw => // hw1 _; rewrite -divn_eq.
+Qed.
+
+Lemma n2posK p : valid_pos p -> n2pos (pos2n p) = p.
+Proof.
+case: p => x y /andP[/= xLhw yLhw]; rewrite /pos2n /n2pos /= .
+have hw_gt0 : 0 < hw by apply: leq_ltn_trans xLhw.
+by rewrite divnMDl // modnMDl divn_small // addn0 modn_small.
 Qed.
 
 Lemma valid_pos_pos2n_lt p : valid_pos p -> pos2n p < hw * hw.
 Proof. by case: p => x y /andP[/= Hx Hy]; rewrite /pos2n /=; nia. Qed.
 
-(* Positions are unique *)
+(* Positions are unique                                                       *)
 Lemma valid_pos_eq p1 p2 :
     valid_pos p1 -> valid_pos p2 -> pos2n p1 = pos2n p2 -> p1 = p2.
 Proof.
@@ -148,11 +156,10 @@ apply: etrans (_ : (x1 * hw + y1) %% hw = _).
 by rewrite HH modnMDl ?modn_small; lia.
 Qed.
 
-(* Find the next position *)
-Definition next p : pos :=
-  if hw == p.2.+1 then (p.1.+1, 0) else (p.1, p.2.+1).
+(* Find the next position                                                     *)
+Definition next p : pos := if hw == p.2.+1 then (p.1.+1, 0) else (p.1, p.2.+1).
 
-Lemma next_pos p : pos2n (next p) = S (pos2n p).
+Lemma next_pos p : pos2n (next p) = (pos2n p).+1.
 Proof.
 case: p => x y; rewrite /next /pos2n /=.
 case: eqP=> Hw /=; lia.
@@ -172,6 +179,7 @@ case: p => x y; rewrite /valid_pos /pos2n /= => /andP[Hx Hy].
 nia.
 Qed.
 
+(* the lexical order on positions                                             *)
 Definition order_pos :=
    [rel p1 p2 | (p1.1 < p2.1) || ((p1.1 == p2.1) && (p1.2 <= p2.2))].
 
@@ -206,27 +214,27 @@ Qed.
 Lemma order_pos_00 p : order_pos (0, 0) p.
 Proof.  by case: p => x y; rewrite /= andbT; case: ltngtP. Qed.
 
-(* Create the seq of positions (x, y) such that 0 <= x < h and 0 <= y < w *)
+(* Create the seq of positions (x, y) such that 0 <= x < h and 0 <= y < w     *)
 Definition cross := [seq (x, y) | x <- iota 0 h , y <- iota 0 w].
 
-Lemma crossP p : p \in cross = ((p.1 < h) && (p.2 < w)).
+Lemma mem_cross p : p \in cross = ((p.1 < h) && (p.2 < w)).
 Proof.
 apply/allpairsP/idP=> [[[x1 y1]/= []]|/andP[Hh Hw]].
   by rewrite !mem_iota !andTb !add0n => Hx Hy -> /=; apply/andP.
 by exists p; split; rewrite ?mem_iota // -surjective_pairing.
 Qed.
 
-(* Create the seq of pairs (x, y) such that 0 <= x < hw and 1 <= y <= hw *)
+(* Create the seq of pairs (x, y) such that 0 <= x < hw and 1 <= y <= hw      *)
 Definition cross1 := [seq (x, y) | x <- indexes , y <- sref].
 
-Lemma cross1P p : p \in cross1 = ((p.1 \in indexes) && (p.2 \in sref)).
+Lemma mem_cross1 p : p \in cross1 = ((p.1 \in indexes) && (p.2 \in sref)).
 Proof.
 apply/allpairsP/idP=> [[[x1 y1]/= [Hx1 Hy1 ->]]|/andP[Hh Hw]].
   by rewrite Hx1.
 by exists p; rewrite Hh Hw -surjective_pairing.
 Qed.
 
-(* Create the seq of positions (x, y) such that                              *)
+(* Create the seq of positions (x, y) such that                               *)
 (*   0 <= x < hw and 0 <= y < hw1                                             *)
 Definition cross2 := [seq (x, y) | x <- indexes , y <- indexes].
 
@@ -253,36 +261,41 @@ by exists (x1, y1); rewrite !mem_iota; split.
 Qed.
 
 (******************************************************************************)
-(*    Get                                                                     *)
+(*    Grid                                                                    *)
 (******************************************************************************)
 
-(* Get the element of the seq s at position (x, y) *)
-Definition get p s := nth out s (pos2n p).
+(* A grid is of sequence of values (the contents of the cells)                *)
+Definition grid := seq nat.
 
-(* Getting from a nil seq always returns 0 *)
-Lemma get_nil p : get p [::] = out.
-Proof. by rewrite /get nth_default. Qed.
+Implicit Types g : grid.
 
-(* The init always returns a non-value *)
-Lemma get_init p : get p init \notin sref.
+(* Empty grid (initial grid)                                                  *)
+Definition ginit : grid := nseq (hw * hw) out.
+
+(* Its size                                                                   *)
+Lemma size_ginit : size ginit = hw * hw.
+Proof. by rewrite size_nseq. Qed.
+
+(* Get the element of the grid g at position (x, y)                           *)
+Definition get p g := nth out g (pos2n p).
+
+(* The init grid always returns a non-value                                   *)
+Lemma get_init p : get p ginit \notin sref.
 Proof. by rewrite /get nth_nseq if_same out_not_in_refl. Qed.
 
-(* Relation between get and next *)
-Lemma get_next p a s : get (next p) (a :: s) = get p s.
+(* Relation between get and next                                              *)
+Lemma get_next p a g : get (next p) (a :: g) = get p g.
 Proof. by rewrite /get next_pos. Qed.
 
-(* m is full of zero *)
-Lemma get_nseq n p : get p (nseq n out) = out.
-Proof. by rewrite /get nth_nseq if_same. Qed.
 
 (******************************************************************************)
 (*    Update                                                                  *)
 (******************************************************************************)
 
-(* Update the seq l at the position (x, y) with the value v *)
-Fixpoint subst (A : Type) (n : nat) (v : A) (l : seq A) : seq A :=
-  if l is a :: l1 then
-    if n is n1.+1 then a :: subst n1 v l1 else v :: l1
+(* sustitute in a sequence s the nth element by v                             *)
+Fixpoint subst (A : Type) (n : nat) (v : A) (s : seq A) : seq A :=
+  if s is a :: s1 then
+    if n is n1.+1 then a :: subst n1 v s1 else v :: s1
   else [::].
 
 Lemma substE A n (v : A) s : 
@@ -298,24 +311,26 @@ rewrite substE; case: leqP => //=; rewrite size_cat /= size_take size_drop.
 case: leqP => [sLn|nLs] //= _.
 by rewrite -subSn // subSS addnC subnK // ltnW.
 Qed.
-Definition update p v (s : seq nat) := subst (pos2n p) v s.
 
-(* The size after an update is unchanged *)
-Lemma size_update p v s : size (update p v s) = size s.
+(* Update the grid g at the position (x, y) with the value v                  *)
+Definition update p v g : grid := subst (pos2n p) v g.
+
+(* The size after an update is unchanged                                      *)
+Lemma size_update p v g : size (update p v g) = size g.
 Proof. by rewrite /update size_subst. Qed.
 
-(* Getting the updated cell gives the new value *)
-Lemma update_get p v s :
-  size s = hw * hw -> valid_pos p -> get p (update p v s) = v.
+(* Getting the updated cell gives the new value                               *)
+Lemma update_get p v g :
+  size g = hw * hw -> valid_pos p -> get p (update p v g) = v.
 Proof.
 move=> Hs Hp; have := valid_pos2n Hp Hs.
 rewrite /update /get substE => pLs.
 by rewrite pLs nth_cat size_take pLs ltnn subnn.
 Qed.
 
-(* Getting outside the updated cell returns the previous value *)
-Lemma update_diff_get p1 p2 v s :
-  valid_pos p1 -> valid_pos p2 -> p1 != p2 -> get p1 (update p2 v s) = get p1 s.
+(* Getting outside the updated cell returns the previous value                *)
+Lemma update_diff_get p1 p2 v g :
+  valid_pos p1 -> valid_pos p2 -> p1 != p2 -> get p1 (update p2 v g) = get p1 g.
 Proof.
 move=> Vp1 Vp2 p1Dp2.
 rewrite /get /update substE; case: leqP => //= p2Ls.
@@ -331,78 +346,80 @@ Qed.
 (*    Restrict till position                                                  *)
 (******************************************************************************)
 
-Definition prestrict p s := 
+(* Return the grid where the cells after position p of g are zeroed           *)
+(* this is used to express an invariable when building the initial grid       *)
+Definition grestrict p g  : grid:= 
   let n1 := pos2n p in 
-  if n1 < size s then take n1 s ++ (nseq (size s - n1) out) else s.
+  if n1 < size g then take n1 g ++ (nseq (size g - n1) out) else g.
 
-Lemma prestrict_0 s : prestrict (0, 0) s = nseq (size s) out.
-Proof. by case: s. Qed.
+Lemma grestrict00 g : grestrict (0, 0) g = nseq (size g) out.
+Proof. by case: g. Qed.
 
-Lemma prestrict_all p s : size s <= pos2n p -> prestrict p s = s.
-Proof. by move=> sLp; rewrite /prestrict ltnNge sLp. Qed.
+Lemma grestrict_all p g : size g <= pos2n p -> grestrict p g = g.
+Proof. by move=> sLp; rewrite /grestrict ltnNge sLp. Qed.
 
-Lemma prestrict_size p s : size (prestrict p s) = (size s).
+Lemma grestrict_size p g : size (grestrict p g) = (size g).
 Proof.
-rewrite /prestrict; case: leqP => // pLs.
-by rewrite size_cat size_take pLs size_nseq addnC subnK // ltnW.
+rewrite /grestrict; case: leqP => // pLg.
+by rewrite size_cat size_take pLg size_nseq addnC subnK // ltnW.
 Qed.
 
-Lemma prestrict_update p s :
-  pos2n (next p) <= size s ->
-  prestrict (next p) s = update p (get p s) (prestrict p s).
+Lemma grestrict_update p g :
+  pos2n (next p) <= size g ->
+  grestrict (next p) g = update p (get p g) (grestrict p g).
 Proof.
-rewrite /prestrict /get /update substE next_pos.
-rewrite leq_eqVlt => /orP[/eqP He|pLs].
-  have pLs : pos2n p < size s by rewrite He.
+rewrite /grestrict /get /update substE next_pos.
+rewrite leq_eqVlt => /orP[/eqP He|pLg].
+  have pLg : pos2n p < size g by rewrite He.
   rewrite He ltnn eqxx /= size_cat size_take.
-  rewrite size_nseq pLs addnC subnK; last by rewrite ltnW.
-  rewrite leqnn take_cat size_take pLs ltnn subnn take0 cats0.
-  rewrite drop_cat size_take pLs ltnNge (ltnW pLs) /= drop_nseq subnn //=.
+  rewrite size_nseq pLg addnC subnK; last by rewrite ltnW.
+  rewrite leqnn take_cat size_take pLg ltnn subnn take0 cats0.
+  rewrite drop_cat size_take pLg ltnNge (ltnW pLg) /= drop_nseq subnn //=.
   rewrite -[LHS](cat_take_drop (pos2n p)) //.
   by rewrite (drop_nth out) // drop_oversize // He.
-have pLs1 : pos2n p < size s by rewrite ltnW.
-rewrite pLs orbT size_cat size_nseq size_take pLs1 ifT; last first.
+have pLg1 : pos2n p < size g by rewrite ltnW.
+rewrite pLg orbT size_cat size_nseq size_take pLg1 ifT; last first.
   by rewrite addnC subnK // ltnW.
-rewrite take_cat drop_cat !size_take !pLs1 ltnn ifN -?leqNgt ?leqnS //.
+rewrite take_cat drop_cat !size_take !pLg1 ltnn ifN -?leqNgt ?leqnS //.
 rewrite subSn // subnn take0 cats0 drop_nseq subn1 subnS.
 by rewrite -cat_rcons (take_nth out).
 Qed.
 
-Lemma prestrict_get s p q :
-  pos2n p < pos2n q -> get p (prestrict q s) = get p s.
+Lemma grestrict_get g p q :
+  pos2n p < pos2n q -> get p (grestrict q g) = get p g.
 Proof.
-move=> pLq; rewrite /get /prestrict.
-case: leqP => // qLs.
-by rewrite nth_cat size_take qLs pLq nth_take.
+move=> pLq; rewrite /get /grestrict.
+case: leqP => // qLg.
+by rewrite nth_cat size_take qLg pLq nth_take.
 Qed.
 
-Lemma prestrict_get_default s p q :
-  pos2n q <= pos2n p -> get p (prestrict q s) = out.
+Lemma grestrict_get_default g p q :
+  pos2n q <= pos2n p -> get p (grestrict q g) = out.
 Proof.
-move=> qLp; rewrite /get /prestrict.
-case: leqP => [sLq|qLs].
-  by rewrite nth_default // (leq_trans sLq).
-by rewrite nth_cat size_take qLs ltnNge qLp /= nth_nseq if_same.
+move=> qLp; rewrite /get /grestrict.
+case: leqP => [gLq|qLg].
+  by rewrite nth_default // (leq_trans gLq).
+by rewrite nth_cat size_take qLg ltnNge qLp /= nth_nseq if_same.
 Qed.
 
 (******************************************************************************)
 (*    Refine                                                                  *)
 (******************************************************************************)
 
-(* A state refines another if it has only substitutes non sref element    *)
-Definition refine s1 s2 :=
-  [&& size s1 == hw * hw,
-      size s2 == hw * hw &
+(* A grid refines another if it only substitutes non-sref elements            *)
+Definition refine g1 g2 :=
+  [&& size g1 == hw * hw,
+      size g2 == hw * hw &
       [forall n : 'I_(hw * hw), 
-        let p := (n %/ hw, n %% hw) in 
-        (get p s1 \in sref) ==> (get p s1 == get p s2)]].
+        let p := n2pos n in 
+        (get p g1 \in sref) ==> (get p g1 == get p g2)]].
 
-Lemma refineP s1 s2 : 
+Lemma refineP g1 g2 : 
   reflect 
-     [/\ size s1 = hw * hw,
-         size s2 = hw * hw &
-         forall p, valid_pos p -> get p s1 \in sref -> get p s1 = get p s2]
-     (refine s1 s2).
+     [/\ size g1 = hw * hw,
+         size g2 = hw * hw &
+         forall p, valid_pos p -> get p g1 \in sref -> get p g1 = get p g2]
+     (refine g1 g2).
 Proof.
 apply: (iffP and3P) => [[/eqP Heq1 /eqP Heq2 /forallP /= Hf]|
                         [Heq1 Heq2 Hf]]; split => //; try by apply/eqP.
@@ -416,35 +433,35 @@ have hw_pos : 0 < hw.
   suff : 0 < hw * hw by case: hw.
   by apply: leq_ltn_trans (ltn_ord n).
 apply/implyP => Hg; apply/eqP.
-have := Hf (n %/ hw, n %% hw).
+have := Hf (n2pos n).
 rewrite /get pos2nK //; apply => //.
 rewrite /valid_pos /= ltn_mod.
 by rewrite ltn_divLR ?ltn_ord /=.
 Qed.
 
-Lemma refine_refl s : size s = hw * hw -> refine s s.
-Proof. by move=> Hs; apply/refineP; split. Qed.
+Lemma refine_refl g : size g = hw * hw -> refine g g.
+Proof. by move=> Hg; apply/refineP; split. Qed.
 
 (* Refinement is transitive                                                   *)
 Lemma refine_trans : transitive refine.
 Proof.
-move=> s1 s2 s3 /refineP[Hl1 Hr1 Hf1] /refineP[Hl2 Hr2 Hf2].
+move=> g1 g2 g3 /refineP[Hl1 Hr1 Hf1] /refineP[Hl2 Hr2 Hf2].
 apply/refineP; split => //.
 by move=> p Hv Hp; rewrite Hf1 // Hf2 // -Hf1.
 Qed.
 
-(* Every states refine the initial state *)
-Lemma refine_init s : size s = hw * hw -> refine init s.
+(* Every grid refines the initial grid                                        *)
+Lemma refine_init g : size g = hw * hw -> refine ginit g.
 Proof.
-move=> Hs; apply/refineP; split => //; first by apply size_init.
-move=> p _; rewrite /init /get !nth_nseq if_same => H.
+move=> Hs; apply/refineP; split => //; first by apply size_ginit.
+move=> p _; rewrite /ginit /get !nth_nseq if_same => H.
 by case/negP: out_not_in_refl.
 Qed.
 
-(* update is a refinement *)
-Lemma refine_update p v s :
-  valid_pos p -> get p s \notin sref -> size s = hw * hw -> 
-  refine s (update p v s).
+(* update is a refinement                                                     *)
+Lemma refine_update p v g :
+  valid_pos p -> get p g \notin sref -> size g = hw * hw -> 
+  refine g (update p v g).
 Proof.
 move=> Hp Hg Hs; apply/refineP; split=> //; first by rewrite size_update.
 move=> p1 Hp1 Hg1.
@@ -452,84 +469,32 @@ have hw_gt0 : 0 < hw by case/andP: Hp1; case: hw.
 by rewrite update_diff_get //; apply: contra Hg => /eqP<-.
 Qed.
 
-Lemma refine_prestrict p s :  size s = hw * hw -> refine (prestrict p s) s.
+Lemma refine_grestrict p g :  size g = hw * hw -> refine (grestrict p g) g.
 Proof.
 move=> Hs.
 apply/refineP; split => //.
-  by rewrite prestrict_size.
+  by rewrite grestrict_size.
 move=> p1 Hp1.
 case: (leqP (pos2n p) (pos2n p1)) => Lp.
-  by rewrite prestrict_get_default // => HH; case/negP: out_not_in_refl.
-by rewrite prestrict_get.
-Qed.
-
-(******************************************************************************)
-(*    Empty                                                                   *)
-(******************************************************************************)
-
-(* A state is empty if it is full of zero *)
-Definition empty s := all (fun x => x \notin sref) s.
-
-Lemma emptyP s : reflect (forall p, get p s \notin sref) (empty s).
-Proof.
-apply: (iffP allP) => [Hs p|Hp x /nthP xIs].
-  case: (leqP (size s) (pos2n p)) => [sLp|pLs]; last by apply/Hs/mem_nth.
-  by rewrite [get _ _]nth_default // out_not_in_refl.
-have [n nLs <-] := xIs out.
-by apply: (Hp (0 , n)).
-Qed.
-
-(* The empty seq is empty *)
-Lemma empty_nil : empty nil.
-Proof. by []. Qed.
-
-Lemma empty_nseq n : empty (nseq n out).
-Proof. by rewrite /empty all_nseq out_not_in_refl orbT. Qed.
-
-(* Dropping an empty state gives an empty state *)
-Lemma empty_drop n s : empty s -> empty (drop n s).
-Proof. 
-move=>/emptyP Hp; apply/emptyP => p.
-rewrite /get nth_drop.
-by apply: (Hp (0, n + pos2n p)).
-Qed.
-
-(* A state that starts with an element not in the sref
-   is empty if its tail is empty *)
-Lemma empty_cons a s : a \notin sref -> empty s -> empty (a :: s).
-Proof.
-move=> aNIs /emptyP He; apply/emptyP => p.
-by rewrite /get; case: pos2n => //= n; apply: (He (0, n)).
-Qed.
-
-(* Inversion theorem for empty *)
-Lemma empty_inv a s : empty (a :: s) -> a \notin sref /\ empty s.
-Proof.
-move=> /emptyP He; split; first by apply: (He (0, 0)).
-by apply/emptyP => p; apply: (He (0, (pos2n p).+1)).
-Qed.
-
-(* For a take to be empty it is sufficient the state to be empty *)
-Lemma empty_take n s : empty s -> empty (take n s).
-Proof.
-by rewrite /empty -{1}(@cat_take_drop n _ s) all_cat => /andP[].
+  by rewrite grestrict_get_default // => HH; case/negP: out_not_in_refl.
+by rewrite grestrict_get.
 Qed.
 
 (******************************************************************************)
 (*    Rows                                                                    *)
 (******************************************************************************)
 
-Definition row i (s : seq nat) := take hw (drop (i * hw) s).
+Definition row i g := take hw (drop (i * hw) g).
 
-Lemma size_row i s :
-  i < hw -> size s = hw * hw -> size (row i s) = hw.
+Lemma size_row i g :
+  i < hw -> size g = hw * hw -> size (row i g) = hw.
 Proof.
 move=> iLhw Hs; rewrite size_take size_drop.
 case: leqP => //; nia.
 Qed.
 
 (* Relation between get and row *)
-Lemma get_row x y s : y < hw -> get (x, y) s = nth out (row x s) y.
+Lemma get_row x y g : y < hw -> get (x, y) g = nth out (row x g) y.
 Proof.
 by move=> yLhw; rewrite /get /row /pos2n /= nth_take // nth_drop.
 Qed.
@@ -561,11 +526,11 @@ rewrite size_drop leq_subRL //=; first by rewrite addnA -mulSn.
 by apply: leq_trans tdLs; rewrite mulSn -addnA leq_addr.
 Qed.
 
-Theorem take_and_drop_nil (A : Type) t d n :
+Lemma take_and_drop_nil (A : Type) t d n :
   take_and_drop t d n [::] = [::] :> seq A.
 Proof. by elim: n. Qed.
 
-Theorem size_take_and_drop (A : Type) t d n (s : seq A) :
+Lemma size_take_and_drop (A : Type) t d n (s : seq A) :
   n.-1 * d + t <= size s -> 
   size (take_and_drop t d n s) = n * t.
 Proof.
@@ -579,10 +544,10 @@ case: ltngtP => [||<-] //.
 by rewrite ltnNge (leq_trans _ tLs) // leq_addl.
 Qed.
 
-Definition column i (l : seq nat) := take_and_drop 1 hw hw (drop i l).
+Definition column i (g : seq nat) := take_and_drop 1 hw hw (drop i g).
 
-Lemma size_column j s :
-  j < hw -> size s = hw * hw -> size (column j s) = hw.
+Lemma size_column j g :
+  j < hw -> size g = hw * hw -> size (column j g) = hw.
 Proof.
 move=> jLhw Hs.
 rewrite size_take_and_drop ?muln1 // size_drop {}Hs.
@@ -590,9 +555,9 @@ rewrite addn1; nia.
 Qed.
 
 (* Relation between get and column *)
-Lemma get_column x y s :
-  size s = hw * hw -> x < hw -> y < hw -> 
-  get (x, y) s = nth out (column y s) x.
+Lemma get_column x y g :
+  size g = hw * hw -> x < hw -> y < hw -> 
+  get (x, y) g = nth out (column y g) x.
 Proof.
 move=> Hs xLhw yLhw.
 rewrite /get /column /pos2n nth_take_and_drop ?muln1 //=.
@@ -605,15 +570,15 @@ Qed.
 (*    SubRectangles                                                           *)
 (******************************************************************************)
 
-(* The subrectangles *)
-Definition rect i (s : seq nat) :=
-  take_and_drop w hw h (drop (w * (i %% h) +  h * (i %/ h) * hw) s).
+(* The subrectangles                                                          *)
+Definition rect i g :=
+  take_and_drop w hw h (drop (w * (i %% h) +  h * (i %/ h) * hw) g).
 
 (* Relation between get and rect *)
-Lemma get_rect x y s :
-  size s = hw * hw -> x < hw -> y < hw ->
-  get (x, y) s =
-  nth out (rect (x %/ h * h + y %/ w) s) (x %% h * w + y %% w).
+Lemma get_rect x y g :
+  size g = hw * hw -> x < hw -> y < hw ->
+  get (x, y) g =
+  nth out (rect (x %/ h * h + y %/ w) g) (x %% h * w + y %% w).
 Proof.
 move=> Hs xLhw yLhw.
 have hw_pos : 0 < hw by apply: leq_ltn_trans xLhw.
@@ -633,10 +598,10 @@ rewrite addn0 size_drop Hs.
 rewrite /hw in hw_pos xLhw yLhw *; nia.
 Qed.
 
-Lemma get_rect_rev i j s :
-  size s = hw * hw -> i < hw -> j < hw -> 
-  get (j %/ h * h + i %/ w, j %% h * w + i %% w) s = 
-  nth  out (rect j s) i.
+Lemma get_rect_rev i j g :
+  size g = hw * hw -> i < hw -> j < hw -> 
+  get (j %/ h * h + i %/ w, j %% h * w + i %% w) g = 
+  nth  out (rect j g) i.
 Proof.
 move=> Hs iLhw jLhw.
 have hw_pos : 0 < hw by apply: leq_ltn_trans iLhw.
@@ -655,8 +620,8 @@ Proof.
 by move=> i1Lh i2Lw j1Lw j2Lh; rewrite /valid_pos /= hw_MhD // hw_MwD.
 Qed.
 
-Lemma size_rect i s :
-  i < hw -> size s = hw * hw -> size (rect i s) = hw.
+Lemma size_rect i g :
+  i < hw -> size g = hw * hw -> size (rect i g) = hw.
 Proof.
 rewrite /hw => iLhw Hs.
 have h_pos := h_pos iLhw; have w_pos := w_pos iLhw.
@@ -669,23 +634,23 @@ Qed.
 (******************************************************************************)
 
 
-(* To be a sudoku, the seq should be of the proper hw, rows, columns and      *)
+(* To be a sudoku, the grid should be of the proper hw, rows, columns and     *)
 (* subrectangle should be a permutation of the reference seq                  *)
-Definition sudoku s :=
+Definition sudoku g :=
   [&& 
-     size s == hw * hw,
-     [forall i : 'I_hw, perm_eq (row i s) sref],
-     [forall i : 'I_hw, perm_eq (column i s) sref] &
-     [forall i : 'I_hw, perm_eq (rect i s) sref]].
+     size g == hw * hw,
+     [forall i : 'I_hw, perm_eq (row i g) sref],
+     [forall i : 'I_hw, perm_eq (column i g) sref] &
+     [forall i : 'I_hw, perm_eq (rect i g) sref]].
 
-Lemma sudokuP s :
+Lemma sudokuP g :
   reflect 
   [/\
-     size s = hw * hw,
-     forall i, i < hw -> perm_eq (row i s) sref,
-     forall i, i < hw -> perm_eq (column i s) sref &
-     forall i, i < hw -> perm_eq (rect i s) sref]
-  (sudoku s).
+     size g = hw * hw,
+     forall i, i < hw -> perm_eq (row i g) sref,
+     forall i, i < hw -> perm_eq (column i g) sref &
+     forall i, i < hw -> perm_eq (rect i g) sref]
+  (sudoku g).
 Proof.
 apply: (iffP and4P) => [] [H1 H2 H3 H4]; split; auto.
 - by apply/eqP.
@@ -699,74 +664,84 @@ by apply/forallP => i; apply H4.
 Qed.
 
 (******************************************************************************)
-(*    Literal, state                                                          *)
+(*    Literal                                                                 *)
 (******************************************************************************)
 
-(* A literal is composed of two coordinates and a value *)
+(* A literal is composed of two coordinates and a value                       *)
 Definition lit := (pos * nat)%type.
 
 Definition valid_lit l := (l.2 \in sref) && valid_pos l.1.
 
 
-(* A state is a list of an ordered of positions with their possible value *)
-Definition state := seq (nat * pos * seq bool).
-Definition rank_val v := count (fun x => x == true) v.
+(******************************************************************************)
+(*    State                                                                   *)
+(******************************************************************************)
 
-(* Generate the state that all cells contains a value
-  in the reference sequence
-*)
+(* A state is an ordered list of positions with their possible values         *)
+(* the possible values is encoded as a list of booleans, true indicates that  *)
+(* this value is possible.                                                    *)
+(* The ordering of the positions is done with respect to the number of        *)
+(* possities. This means that positions with a small number of possible       *)
+(* values are top of the list.                                                *)
+
+Definition state := seq (nat * pos * seq bool).
+
+(* ranking value that is stored as the first element of the triple and used   *)
+(* for the ordering                                                           *)
+Definition rank_val bs := count (fun x => x == true) (behead bs).
+
+(* Generate the state where all cells have all the possibilities              *)
 
 Definition init_state : state :=
-  let v := nseq hw true in 
-  let v1 := false :: v in
-  let n := rank_val v in 
-  [seq (n, p, v1) | p <- cross2].
+  let bs := false :: nseq hw true in
+  let n := rank_val bs in 
+  [seq (n, p, bs) | p <- cross2].
 
 Implicit Type st : state.
 
-Fixpoint add_state n p s st := 
-  if st is ((n1, p1, s1) as t) :: st1 then 
-     if n <= n1 then (n, p, s) :: st else 
-     t :: add_state n p s st1
-  else [:: (n, p, s)].
+Fixpoint add_state n p bs st := 
+  if st is ((n1, p1, bs1) as t) :: st1 then 
+     if n <= n1 then (n, p, bs) :: st else 
+     t :: add_state n p bs st1
+  else [:: (n, p, bs)].
 
-Definition bcons b s :=  
-  if b then b :: s else if s is _ :: _ then b :: s else [::].
+(* perform the cons avoiding having tails of false values                     *)
+Definition bcons b bs :=  
+  if b then b :: bs else if bs is _ :: _ then b :: bs else [::].
 
-Fixpoint rm_val n (s : seq bool) {struct s} := 
-  if s is b :: s1 then 
-    if n is n1.+1 then bcons b (rm_val n1 s1) else bcons false s1
+(* remove the possibility n                                                   *)
+Fixpoint rm_val n (bs : seq bool) {struct bs} := 
+  if bs is b :: bs1 then 
+    if n is n1.+1 then bcons b (rm_val n1 bs1) else bcons false bs1
   else [::].
 
-Definition in_val i s := nth false s i.
+(* check if the possibility i is available *)
+Definition in_val i bs := nth false bs i.
 
 Lemma in_val_nil i : in_val i [::] = false.
 Proof. by rewrite /in_val nth_nil. Qed.
 
-Lemma in_val_rm_val i j s : 
-  in_val i (rm_val j s) = (i != j) && in_val i s.
+Lemma in_val_rm_val i j bs : 
+  in_val i (rm_val j bs) = (i != j) && in_val i bs.
 Proof.
-elim: s i j => [[|i] [|j]|b s1 IH [|i] [|j]] //=; first by rewrite andbF.
-- by case: s1 IH.
+elim: bs i j => [[|i] [|j]|b bs IH [|i] [|j]] //=; first by rewrite andbF.
+- by case: bs IH.
 - by case: b => //; case: rm_val.
-- by case: s1 IH => [|b1 s1] IH //=; rewrite in_val_nil.
-case: rm_val (IH i j) => [|b2 s2] /=.
+- by case: bs IH => [|b1 bs] IH //=; rewrite in_val_nil.
+case: rm_val (IH i j) => [|b2 bs2] /=.
   by case: b => /=; rewrite in_val_nil; case: in_val; rewrite (andbT, andbF).
 by case: b.
 Qed.
 
 Fixpoint update_state p i st := 
-  if st is ((n1, p1, s1) as t) :: st1 then 
+  if st is ((n1, p1, bs1) as t) :: st1 then 
     if p == p1 then 
-      let s2 := rm_val i s1 in
-      add_state (rank_val s2) p s2 st1 else  
-      add_state n1 p1 s1 (update_state p i st1)
+      let bs2 := rm_val i bs1 in
+      add_state (rank_val bs2) p bs2 st1 else  
+      add_state n1 p1 bs1 (update_state p i st1)
   else [::].
 
-(* list of all values *)
-Definition sval st := [seq (let: (_,_,v) := i in v) | i <- st ].
-
-(* list of all positions *)
+(* list of all positions in a state                                           *)
 Definition spos st := [seq (let: (_,p,_) := i in p) | i <- st ].
 
 Lemma perm_spos_add n p i st : 
@@ -798,9 +773,9 @@ Proof. by rewrite /spos -map_comp /=; elim: cross2 => //= a st ->. Qed.
 Definition in_state p i st := 
   has (fun v => let: (_, p1, v1) := v in (p == p1) && (in_val i v1)) st.
 
-Lemma in_state_add p1 p2 i1 n2 v2 st :
-  in_state p1 i1 (add_state n2 p2 v2 st) =
-    ((p1 == p2) && (in_val i1 v2)) || in_state p1 i1 st.
+Lemma in_state_add p1 p2 i1 n2 bs2 st :
+  in_state p1 i1 (add_state n2 p2 bs2 st) =
+    ((p1 == p2) && (in_val i1 bs2)) || in_state p1 i1 st.
 Proof.
 elim: st => //= [] [[n3 p3] v3] st IH.
 case: leqP => Ln2n3 //=.
@@ -833,28 +808,27 @@ do 3 case: eqP => //=.
 by move=> _ p2E p3E; case: p1Dp3; rewrite -p2E.
 Qed.
 
-Lemma in_state_init n p v : 
-  (n, p, v) \in init_state =
-  [&& n == rank_val (nseq hw true),
-      valid_pos p &
-      v == false :: nseq hw true].
+Lemma in_state_init n p bs : 
+  (n, p, bs) \in init_state =
+  [&& n == hw, valid_pos p & bs == false :: nseq hw true].
 Proof.
-apply/mapP/idP => [[[x y]] Hc [<- -> <-] |/and3P[/eqP<- Hc /eqP<-]].
-  by rewrite  -mem_cross2 Hc !eqxx.
-by exists p; rewrite ?mem_cross2.
+have rE : rank_val (false :: nseq hw true) = hw.
+  by rewrite /rank_val /= count_nseq mul1n.
+apply/mapP/idP => /= [[[x y]] /= Hc [-> -> ->] | /and3P[/eqP-> Hc /eqP->]].
+  by rewrite rE -mem_cross2 Hc !eqxx.
+by exists p; rewrite ?rE ?mem_cross2.
 Qed.
 
 Lemma in_state_init_state p z : 
   valid_pos p -> z \in sref -> in_state p z init_state.
 Proof.
 move=> Hp Hz; apply/hasP.
-exists (rank_val (nseq hw true), p, false :: nseq hw true).
+exists (hw, p, false :: nseq hw true).
   by rewrite in_state_init !eqxx Hp.
 rewrite eqxx; rewrite mem_iota in Hz.
 case: z Hz => //= z; rewrite add1n ltnS => zLhw.
 by rewrite /in_val nth_nseq zLhw.
 Qed.
-
 
 Definition valid_state st := 
   [/\ uniq (spos st), 
@@ -865,11 +839,10 @@ Lemma valid_state_update p z (st : state) :
   valid_state st -> valid_state (update_state p z st).
 Proof.
 move=> [Hu Hv Hw]; split.
-  by rewrite (perm_uniq (perm_spos_update _ _ _)) Hu /=.
+- by rewrite (perm_uniq (perm_spos_update _ _ _)) Hu /=.
 - move=> p1 Hp1; apply: Hv.
   by rewrite (perm_mem (perm_spos_update _ _ _)) in Hp1.
-move=> p1 z1.
-by rewrite in_state_update // => /andP[_ /Hw].
+by move=> p1 z1; rewrite in_state_update // => /andP[_ /Hw].
 Qed.
 
 Lemma in_state_cons n p v z st : valid_state ((n, p, v) :: st) ->
@@ -882,7 +855,6 @@ have [/= /andP[Hv1 _] _ _] := Hv.
 elim: st {Hv}Hv1 => //= [] [[n1 p1] v1] st IH.
 by rewrite inE negb_or; case: eqP.
 Qed.
-
 
 Definition rm_state p st := 
   [seq i <- st | let: (_, p1, v1) := i in (p != p1)].
@@ -938,7 +910,6 @@ rewrite inE negb_or; case: eqP => //= ? ?.
 by rewrite IH.
 Qed.
 
-
 (* Given a literal that we know that holds generate the seq of literals
    that we know cannot hold *)
 Definition update_anti_literals (p : pos) z (st : state) : state :=
@@ -970,7 +941,7 @@ Lemma valid_pos_anti_literals p1 p2 z1 z2 :
 Proof.
 case: p1 => x1 y1;  case: p2 => x2 y2.
 rewrite !mem_cat => /or3P[] /mapP[x];
-   rewrite mem_filter ?mem_iota ?crossP ?add0n /= => 
+   rewrite mem_filter ?mem_iota ?mem_cross ?add0n /= => 
      /andP[Hd Hhw] [-> -> _] /andP[/= x2Lhw y2Lhw]; rewrite /valid_pos /=.
 - by rewrite x2Lhw Hhw.
 - by rewrite Hhw y2Lhw.
@@ -984,7 +955,7 @@ Lemma anti_literals_swap p1 p2 z1 z2 :
 Proof.
 case: p1 => x1 y1; case: p2 => x2 y2 => /andP[/= x1Lhw y1Lhw].
 rewrite !mem_cat => /or3P[] /mapP[x];
-   rewrite mem_filter ?mem_iota ?crossP ?add0n => 
+   rewrite mem_filter ?mem_iota ?mem_cross ?add0n => 
      /andP[Hd Hhw] [-> -> ->].
 - apply/or3P; apply: Or31.
   by rewrite map_f // mem_filter // eq_sym Hd mem_iota.
@@ -996,7 +967,7 @@ have /andP[x1Lh x2Lw] := Hhw.
 rewrite !divnMDl // (divn_small x1Lh) (divn_small x2Lw) !addn0.
 have ->: (x1, y1) = shift (x1 %% h, y1 %% w) (x1 %/ h * h) (y1 %/ w * w).
   by rewrite /shift /= -!divn_eq.
-rewrite map_f // mem_filter crossP /= hw_modh // hw_modw // !andbT.
+rewrite map_f // mem_filter mem_cross /= hw_modh // hw_modw // !andbT.
 rewrite /shift /= xpair_eqE {1}(divn_eq x1 h)  
         {1}(divn_eq y1 w) !eqn_add2l eq_sym [_ == x.2]eq_sym in Hd.
 by rewrite /shift /= xpair_eqE /= !eqn_add2l.
@@ -1025,18 +996,18 @@ apply/and3P; split; apply/allP => i /mapP [j];
     rewrite mem_filter => /andP[Hd Hj] ->; apply/andP; split => //=.
 - by apply/andP; split=> //=; rewrite mem_iota in Hj.
 - by apply/andP; split=> //=; rewrite mem_iota in Hj.
-rewrite crossP in Hj; case/andP: Hj => Hj1 Hj2.
+rewrite mem_cross in Hj; case/andP: Hj => Hj1 Hj2.
 apply: valid_get_rect_rev=> //.
   by rewrite ltn_divLR 1?mulnC ?Hx //; lia.
 rewrite ltn_divLR ?Hy //; lia.
 Qed.
 
-Lemma valid_state_fold (A : Type) (st : state) (s : seq A)  h1 g1 z :
+Lemma valid_state_fold (A : Type) (st : state) (s : seq A)  h1 f1 z :
   valid_state st -> 
   valid_state
        (foldr
           (fun (x1 : A) st0 =>
-          if h1 x1 then st0 else update_state (g1 x1) z st0) st s).
+          if h1 x1 then st0 else update_state (f1 x1) z st0) st s).
 Proof.
 elim: s st => [|x s IH] st Hu //=.
 case: (h1 _) => //=; first by apply: IH.
@@ -1050,25 +1021,25 @@ case: p => x y Hv.
 by do 3 apply: valid_state_fold; apply: valid_state_rm_state.
 Qed.
 
-Lemma uniq_spos_fold (A : Type) (st : state) (s : seq A)  h1 g1  z :
+Lemma uniq_spos_fold (A : Type) (st : state) (s : seq A)  h1 f1  z :
   uniq (spos st) ->
   uniq
     (spos
        (foldr
           (fun (x1 : A) st0 =>
-          if h1 x1 then st0 else update_state (g1 x1) z st0) st s)).
+          if h1 x1 then st0 else update_state (f1 x1) z st0) st s)).
 Proof.
 elim: s st => [|x s IH] st Hu //=.
 case: (h1 _) => //=; first by apply: IH.
 by apply/ulist_update/IH.
 Qed.
 
-Lemma update_fold (A : Type) (st : state) (s : seq A)  h1 g1  z (p1 : pos) z1 : 
+Lemma update_fold (A : Type) (st : state) (s : seq A)  h1 f1  z (p1 : pos) z1 : 
   uniq (spos st) ->
   in_state p1 z1
   (foldr (fun x1 st => if h1 x1 then st else
-                      update_state (g1 x1) z st) st s)  =
-  ((p1, z1) \notin [seq (g1 x1, z) | x1 <- s & ~~ h1 x1]) && 
+                      update_state (f1 x1) z st) st s)  =
+  ((p1, z1) \notin [seq (f1 x1, z) | x1 <- s & ~~ h1 x1]) && 
    (in_state p1 z1 st).
 Proof.
 move=> Hu.
@@ -1078,7 +1049,6 @@ rewrite in_state_update.
 rewrite in_cons negb_or xpair_eqE negb_and IH // andbA //.
 by apply: uniq_spos_fold.
 Qed.
-
 
 Lemma in_state_update_anti p1 p2 z1 z2 st :
   uniq (spos st) ->
@@ -1093,11 +1063,11 @@ rewrite !update_fold //.
 - by apply/uniq_spos_fold/uniq_spos_fold.
 Qed.
 
-Lemma perm_spos_fold (A : Type) (st : state) (s : seq A)  h1 g1 z :
+Lemma perm_spos_fold (A : Type) (st : state) (s : seq A)  h1 f1 z :
   perm_eq 
       (spos (foldr
           (fun (x1 : A) st0 =>
-           if h1 x1 then st0 else update_state (g1 x1) z st0) st s)) 
+           if h1 x1 then st0 else update_state (f1 x1) z st0) st s)) 
       (spos st).
 Proof.
 elim: s st => //= x s IH st.
@@ -1105,7 +1075,7 @@ case: (h1 _); first by rewrite IH.
 by apply: perm_trans (perm_spos_update _ _ _) (IH _).
 Qed.
 
-Lemma perm_spos_update_anti_literals p z (st : state) :
+Lemma perm_spos_update_anti_literals p z st :
   perm_eq (spos (update_anti_literals p z st)) (spos st).
 Proof.
 by case: p => x y; do 3 apply: perm_trans (perm_spos_fold _ _ _ _ _) _.
@@ -1124,11 +1094,10 @@ Qed.
    the update is performed only for the elements of s that are in sref
  *)
 
+
 Fixpoint gen_init_state_aux (s : seq nat) (p : pos) (st : state)
     {struct s} : option state :=
-  match s with
-  | nil => some st
-  | a :: s1 =>
+  if s is a :: s1 then
     let p1 := next p in
     if (a \in sref) then
       if in_state p a st then
@@ -1136,10 +1105,10 @@ Fixpoint gen_init_state_aux (s : seq nat) (p : pos) (st : state)
         gen_init_state_aux s1 p1 (update_anti_literals p a st1) else
       None
     else gen_init_state_aux s1 p1 st
-  end.
+  else some st.
 
-(* Generate the state relative to a seq s *)
-Definition gen_init_state s := gen_init_state_aux s (0, 0) init_state.
+(* Generate the state relative to a grid s *)
+Definition gen_init_state g := gen_init_state_aux g (0, 0) init_state.
 
 (******************************************************************************)
 (*    Algorithm that finds a solution                                         *)
@@ -1148,34 +1117,34 @@ Definition gen_init_state s := gen_init_state_aux s (0, 0) init_state.
 (* Try to satisfy one of the literal of seq l calling after
    the continuation f
  *)
-Fixpoint try_one (bs : seq bool) (p : pos) (z : nat) (s : seq nat)
+Fixpoint try_one (bs : seq bool) (p : pos) (z : nat) (g : grid)
          (st : state)
          (f: seq nat -> state -> option (seq nat))
          {struct bs}:
   option (seq nat) :=
   if bs is b :: bs1 then 
     if b then 
-      let s1 := update p z s in
+      let g1 := update p z g in
       let st1 := update_anti_literals p z st in
-      if f s1 st1 is Some c1 then Some c1 else try_one bs1 p z.+1 s st f
-     else try_one bs1 p z.+1 s st f
+      if f g1 st1 is some c1 then some c1 else try_one bs1 p z.+1 g st f
+     else try_one bs1 p z.+1 g st f
   else None. 
 
 (* An auxiliary function to find a solution by iteratively trying
    to satisfy the position in state
  *)
-Fixpoint find_one_aux (n : state) (s : seq nat) (st : state) {struct n} :
+Fixpoint find_one_aux (n : state) (g : seq nat) (st : state) {struct n} :
     option (seq nat) :=
   if st is (_, p, vs) :: st1 then
     if n is _ :: n1 then 
-      try_one (behead vs) p 1 s st1 (find_one_aux n1) 
+      try_one (behead vs) p 1 g st1 (find_one_aux n1) 
     else None 
-  else Some s. 
+  else some g. 
 
-(* Find one solution that refines the state s *)
-Definition find_one s := 
-  if gen_init_state s is Some st then
-    find_one_aux st s st 
+(* Find one solution that refines the grid g *)
+Definition find_one g := 
+  if gen_init_state g is some st then
+    find_one_aux st g st 
   else None.
 
 (******************************************************************************)
@@ -1184,46 +1153,46 @@ Definition find_one s :=
 
 
 (** The merge for the sudoku (* we should use lexico from order *) **)
-Fixpoint seq_leqn s1 s2 := 
-  if s1 is a :: s3 then 
-    if s2 is b :: s4 then (a <= b) && seq_leqn s3 s4 else false 
+Fixpoint grid_leqn g1 g2 := 
+  if g1 is a :: g3 then 
+    if g2 is b :: g4 then (a <= b) && grid_leqn g3 g4 else false 
   else true.
 
-Lemma seq_leqn_refl : reflexive seq_leqn.
-Proof. by elim=> //= a l ->; rewrite leqnn. Qed.
+Lemma grid_leqn_refl : reflexive grid_leqn.
+Proof. by elim=> //= a g ->; rewrite leqnn. Qed.
 
-Lemma seq_leqn_trans : transitive seq_leqn.
+Lemma grid_leqn_trans : transitive grid_leqn.
 Proof.
-elim=> [[]|a s1 IH [|b s2] [|c s3]] //= /andP[Ha Hs1] /andP[Hb Hs2].
+elim=> [[]|a g1 IH [|b g2] [|c g3]] //= /andP[Ha Hg1] /andP[Hb Hg2].
 by rewrite (leq_trans Ha) // IH.
 Qed.
 
-Lemma seq_leqn_anti s1 s2 : seq_leqn s1 s2 -> seq_leqn s2 s1 -> s1 = s2.
+Lemma grid_leqn_anti g1 g2 : grid_leqn g1 g2 -> grid_leqn g2 g1 -> g1 = g2.
 Proof.
-elim: s1 s2 => [[]|a s1 IH [|b s2]] //= /andP[Ha Hs1] /andP[Hb Hs2].
-by rewrite (IH s2) //; case: ltngtP Ha Hb => // ->.
+elim: g1 g2 => [[]|a g1 IH [|b g2]] //= /andP[Ha Hg1] /andP[Hb Hg2].
+by rewrite (IH g2) //; case: ltngtP Ha Hb => // ->.
 Qed.
 
-Fixpoint insert_sudoku s ls := 
-  if ls is s1 :: ls1 then 
-    if seq_leqn s s1 then 
-      if seq_leqn s1 s then ls else s :: ls 
-    else s1 :: insert_sudoku s ls1
-  else [::s].
+Fixpoint insert_sudoku g gs := 
+  if gs is g1 :: gs1 then 
+    if grid_leqn g g1 then 
+      if grid_leqn g1 g then gs else g :: gs 
+    else g1 :: insert_sudoku g gs1
+  else [::g].
 
-Lemma mem_insert_sudoku s ls : insert_sudoku s ls =i (s :: ls).
+Lemma mem_insert_sudoku g gs : insert_sudoku g gs =i (g :: gs).
 Proof.
-elim: ls => //= s1 ls IH.
-case: seq_leqn (@seq_leqn_anti s s1) => [|_ i].
-  by case: seq_leqn => [->// i|_ i]; rewrite !in_cons; case: eqP.
+elim: gs => //= g1 gs IH.
+case: grid_leqn (@grid_leqn_anti g g1) => [|_ i].
+  by case: grid_leqn => [->// i|_ i]; rewrite !in_cons; case: eqP.
 by rewrite !in_cons IH; do 2 case: eqP => //=.
 Qed.
 
-Definition merge_sudoku ls1 ls2 := foldr insert_sudoku ls1 ls2.
+Definition merge_sudoku gs1 gs2 := foldr insert_sudoku gs1 gs2.
 
-Lemma mem_merge_sudoku ls1 ls2 : merge_sudoku ls1 ls2 =i (ls1 ++ ls2).
+Lemma mem_merge_sudoku gs1 gs2 : merge_sudoku gs1 gs2 =i (gs1 ++ gs2).
 Proof.
-elim: ls2 ls1 => /= [[|a ls1]|a ls2 IH ls1 i] //=; first by rewrite cats0.
+elim: gs2 gs1 => /= [[|a gs1]|a gs2 IH gs1 i] //=; first by rewrite cats0.
 by rewrite mem_insert_sudoku !(mem_cat, in_cons, IH); case: eqP => //; 
    case: (_ \in _).
 Qed.
@@ -1231,30 +1200,30 @@ Qed.
 (* Find all the literals of seq l that can be satisfied calling after
    the continuation f
  *)
-Fixpoint try_all (bs : seq bool) (p : pos) (z : nat) (s : seq nat) (st : state)
-                 (f : seq nat -> state -> seq (seq nat)) {struct bs} :
-   seq (seq nat) :=
+Fixpoint try_all (bs : seq bool) (p : pos) (z : nat) (g : grid) (st : state)
+                 (f : grid -> state -> seq grid) {struct bs} :
+   seq grid :=
 if bs is b :: bs1 then 
   if b then 
-    let s1 := update p z s in
+    let g1 := update p z g in
     let st1 := update_anti_literals p z st in
-    merge_sudoku (f s1 st1) (try_all bs1 p z.+1 s st f)
-  else try_all bs1 p z.+1 s st f
+    merge_sudoku (f g1 st1) (try_all bs1 p z.+1 g st f)
+  else try_all bs1 p z.+1 g st f
 else [::].
 
 (* An auxiliary function to find all solutions by iteratively trying
    to satisfy the first clause of the seq of clauses c
  *)
-Fixpoint find_all_aux (n : state) (s : seq nat) (st : state) {struct n}:
-  seq (seq nat) :=
+Fixpoint find_all_aux (n : state) (g : grid) (st : state) {struct n}:
+  seq grid :=
   if st is (_, p, bs) :: st1 then 
-    if n is _ :: n1 then try_all (behead bs) p 1 s st1 (find_all_aux n1)
+    if n is _ :: n1 then try_all (behead bs) p 1 g st1 (find_all_aux n1)
     else [::]
-  else [::s].
+  else [::g].
 
 (* Find all solutions that refines the state s *)
-Definition find_all s := 
-  if gen_init_state s is Some st then find_all_aux st s st else [::].
+Definition find_all g := 
+  if gen_init_state g is some st then find_all_aux st g st else [::].
 
 (******************************************************************************)
 (*  Algorithm that finds one solution and insures that it is unique           *)
@@ -1263,45 +1232,48 @@ Definition find_all s :=
 Inductive jRes : Set := jNone | jOne (_ : seq nat) | jMore (_ _ : seq nat).
 
 Fixpoint try_just_one (bs : seq bool) (p : pos) (z : nat)
-                      (s : seq nat) (st : state)
+                      (g : grid) (st : state)
     (f : seq nat -> state -> jRes) : jRes :=
   if bs is b :: bs1 then
     if b then  
-      let s1 := update p z s in
+      let g1 := update p z g in
       let st1 := update_anti_literals p z st in
-      match f s1 st1 with
-      | jNone => try_just_one bs1 p z.+1 s st f
+      match f g1 st1 with
+      | jNone => try_just_one bs1 p z.+1 g st f
       | jOne s2 => 
-        match try_just_one bs1 p z.+1 s st f with
+        match try_just_one bs1 p z.+1 g st f with
         | jNone => jOne s2
         | jOne s3 => if s2 == s3 then jOne s2 else jMore s2 s3
         | jMore s1 s2 => jMore s1 s2
         end
       | jMore s1 s2 => jMore s1 s2
       end
-    else try_just_one bs1 p z.+1 s st f
+    else try_just_one bs1 p z.+1 g st f
   else jNone.
 
 (* An auxiliary function to find a solution by iteratively trying
    to satisfy the first clause of the seq of clauses c
  *)
-Fixpoint find_just_one_aux (n : state) (s : seq nat) (st : state) : jRes :=
+Fixpoint find_just_one_aux (n : state) (g : grid) (st : state) : jRes :=
 if st is (_, p, bs) :: st1 then 
-  if n is _ :: n1 then try_just_one (behead bs) p 1 s st1 (find_just_one_aux n1) 
+  if n is _ :: n1 then try_just_one (behead bs) p 1 g st1 (find_just_one_aux n1)
   else jNone
-else jOne s.
+else jOne g.
 
-(* Find one solution that refines the state s *)
-Definition find_just_one s :=
-  if gen_init_state s is Some st then find_just_one_aux st s st else jNone.
+(* Find one solution that refines the grid g                                  *)
+Definition find_just_one g :=
+  if gen_init_state g is some st then find_just_one_aux st g st else jNone.
 
-Lemma sudoku_def s :
+(* Key lemma that motivates the algorithm, to build a sudoku we just need to  *)
+(* fill the cells, taking care to remove the possibilities given by           *)
+(* anti literals                                                              *)
+Lemma sudoku_def g :
   reflect 
-    [/\ size s = hw * hw,
-        forall p, valid_pos p -> get p s \in sref & 
+    [/\ size g = hw * hw,
+        forall p, valid_pos p -> get p g \in sref & 
         forall p1 p2 z, valid_pos p1 -> 
-          (p2, z) \in anti_literals (p1, get p1 s) -> get p2 s != z]
-  (sudoku s).
+          (p2, z) \in anti_literals (p1, get p1 g) -> get p2 g != z]
+  (sudoku g).
 Proof.
 apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
                         [Hs Hv Ha]]; split => //=.
@@ -1314,16 +1286,16 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
   + have z1Lhw : z1 < hw by rewrite mem_iota in z1I.
     rewrite !get_row //.
     apply: contra y1Dz1 => /eqP Hnth; apply/eqP.
-    have /uniqP : uniq (row x1 s).  
+    have /uniqP : uniq (row x1 g).  
       by rewrite (perm_uniq (Hr (Ordinal x1Lhw))) sref_uniq.
     by move/(_ out); apply; rewrite -?topredE /= ?size_row.
   + have z1Lhw : z1 < hw by rewrite mem_iota in z1I.
     rewrite !get_column //.
     apply: contra y1Dz1 => /eqP Hnth; apply/eqP.
-    have /uniqP : uniq (column y1 s).  
+    have /uniqP : uniq (column y1 g).  
       by rewrite (perm_uniq (Hc (Ordinal y1Lhw))) sref_uniq.
     by move/(_ out); apply; rewrite -?topredE /= ?size_column.
-  rewrite crossP in z1I; have /andP[Hz11 Hz12] := z1I.
+  rewrite mem_cross in z1I; have /andP[Hz11 Hz12] := z1I.
   rewrite !get_rect // ?hw_divhMD  ?hw_divwMD //.
   rewrite !divnMDl // !modnMDl // (divn_small Hz11) addn0.
   rewrite (divn_small Hz12) addn0.
@@ -1336,7 +1308,7 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
             divn_small ?ltn_mod // addn0.
     by rewrite -(modn_small y3Lw) -(modnMDl x3 y3) He modnMDl modn_mod.
   have y1wLh := hw_divw y1Lhw.
-  have /uniqP : uniq (rect (x1 %/ h * h + y1 %/ w) s).
+  have /uniqP : uniq (rect (x1 %/ h * h + y1 %/ w) g).
     by rewrite (perm_uniq (Hre (Ordinal (hw_divhMD x1Lhw y1wLh)))) sref_uniq.
   move/(_ out); apply => //=; rewrite -?topredE /= ?size_rect //.
   + by rewrite /hw; nia.
@@ -1345,14 +1317,14 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
   by apply: hw_divhMD.
 - by apply/eqP.
 - apply/forallP => /= [] [x xLhw] /=.
-  suff Hi : row x s =i sref.
+  suff Hi : row x g =i sref.
     apply: uniq_perm sref_uniq _ => //.
     by rewrite (eq_uniq _ Hi) ?sref_uniq // size_row // size_sref.
-  case (@uniq_min_size _ (row x s) sref) => //.
+  case (@uniq_min_size _ (row x g) sref) => //.
   + apply/(uniqP out) => y1 y2.
     rewrite -?topredE /= size_row // => y1Lhw y2Lhw.
     rewrite -!get_row //; case: (y1 =P y2) => // /eqP y1Dy2 Hg.
-    have [] := negP (Ha (x, y1) (x, y2) (get (x, y1) s) _ _); last by apply/eqP.
+    have [] := negP (Ha (x, y1) (x, y2) (get (x, y1) g) _ _); last by apply/eqP.
       by rewrite /valid_pos /= xLhw.
     rewrite mem_cat; apply/orP; left.
     apply: map_f.
@@ -1362,14 +1334,14 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
     by apply: Hv; rewrite /valid_pos /= xLhw.
   by rewrite size_sref size_row.
 - apply/forallP => /= [] [y yLhw] /=.
-  suff Hi : column y s =i sref.
+  suff Hi : column y g =i sref.
     apply: uniq_perm sref_uniq _ => //.
     by rewrite (eq_uniq _ Hi) ?sref_uniq // size_column // size_sref.
-  case (@uniq_min_size _ (column y s) sref) => //.
+  case (@uniq_min_size _ (column y g) sref) => //.
   + apply/(uniqP out) => x1 x2.
     rewrite -?topredE /= size_column // => x1Lhw x2Lhw.
     rewrite -!get_column //; case: (x1 =P x2) => // /eqP x1Dx2 Hg.
-    have [] := negP (Ha (x1, y) (x2, y) (get (x1, y) s) _ _); last by apply/eqP.
+    have [] := negP (Ha (x1, y) (x2, y) (get (x1, y) g) _ _); last by apply/eqP.
       by rewrite /valid_pos /= x1Lhw.
     rewrite !mem_cat; apply/orP; right; apply/orP; left.
     apply: map_f.
@@ -1379,16 +1351,16 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
     by apply: Hv; rewrite /valid_pos /= xLhw.
   by rewrite size_sref size_column.
 apply/forallP => /= [] [i iLhw] /=.
-suff Hi : rect i s =i sref.
+suff Hi : rect i g =i sref.
   apply: uniq_perm sref_uniq _ => //.
   by rewrite (eq_uniq _ Hi) ?sref_uniq // size_rect // size_sref.
 have h_pos := h_pos iLhw; have w_pos := w_pos iLhw.
-case (@uniq_min_size _ (rect i s) sref) => //.
+case (@uniq_min_size _ (rect i g) sref) => //.
 - apply/(uniqP out) => j1 j2.
   rewrite -?topredE /= size_rect // => j1Lhw j2Lhw.
   rewrite -!get_rect_rev //; case: (j1 =P j2) => // /eqP j1Dj2 Hg.
   set p1 := (_, _) in Hg; set p2 := (_, _) in Hg.
-  have [] := negP (Ha p1 p2 (get p1 s) _ _); last by apply/eqP.
+  have [] := negP (Ha p1 p2 (get p1 g) _ _); last by apply/eqP.
     apply/andP; split=> /=; first by rewrite hw_divhMD // hw_divw.
     by apply: hw_modwMDmod.
   rewrite !mem_cat; apply/orP; right; apply/orP; right.
@@ -1400,48 +1372,46 @@ case (@uniq_min_size _ (rect i s) sref) => //.
     rewrite xpair_eqE /= !eqn_add2l.
     apply: contra j1Dj2 => /andP[/eqP Hj1 /eqP Hj2].
     by rewrite (divn_eq j1 w) Hj1 Hj2 -divn_eq.
-  by rewrite crossP /= ltn_mod w_pos hw_divw.
+  by rewrite mem_cross /= ltn_mod w_pos hw_divw.
 - move=> j /(nthP out)[k]; rewrite size_rect // => kLhw.
   rewrite -get_rect_rev // => <-.
   apply: Hv; apply/andP; split => /=; first by rewrite hw_divhMD // hw_divw.
   by apply: hw_modwMDmod.
 by rewrite size_sref size_rect.
 Qed.
-
-Lemma sudoku_refine_id s1 s2 : sudoku s1 -> refine s1 s2 -> s1 = s2.
+Lemma sudoku_refine_id g1 g2 : sudoku g1 -> refine g1 g2 -> g1 = g2.
 Proof.
 move=> Hs /refineP[Hr1 Hr2 Hr3].
 apply: (@eq_from_nth _ out) => [|i iLs1]; first by rewrite Hr2.
 rewrite Hr1 in iLs1.
 rewrite -[i]pos2nK //.
 have hw_pos : 0 < hw by case: hw iLs1.
-have Hv : valid_pos (i %/ hw, i %% hw).
+have Hv : valid_pos (n2pos i).
   by rewrite /valid_pos ltn_divLR ?iLs1 //= ltn_mod.
 apply: Hr3 => //.
 by have /sudoku_def[_ ->] := Hs.
 Qed.
 
-
-Definition invariant st s :=
+Definition invariant st g :=
   [/\ 
-    size s = hw * hw,
+    size g = hw * hw,
     valid_state st,
-    forall p, valid_pos p -> (get p s \in sref) = (p \notin spos st),
+    forall p, valid_pos p -> (get p g \in sref) = (p \notin spos st),
     forall p1 p2, valid_pos p1 -> valid_pos p2 ->
-                  get p1 s \in sref -> get p2 s \in sref ->
-                  (p1, get p1 s) \notin anti_literals (p2, get p2 s) &
+                  get p1 g \in sref -> get p2 g \in sref ->
+                  (p1, get p1 g) \notin anti_literals (p2, get p2 g) &
     (forall p1 p2 z, valid_pos p1 -> valid_pos p2 -> z \in sref ->
-              get p2 s \in sref -> in_state p1 z st -> 
-              (p1, z) \notin anti_literals (p2, get p2 s)) /\
-    forall p1 z1, valid_pos p1 -> z1 \in sref -> get p1 s \notin sref -> 
+              get p2 g \in sref -> in_state p1 z st -> 
+              (p1, z) \notin anti_literals (p2, get p2 g)) /\
+    forall p1 z1, valid_pos p1 -> z1 \in sref -> get p1 g \notin sref -> 
                 ~~ in_state p1 z1 st -> 
-                exists p2, [/\ valid_pos p2, get p2 s \in sref & 
-                               (p1, z1) \in anti_literals (p2, get p2 s)]].
+                exists p2, [/\ valid_pos p2, get p2 g \in sref & 
+                               (p1, z1) \in anti_literals (p2, get p2 g)]].
 
-Lemma invariant_init : invariant init_state init.
+Lemma invariant_init : invariant init_state ginit.
 Proof.
 split.
-- by rewrite size_init.
+- by rewrite size_ginit.
 - split; first by rewrite spos_init_state cross2_uniq.
     by move=> p; rewrite spos_init_state mem_cross2.
   move=> p z.
@@ -1458,9 +1428,9 @@ split.
 by move=> p1 z1 Hp1 Hz1; rewrite in_state_init_state.
 Qed.
 
-Lemma invariant_update p z st s :
-  invariant st s -> in_state p z st ->
-  invariant (update_anti_literals p z (rm_state p st)) (update p z s).
+Lemma invariant_update p z st g :
+  invariant st g -> in_state p z st ->
+  invariant (update_anti_literals p z (rm_state p st)) (update p z g).
 Proof.
 move=> [Hs Hpos Hanti Hi [His1 His2]] Hin.
 case: (Hpos)=> _ _ /(_ _ _ Hin) => Hz.
@@ -1513,12 +1483,12 @@ rewrite negb_and negbK => Hg1 /orP[Han|HNi]; last first.
 by exists p; rewrite update_get.
 Qed.
 
-Lemma invariant_nil s : invariant [::] s -> sudoku s.
+Lemma invariant_nil g : invariant [::] g -> sudoku g.
 Proof.
 move=> [Hs Hpos Hanti Hi [His1 His2]].
 apply/sudoku_def; split=> //.
 move=> p1 p2 z Hv Hz; apply/negP => /eqP Hg.
-have : (p1, get p1 s) \notin anti_literals (p2, get p2 s).
+have : (p1, get p1 g) \notin anti_literals (p2, get p2 g).
   apply: Hi => //.
   - by apply: valid_pos_anti_literals Hz _.
   - by rewrite Hanti.
@@ -1527,27 +1497,27 @@ rewrite Hg => /anti_literals_nswap => /(_ Hv).
 by case: (_ \in _) Hz.
 Qed.
 
-Lemma invariant_refine_update p st s s1 :
-  invariant st s -> valid_pos p -> get p s \notin sref ->
-  refine s s1 -> sudoku s1 -> in_state p (get p s1) st.
+Lemma invariant_refine_update p st g g1 :
+  invariant st g -> valid_pos p -> get p g \notin sref ->
+  refine g g1 -> sudoku g1 -> in_state p (get p g1) st.
 Proof.
 move=> [Hs Hpos Hanti Hi [His1 His2]] Hv Hgp /refineP[H1r H2r H3r]
         /sudoku_def[H1su H2su H3su].
 case: (boolP (in_state _ _ _)) => // Hz.
-case: (His2 p (get p s1)) => // [|p2 [H1p2 H2p2 H3p2]].
+case: (His2 p (get p g1)) => // [|p2 [H1p2 H2p2 H3p2]].
   by apply: H2su.
 rewrite (H3r p2) // in H3p2.
 by have := H3su _ _ _ H1p2 H3p2; rewrite eqxx.
 Qed.
 
-Lemma invariant_nil_refine_not_sudoku p st n s s1 :
-  invariant ((n, p, [::]) :: st) s -> refine s s1 -> ~~ sudoku s1.
+Lemma invariant_nil_refine_not_sudoku p st n g g1 :
+  invariant ((n, p, [::]) :: st) g -> refine g g1 -> ~ sudoku g1.
 Proof.
-move=> Hs Hr; apply/negP=> Hsu.
+move=> Hs Hr Hsu.
 have [/= /andP[H1vs H2v3] H3vs H4vs] :
   valid_state ((n, p, [::]) :: st) by case: Hs.
 have Hp : valid_pos p by apply: H3vs; rewrite /= in_cons eqxx.
-have /= : in_state p (get p s1) ((n, p, [::]) :: st).
+have /= : in_state p (get p g1) ((n, p, [::]) :: st).
   apply: invariant_refine_update (Hs) _ _ _ _ => //.
   by case: Hs => _ _ -> //; rewrite in_cons eqxx.
 rewrite eqxx /in_val nth_nil /=.
@@ -1556,8 +1526,8 @@ rewrite in_cons negb_or => /andP[/negPf-> Hpp] /=.
 by apply: IH.
 Qed.
 
-Lemma invariant_equiv st s1 s2 :
-  refine s1 s2 -> refine s2 s1 -> invariant st s1 -> invariant st s2.
+Lemma invariant_equiv st g1 g2 :
+  refine g1 g2 -> refine g2 g1 -> invariant st g1 -> invariant st g2.
 Proof.
 move=> /refineP[Hs1 Hs2 Hg12] /refineP[_ _  Hg21] [H1 H2 H3 H4 [H5 H6]].
 split => //.
@@ -1575,70 +1545,70 @@ move=> p2 [H1p2 H2p2 H3p2].
 by exists p2; split=> //; rewrite -Hg12.
 Qed.
 
-Lemma gen_init_state_cotrect s :
-  size s = hw * hw -> 
-  if gen_init_state s is Some st1 then invariant st1 s
-  else forall s1, refine s s1 -> ~ sudoku s1.
+Lemma gen_init_state_correct g :
+  size g = hw * hw -> 
+  if gen_init_state g is some st1 then invariant st1 g
+  else forall g1, refine g g1 -> ~ sudoku g1.
 Proof.
-revert s.
+revert g.
 rewrite /gen_init_state.
-suff H s s1 st p : (s1 != nil -> valid_pos p) -> size s = hw * hw ->
-    invariant st (prestrict p s) -> s1 = drop (pos2n p) s ->
-    if gen_init_state_aux s1 p st is Some st1 then invariant st1 s
-    else forall s1, refine s s1 -> ~ sudoku s1.
+suff H g g1 st p : (g1 != [::] -> valid_pos p) -> size g = hw * hw ->
+    invariant st (grestrict p g) -> g1 = drop (pos2n p) g ->
+    if gen_init_state_aux g1 p st is some st1 then invariant st1 g
+    else forall g1, refine g g1 -> ~ sudoku g1.
   case: (hw =P 0) => [hwE|hwD0].
     rewrite hwE; case=> //=; have := invariant_init.
-    by rewrite /init hwE.
-  move=> s Hs; apply: H => //.
-  - by case: (s) Hs => //= _ s2; rewrite /valid_pos; case: hw.
-  - rewrite prestrict_0.
+    by rewrite /ginit hwE.
+  move=> g Hs; apply: H => //.
+  - by case: (g) Hs => //= _ s2; rewrite /valid_pos; case: hw.
+  - rewrite grestrict00.
     by rewrite Hs; apply: invariant_init.
   by rewrite drop0.
-elim: s1 s st p => /= [|v s1 IH]/= s st p Hp Hs Hin Hd.
-  rewrite prestrict_all // in Hin.
+elim: g1 g st p => /= [|v g1 IH]/= g st p Hp Hs Hin Hd.
+  rewrite grestrict_all // in Hin.
   rewrite -subn_eq0; apply/eqP.
   by rewrite -size_drop -Hd.
-have Hgv :  get p s = v.
+have Hgv :  get p g = v.
   by rewrite /get -[pos2n p]addn0 -nth_drop -Hd.
 have {}Hp := Hp isT.
-have Hv : s1 != [::] -> valid_pos (next p).
-  case: s1 {IH}Hd => //= v1 s1 Hd _.
+have Hv : g1 != [::] -> valid_pos (next p).
+  case: g1 {IH}Hd => //= v1 s1 Hd _.
   apply: valid_pos_next => //.
   rewrite next_pos -Hs.
   case: leqP => // /drop_oversize.
   by rewrite -add1n -drop_drop -Hd.
-have Hdr : s1 = drop (pos2n (next p)) s.
+have Hdr : g1 = drop (pos2n (next p)) g.
   by rewrite next_pos -add1n -drop_drop -Hd /= drop0.
 have [vis|vnis] := boolP (v \in sref); last first.
   apply: IH => //.
   apply: invariant_equiv Hin; apply/refineP; split.
-    - by rewrite prestrict_size.
-    - by rewrite prestrict_size.
+    - by rewrite grestrict_size.
+    - by rewrite grestrict_size.
     - move=> p1 Hp1 Hg1.
       case: (leqP (pos2n p) (pos2n p1)) => Lp.
-        rewrite prestrict_get_default // in Hg1.
+        rewrite grestrict_get_default // in Hg1.
         by case/negP: out_not_in_refl.
-      by rewrite !prestrict_get // next_pos (leq_trans Lp).
-    - by rewrite prestrict_size.
-    - by rewrite prestrict_size.
+      by rewrite !grestrict_get // next_pos (leq_trans Lp).
+    - by rewrite grestrict_size.
+    - by rewrite grestrict_size.
     move=> p1 Hp1 Hg1.
     case: (leqP (pos2n p1) (pos2n p)) => Lp; last first.
-      rewrite prestrict_get_default // in Hg1.
+      rewrite grestrict_get_default // in Hg1.
         by case/negP: out_not_in_refl.
       by rewrite next_pos.
     case: ltngtP Lp => // Lp1 .
-      by rewrite !prestrict_get // next_pos (leq_trans Lp1).
-    rewrite prestrict_get // in Hg1; last first.
+      by rewrite !grestrict_get // next_pos (leq_trans Lp1).
+    rewrite grestrict_get // in Hg1; last first.
       by rewrite next_pos Lp1.
     case/negP: vnis.
     by rewrite /get Lp1 -[pos2n _]addn0 -nth_drop -Hd in Hg1.
 have [His|Hnis] := boolP (in_state p v st); last first.
-  move=> s2 Hrss2 /sudoku_def[H1su H2su H3su].
+  move=> g2 Hrss2 /sudoku_def[H1su H2su H3su].
   have [_ _ _ _ [_ Hin1]] := Hin.
   case: (Hin1 p v) => // [|p2 [H1p2 H2p2 H3p2]].
-    by rewrite prestrict_get_default // out_not_in_refl.
-  have Hrps : refine (prestrict p s) s by apply: refine_prestrict.
-  case: (get p s2 =P v); [apply/eqP|case=> //].
+    by rewrite grestrict_get_default // out_not_in_refl.
+  have Hrps : refine (grestrict p g) g by apply: refine_grestrict.
+  case: (get p g2 =P v); [apply/eqP|case=> //].
     apply: H3su (H1p2) _.
     have /refineP[_ _ <-//] := Hrss2.
       by have /refineP[_ _ /(_ p2)<-//] := Hrps.
@@ -1646,8 +1616,8 @@ have [His|Hnis] := boolP (in_state p v st); last first.
   have /refineP[_ _ <-//] := Hrss2.
   by rewrite Hgv.
 apply: IH => //.
-rewrite prestrict_update.
-have->: get p s = v.
+rewrite grestrict_update.
+have->: get p g = v.
   by rewrite /get -[pos2n p]addn0 -nth_drop -Hd.
 apply: invariant_update => //.
 case: leqP => // H.
@@ -1658,23 +1628,23 @@ Qed.
 (*    Main theorems about sudoku solvers                                      *)
 (******************************************************************************)
 
-Lemma mem_find_all s s1 :
-  size s = hw * hw ->
-  (refine s s1 && sudoku s1) = (s1 \in find_all s).
+Lemma mem_find_all g g1 :
+  size g = hw * hw ->
+  (g1 \in find_all g) = refine g g1 && sudoku g1.
 Proof.
 move=> Hs; rewrite /find_all.
-case: gen_init_state (gen_init_state_cotrect Hs) => [|/(_ s1)]; last first.
+case: gen_init_state (gen_init_state_correct Hs) => [|/(_ g1)]; last first.
   by rewrite in_nil ;case: refine => //= /(_ isT); case: sudoku.
 move=> st.
-elim: st s Hs {1 3 5}st (leqnn (size st)) => /= [|_ n IH] s Hs.
+elim: st g Hs {1 3 5}st (leqnn (size st)) => /= [|_ n IH] g Hs.
   case=> // _ /invariant_nil Hu.
-  rewrite inE; apply/andP/eqP=> [[Hr1 Hs1]|->].
-    by apply/sym_equal/sudoku_refine_id.
-  by split => //; apply: refine_refl.
+  rewrite inE; apply/eqP/andP=> [->|[Hr1 Hs1]].
+    by split => //; apply: refine_refl.
+  by apply/sym_equal/sudoku_refine_id.
 case=> [_ /invariant_nil Hu|[[n1 p1] v1] st] /=.
-  rewrite inE; apply/andP/eqP=> [[Hr1 Hs1]|->].
-    by apply/sym_equal/sudoku_refine_id.
-  by split => //; apply: refine_refl.
+  rewrite inE; apply/eqP/andP=> [->|[Hr1 Hs1]].
+    by split => //; apply: refine_refl.
+  by apply/sym_equal/sudoku_refine_id.
 rewrite ltnS => stLn Hin.
 have Hp1 : valid_pos p1.
   have [_ [_ Hin1] _ _ _ _] := Hin.
@@ -1682,14 +1652,14 @@ have Hp1 : valid_pos p1.
 suff : 
   (behead v1) = drop 1 v1 -> 
   (
-    refine s s1 -> sudoku s1 -> get p1 s1 >= 1 ->
-    s1 \in try_all (behead v1) p1 1 s st (find_all_aux n)
+    refine g g1 -> sudoku g1 -> get p1 g1 >= 1 ->
+    g1 \in try_all (behead v1) p1 1 g st (find_all_aux n)
   ) /\ (
-    s1 \in try_all (behead v1) p1 1 s st (find_all_aux n) -> 
-    refine s s1 /\ sudoku s1
+    g1 \in try_all (behead v1) p1 1 g st (find_all_aux n) -> 
+    refine g g1 /\ sudoku g1
   ).
   rewrite drop1 => /(_ (refl_equal _)) [H1 H2].
-  apply/andP/idP=> // [] [H3 H4].
+  apply/idP/andP=> // [] [H3 H4].
   apply: H1 => //.
   have /sudoku_def[_ H5 _] := H4.
   case: get (H5 _ Hp1) => //=.
@@ -1697,8 +1667,8 @@ suff :
 elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
 - move=> /refineP[H1rss1 H2rss1 H3rss1] /sudoku_def[H1su H2su H3su] kLg.
   have [p3 [H1p3 H2p3 H3p3]] : exists p3,
-         [/\ valid_pos p3, get p3 s \in sref
-          & (p1, get p1 s1) \in anti_literals (p3, get p3 s)].
+         [/\ valid_pos p3, get p3 g \in sref
+          & (p1, get p1 g1) \in anti_literals (p3, get p3 g)].
     have [H1 H2 H3 H4 [H5 H6]] := Hin; apply: H6 => //.
     - by apply: H2su.
     - by rewrite H3 //= inE eqxx.
@@ -1715,7 +1685,7 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
         by rewrite -add1n -drop_drop -Hdr /= drop0.
       by apply: IH11.
     rewrite mem_merge_sudoku mem_cat; apply/orP; left.
-    rewrite -IH //.
+    rewrite IH //.
     - rewrite Hsu andbT.
       apply/refineP; split => //.
       + by rewrite size_update.
@@ -1738,8 +1708,8 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
   have /refineP[H1rss1 H2rss1 H3rss1] := Hrss1.
   have /sudoku_def[H1su H2su H3su] := Hsu.  
   have [p3 [H1p3 H2p3 H3p3]] : exists p3,
-         [/\ valid_pos p3, get p3 s \in sref
-          & (p1, get p1 s1) \in anti_literals (p3, get p3 s)].
+         [/\ valid_pos p3, get p3 g \in sref
+          & (p1, get p1 g1) \in anti_literals (p3, get p3 g)].
     have [H1 H2 H3 H4 [H5 H6]] := Hin; apply: H6 => //.
     - by apply: H2su.
     - by rewrite H3 //= inE eqxx.
@@ -1749,7 +1719,7 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
   by have /eqP[] := (H3su _ _ _ H1p3 H3p3).
 case: kb Hdr => Hdr.
   rewrite mem_merge_sudoku mem_cat => /orP[].
-    rewrite -IH //.
+    rewrite IH //.
     - move=>/andP[Hr Hu]; split=> //.
       apply: refine_trans Hr.
       apply: refine_update => //.
@@ -1771,111 +1741,111 @@ Qed.
 
 (* Proof of one_correct vs all_correct                                        *)
 
-Lemma find_one_aux_correct st s st1 :
-if find_one_aux st s st1 is Some s1 then
-  s1 \in find_all_aux st s st1
-else find_all_aux st s st1 == [::].
+Lemma find_one_aux_correct st g st1 :
+if find_one_aux st g st1 is some g1 then
+  g1 \in find_all_aux st g st1
+else find_all_aux st g st1 == [::].
 Proof.
-elim: st s st1=> [s [|[[n p] v]]|[[n p] v] st IH s [|[[n1 p1] v1] st1]] //=.
+elim: st g st1=> [s [|[[n p] v]]|[[n p] v] st IH g [|[[n1 p1] v1] st1]] //=.
 - by rewrite in_cons eqxx.
 - by rewrite in_cons eqxx.
-elim: behead p1 1 s st1 => //= [] [] bs IH1 p1 k s st1. 
-  case: find_one_aux (IH (update p1 k s) (update_anti_literals p1 k st1)).
+elim: behead p1 1 g st1 => //= [] [] bs IH1 p1 k g st1. 
+  case: find_one_aux (IH (update p1 k g) (update_anti_literals p1 k st1)).
     by move=> s1 s1If; rewrite mem_merge_sudoku mem_cat s1If.
   move/eqP=> ->.
-  case: try_one (IH1 p1 k.+1 s st1) => [s1|/eqP->//].
+  case: try_one (IH1 p1 k.+1 g st1) => [s1|/eqP->//].
   by rewrite mem_merge_sudoku => ->.
 by apply: IH1.
 Qed.
 
-Lemma find_one_correct_aux s :
-  size s = hw * hw ->
-  if find_one s is Some s1 then s1 \in find_all s else find_all s == [::].
+Lemma find_one_correct_aux g :
+  size g = hw * hw ->
+  if find_one g is some g1 then g1 \in find_all g else find_all g == [::].
 Proof.
 move=> Hs; rewrite /find_one /find_all.
-case: gen_init_state (gen_init_state_cotrect Hs) => // st _.
+case: gen_init_state (gen_init_state_correct Hs) => // st _.
 apply find_one_aux_correct.
 Qed.
 
-Lemma find_one_correct s :
-  size s = hw * hw -> 
-  if find_one s is Some s1 then refine s s1 /\ sudoku s1
-  else forall s1, refine s s1 -> ~ sudoku s1.
+Lemma find_one_correct g :
+  size g = hw * hw -> 
+  if find_one g is some g1 then refine g g1 /\ sudoku g1
+  else forall g1, refine g g1 -> ~ sudoku g1.
 Proof.
 move=> Hs.
 case: find_one (find_one_correct_aux Hs) => [s1|/eqP He s1 Hr Hsu].
-  by rewrite -mem_find_all // => /andP[].
+  by rewrite mem_find_all // => /andP[].
 have := mem_find_all s1 Hs.
 by rewrite Hr Hsu He in_nil.
 Qed.
 
 (* Proof of just one_correct vs all_correct                                   *)
 
-Lemma find_just_one_aux_correct st s st1 :
-match find_just_one_aux st s st1 with
-| jNone => find_all_aux st s st1 = [::]
-| jOne s1 => find_all_aux st s st1 = [:: s1]
-| jMore s1 s2 =>
-    [/\ s1 \in find_all_aux st s st1, s2 \in find_all_aux st s st1 & s1 != s2]
+Lemma find_just_one_aux_correct st g st1 :
+match find_just_one_aux st g st1 with
+| jNone => find_all_aux st g st1 = [::]
+| jOne g1 => find_all_aux st g st1 = [:: g1]
+| jMore g1 g2 =>
+    [/\ g1 \in find_all_aux st g st1, g2 \in find_all_aux st g st1 & g1 != g2]
 end.
 Proof.
-elim: st s st1 => [|[[n p] v] st IH] s  [|[[n1 p1] v1] st1] //=.
-elim: behead p1 1 s st1 => //= [] [] bs IH1 p1 k s st1. 
-  case: find_just_one_aux (IH (update p1 k s) (update_anti_literals p1 k st1)).
+elim: st g st1 => [|[[n p] v] st IH] g [|[[n1 p1] v1] st1] //=.
+elim: behead p1 1 g st1 => //= [] [] bs IH1 p1 k g st1.
+  case: find_just_one_aux (IH (update p1 k g) (update_anti_literals p1 k st1)).
   - move=> -> /=.
-    case: try_just_one (IH1 p1 k.+1 s st1) => [->//|s1 ->//|].
-    by move=> s1 s2; rewrite !mem_merge_sudoku => [] [-> -> ->].
-  - move=> s1 ->.
-    case: try_just_one (IH1 p1 k.+1 s st1) => [->//|s2 ->|].
-      case: eqP => [->/=|/eqP s1Ds2]; first by rewrite seq_leqn_refl.
-    by rewrite !mem_merge_sudoku /= !inE !eqxx orbT (negPf s1Ds2).
-  - move=> s2 s3; rewrite !mem_merge_sudoku !inE => [] [-> -> ->].
+    case: try_just_one (IH1 p1 k.+1 g st1) => [->//|g1 ->//|].
+    by move=> g1 g2; rewrite !mem_merge_sudoku => [] [-> -> ->].
+  - move=> g1 ->.
+    case: try_just_one (IH1 p1 k.+1 g st1) => [->//|g2 ->|].
+      case: eqP => [->/=|/eqP g1Dg2]; first by rewrite grid_leqn_refl.
+    by rewrite !mem_merge_sudoku /= !inE !eqxx orbT (negPf g1Dg2).
+  - move=> g2 g3; rewrite !mem_merge_sudoku !inE => [] [-> -> ->].
     by rewrite !orbT.
-  by move=> s2 s3; rewrite !mem_merge_sudoku !mem_cat => [] [-> -> ->].
-  case: find_just_one_aux (IH (update p1 k s) (update_anti_literals p1 k st1)).
+  by move=> g2 g3; rewrite !mem_merge_sudoku !mem_cat => [] [-> -> ->].
+  case: find_just_one_aux (IH (update p1 k g) (update_anti_literals p1 k st1)).
     move=> H.
-    by case: try_just_one (IH1 p1 k.+1 s st1) => [->|s1 ->|].
+    by case: try_just_one (IH1 p1 k.+1 g st1) => [->|g1 ->|].
   move=> s1 H.
-  by case: try_just_one (IH1 p1 k.+1 s st1) => [->//|s2 ->|].
-move=> s1 s2 [H1s H2s H3s].
-by case: try_just_one (IH1 p1 k.+1 s st1) => [->//|s3 ->|].
+  by case: try_just_one (IH1 p1 k.+1 g st1) => [->//|g2 ->|].
+move=> g1 g2 [H1s H2s H3s].
+by case: try_just_one (IH1 p1 k.+1 g st1) => [->//|s3 ->|].
 Qed.
 
-Lemma find_just_one_correct_aux s :
-  size s = hw * hw ->
-  match find_just_one s with 
-    jNone =>  find_all s = [::]
-  | jOne s1 => find_all s =  [:: s1]
-  | jMore s1 s2 =>  
-      [/\ s1 \in find_all s, s2 \in find_all s & s1 != s2]
+Lemma find_just_one_correct_aux g :
+  size g = hw * hw ->
+  match find_just_one g with 
+    jNone =>  find_all g = [::]
+  | jOne g1 => find_all g =  [:: g1]
+  | jMore g1 g2 =>  
+      [/\ g1 \in find_all g, g2 \in find_all g & g1 != g2]
   end.
 Proof.
 move=> Hs; rewrite /find_just_one /find_all.
-case: gen_init_state (gen_init_state_cotrect Hs) => // s1 Hs1.
+case: gen_init_state (gen_init_state_correct Hs) => // s1 Hs1.
 apply: find_just_one_aux_correct.
 Qed.
 
-Lemma find_just_one_correct s :
-  size s = hw * hw ->
-  match find_just_one s with 
-    jNone =>  forall s1, refine s s1 -> ~ sudoku s1
-  | jOne s1 => [/\ refine s s1, sudoku s1 & 
-                   forall s2, refine s s2 -> sudoku s2 -> s1 = s2]
-  | jMore s1 s2 => 
-    [/\ refine s s1, sudoku s1, refine s s2, sudoku s2 & s1 != s2]
+Lemma find_just_one_correct g :
+  size g = hw * hw ->
+  match find_just_one g with 
+    jNone =>  forall g1, refine g g1 -> ~ sudoku g1
+  | jOne g1 => [/\ refine g g1, sudoku g1 & 
+                   forall g2, refine g g2 -> sudoku g2 -> g1 = g2]
+  | jMore g1 g2 => 
+    [/\ refine g g1, sudoku g1, refine g g2, sudoku g2 & g1 != g2]
    end.
 Proof.
 move=> Hs.
-case: find_just_one (find_just_one_correct_aux Hs) => [H s1 Hr Hsu||].
-- by have := mem_find_all s1 Hs; rewrite Hr Hsu H in_nil.
-- move=> s1 He.
-  have: s1 \in find_all s by rewrite He in_cons eqxx.
-  rewrite -mem_find_all // => /andP[Hs1 Hr1].
-  split => // s2 Hs2 Hr2.
-  have: s2 \in find_all s by rewrite -mem_find_all // Hs2.
+case: find_just_one (find_just_one_correct_aux Hs) => [H g1 Hr Hsu||].
+- by have := mem_find_all g1 Hs; rewrite Hr Hsu H in_nil.
+- move=> g1 He.
+  have: g1 \in find_all g by rewrite He in_cons eqxx.
+  rewrite mem_find_all // => /andP[Hs1 Hr1].
+  split => // g2 Hs2 Hr2.
+  have: g2 \in find_all g by rewrite mem_find_all // Hs2.
   by rewrite He inE => /eqP.
-move=> s1 s2.
-rewrite -!mem_find_all // => [] [/andP[H1 H2] /andP[H3 H4] H5].
+move=> g1 g2.
+rewrite !mem_find_all // => [] [/andP[H1 H2] /andP[H3 H4] H5].
 by split.
 Qed.
 
@@ -1899,13 +1869,13 @@ Fixpoint mkline s acc {struct s} :=
   if s is String a s1 then
     let n := nat_of_ascii a in
       if n == sp then
-        if acc is Some x then mkline s1 (Some (0::x)) else mkline s1 None  
+        if acc is some x then mkline s1 (some (0::x)) else mkline s1 None  
       else  if n == nl then mkline s1 None
       else if n == sep then
-        if acc is Some x then app (rev x) (mkline s1 (Some [::]))
-        else mkline s1 (Some [::])
+        if acc is some x then app (rev x) (mkline s1 (some [::]))
+        else mkline s1 (some [::])
       else if is_num n then
-        if acc is Some x then mkline s1 (Some ((get_num n)::x))
+        if acc is some x then mkline s1 (some ((get_num n)::x))
         else mkline s1 None
       else mkline s1 None
    else [::].
@@ -1957,7 +1927,7 @@ Definition print n m s :=
 (******************************************************************************)
 
 Definition one_solution n m l :=
- match find_one n m l with Some c => print n m c
+ match find_one n m l with some c => print n m c
                           | _ => "No Solution" end.
 
 Definition solutions n m l := size (find_all n m l).
@@ -1974,7 +1944,7 @@ Definition just_one_solution n m l :=
  end.
 
 (* Compute all the sudoku 2 x 2 *)
-Eval vm_compute in solutions 2 2 (init 2 2).
+Eval vm_compute in solutions 2 2 (ginit 2 2).
 
 Definition os s := one_solution 3 3 (parse s).
 Definition ns s := solutions 3 3 (parse s).
@@ -2031,7 +2001,7 @@ Time Eval vm_compute in jos
     |  4| 78|1  |
     -------------".
 
-Definition ppf n m := one_solution n m (init n m).
+Definition ppf n m := one_solution n m (ginit n m).
 
 (* Find a solution for 1 x 1 *)
 Time Eval compute in (ppf 1 1).
