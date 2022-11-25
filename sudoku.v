@@ -304,8 +304,6 @@ Definition update p v (s : seq nat) := subst (pos2n p) v s.
 Lemma size_update p v s : size (update p v s) = size s.
 Proof. by rewrite /update size_subst. Qed.
 
-Check valid_pos2n.
-
 (* Getting the updated cell gives the new value *)
 Lemma update_get p v s :
   size s = hw * hw -> valid_pos p -> get p (update p v s) = v.
@@ -477,7 +475,7 @@ Proof.
 apply: (iffP allP) => [Hs p|Hp x /nthP xIs].
   case: (leqP (size s) (pos2n p)) => [sLp|pLs]; last by apply/Hs/mem_nth.
   by rewrite [get _ _]nth_default // out_not_in_refl.
-have [n [nLs <-]]:= xIs out.
+have [n nLs <-] := xIs out.
 by apply: (Hp (0 , n)).
 Qed.
 
@@ -2033,7 +2031,7 @@ Time Eval vm_compute in jos
     |  4| 78|1  |
     -------------".
 
-Let ppf n m := one_solution n m (init n m).
+Definition ppf n m := one_solution n m (init n m).
 
 (* Find a solution for 1 x 1 *)
 Time Eval compute in (ppf 1 1).
