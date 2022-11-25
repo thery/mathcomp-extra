@@ -54,6 +54,8 @@ description: |-
 
     [A port to mathcomp of the elliptic curve of CoqPrime](./elliptic.v)
 
+    [A formalisation of some sudoku solvers ](./sudovu.v)
+
   A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 authors:

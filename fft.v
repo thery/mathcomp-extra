@@ -28,7 +28,6 @@ Import GRing.Theory Num.Theory Order.POrderTheory Num.ExtraDef Num.
 
 Section FFT.
 
-Check comp_polyX.
 Local Open Scope ring_scope.
 
 (* Arbitary idomain                                                           *)
@@ -537,6 +536,7 @@ rewrite step1E.
 apply: IH.
 by apply: size_reverse_poly.
 Qed.
+
 
 End FFT.
 

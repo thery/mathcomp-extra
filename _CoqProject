@@ -25,3 +25,4 @@ bjsort.v
 puzzleFF.v
 elliptic.v
 iterative.v
+sudoku.v

@@ -596,7 +596,6 @@ apply: Mk_rmodp_inj (F3 _ m1I) (F3 _ m2I) (F4 _ m1I) (F4 _ m2I) H => //.
 by rewrite hQE.
 Qed.
 
-
 (* 110 *)
 Lemma exp_Mk_upper_bound (R : comRingType) k s n a (M : {set 'Z_k}) :
    Mk_spec R s M -> 1 < #|M| ->
