@@ -113,7 +113,7 @@ Definition shift p x y : pos := (x + p.1, y + p.2).
 (* A position is valid if it represents a cell of the grid                    *)
 Definition valid_pos p := (p.1 < hw) && (p.2 < hw).
 
-(* Turn a position into a number:                                             *) 
+(* Turn a position into a number:                                             *)
 (* we number the grid from top to bottom and left to right, i.e.              *)
 (* (0,0) -> 0, (0,1) -> 1, ..., (hw.-1,hw.-1) -> hw * hw).-1                  *)
 

@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
 From mathcomp Require cyclic.
-Require Import more_thm rootn divpoly lcm_lbound.
+Require Import more_thm rootn qpoly lcm_lbound.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -64,15 +64,15 @@ case: k => [|k mIp nIp].
 have XM : ('X^k.+1 - 1 : {poly R}) \is monic.
   rewrite qualifE lead_coefDl ?lead_coefXn ?unitr1 //.
   by rewrite size_polyXn size_opp size_polyC oner_neq0.
-rewrite /introspective exprM -rmodp_exp // (eqP mIp) rmodp_exp //.
+rewrite /introspective exprM -rmodpX // (eqP mIp) rmodpX //.
 rewrite exprM -['X^m.+1 ^+_]comp_polyXn comp_poly_exp comp_polyA.
-rewrite -subr_eq0 -rmodp_sub // -comp_polyB.
+rewrite -subr_eq0 -rmodpB // -comp_polyB.
 apply: rdvdp_trans (_ : rdvdp (('X^k.+1 -1) \Po 'X^m.+1) _) => //.
 - by apply: monic_comp_poly => //; rewrite qualifE lead_coefXn.
 - rewrite comp_polyB comp_polyXn comp_polyC -exprM mulnC exprM.
   by apply: dvdp_geom.
 apply: rdvdp_comp_poly => //; first by rewrite qualifE lead_coefXn.
-by rewrite /rdvdp rmodp_sub // subr_eq0.
+by rewrite /rdvdp rmodpB // subr_eq0.
 Qed.
 
 (* 100 *)
@@ -288,7 +288,7 @@ Lemma rmodn_trans {R : ringType} (p q h z : {poly R}) :
   rmodp p z = rmodp q z -> rmodp p h  = rmodp q h.
 Proof.
 move=> hM zM /(rdvdp_trans hM zM) => /(_ (p - q)).
-rewrite /rdvdp !rmodp_sub // !subr_eq0 => H /eqP H1; apply/eqP.
+rewrite /rdvdp !rmodpB // !subr_eq0 => H /eqP H1; apply/eqP.
 by apply: H.
 Qed.
 
@@ -304,7 +304,7 @@ wlog : m n / m <= n => [Hw |mLn] mLp nLp xmExn.
   by apply/sym_equal/Hw => //; apply: ltnW.
 move: mLn; rewrite leq_eqVlt => /orP[/eqP//|mLn].
 have xkE1 :  rmodp 'X^k h = 1.
-  move: hDxk; rewrite /rdvdp rmodp_sub // [rmodp 1 _]rmodp_small.
+  move: hDxk; rewrite /rdvdp rmodpB // [rmodp 1 _]rmodp_small.
     by rewrite subr_eq0 => /eqP.
   by rewrite size_polyC oner_neq0.
 have [|o_gt0] := leqP (poly_order h 'X k) 0.
@@ -338,15 +338,15 @@ have F : rmodp 'X^n ('X^k - 1) = rmodp 'X^m ('X^k - 1) :> {poly R}.
     rewrite -{1}['X^k](subrK (1 : {poly R})) addrC rmodpD // rmodpp //.
     by rewrite addr0 rmodp_small // size_polyC oner_eq0 /= size_Xn_sub_1.
     rewrite (divn_eq m k) exprD mulnC exprM.
-    rewrite mulrC -rmodp_mulmr // -[in RHS]rmodp_exp // F1 expr1n.
+    rewrite mulrC -rmodp_mulmr // -[in RHS]rmodpX // F1 expr1n.
     by rewrite rmodp_mulmr // mulr1 nE.
-rewrite comp_polyB rmodp_sub // subr_eq0; apply/eqP.
+rewrite comp_polyB rmodpB // subr_eq0; apply/eqP.
 apply: etrans (_ : rmodp (p^+m) h = _).
   apply: rmodn_trans hDxk _ => //.
   rewrite -rmodp_compr // F rmodp_compr //.
   by apply/esym/eqP/pI.
 apply: etrans (_ : rmodp (q^+m) h = _).
-  by rewrite -rmodp_exp // phEqh rmodp_exp.
+  by rewrite -rmodpX // phEqh rmodpX.
 apply: esym.
 apply: rmodn_trans hDxk _ => //.
 rewrite -rmodp_compr // F rmodp_compr //.
@@ -368,9 +368,9 @@ move=> HMk hMI k_gt0 hDxk XoE pS qS pI qI /eqP.
 have hS : 1 < size h by case: hMI; case.
 have hI : irreducible_poly h by case: hMI.
 have hM : h \is monic by case: hMI.
-have hQE : divpoly_quotient h = h by rewrite /divpoly_quotient hS hM.
-pose l : seq (fdivpoly hMI) := 
-  map (fun i : 'I_ _ => (inDivPoly h 'X^i)) (enum M).
+have hQE : mk_qpoly h = h by rewrite /mk_qpoly hS hM.
+pose l : seq  {qfpoly hMI} := 
+  map (fun i : 'I_ _ => (in_qpoly h 'X^i)) (enum M).
 have Ul : uniq l.
   apply/(uniqP 0) => i j; rewrite !inE size_map -cardE => Hi1 Hj1.
   rewrite  !(nth_map ord0) -?cardE // => /val_eqP /eqP /= HH.
@@ -383,46 +383,46 @@ have Ul : uniq l.
     by case: HMk => // m -> _; rewrite ltn_mod //.
   have: nth ord0 (enum M) j \in M by rewrite -mem_enum mem_nth // -cardE.
   by case: HMk => // m -> _; rewrite ltn_mod.
-rewrite -subr_eq0 -rmodp_sub // => /eqP => u.
+rewrite -subr_eq0 -rmodpB // => /eqP => u.
 apply/eqP; rewrite -subr_eq0; apply/eqP/(@map_fpoly_div_inj _ h).
 rewrite map_poly0.
 apply: roots_geq_poly_eq0 Ul _ => //; last first.
-  rewrite (@size_map_poly _ _ (divpoly_const_rmorphism h)) /=.
+  rewrite (@size_map_poly _ _ (qpoly_const_rmorphism h)) /=.
   rewrite size_map (leq_trans (size_add _ _)) //=  size_opp.
   by rewrite geq_max -cardE pS.
 apply/allP=> i /mapP[j jI ->]; apply/eqP.
-rewrite -inDivPoly_comp_horner //.
+rewrite -in_qpoly_comp_horner //.
 apply/val_inj => /=.
-rewrite polyC0 hQE //.
+rewrite hQE //.
 apply: Mk_root_Mk => //.
-  by apply/eqP; rewrite -subr_eq0 -rmodp_sub //; apply/eqP.
+  by apply/eqP; rewrite -subr_eq0 -rmodpB //; apply/eqP.
 by rewrite -mem_enum.
 Qed.
 
 (* This is 𝒬_h *)
 Definition is_iexph (R : ringType) (k s: nat) h ph :=
-  exists2 p : {poly R}, ph = inDivPoly h p & is_ipoly k s p.
+  exists2 p : {poly R}, ph = in_qpoly h p & is_ipoly k s p.
 
 Inductive is_iexph_spec 
      (R : ringType) (k s : nat) (h : {poly R}) ph : bool -> Prop :=
    is_iexph_spec_true : 
-    forall p, ph = inDivPoly h p -> is_ipoly k s p -> 
+    forall p, ph = in_qpoly h p -> is_ipoly k s p -> 
       @is_iexph_spec R k s h ph true
  | is_iexph_spec_false :
-    (forall p, is_ipoly k s p -> ph != inDivPoly h p) -> 
+    (forall p, is_ipoly k s p -> ph != in_qpoly h p) -> 
       @is_iexph_spec R k s h ph false.
 
 Definition Qh_spec (R : finRingType) k s (h :{poly R}) 
-                   (M : {set {divpoly h}}) :=
+                   (M : {set {qpoly h}}) :=
   (forall x, @is_iexph_spec R k s h x (x \in M)).
 
 Lemma Qh_Cexists (R : finRingType) k s (h : {poly R}) :
-  classically (exists M : {set {divpoly h}}, Qh_spec k s M).
+  classically (exists M : {set {qpoly h}}, Qh_spec k s M).
 Proof.
 rewrite /Qh_spec.
-suff : classically (exists M : {set {divpoly h}}, 
-      forall x : {divpoly h}, x \in (enum {divpoly h}) -> 
-            uniq (enum {divpoly h}) -> 
+suff : classically (exists M : {set {qpoly h}}, 
+      forall x : {qpoly h}, x \in (enum {qpoly h}) -> 
+            uniq (enum {qpoly h}) -> 
             is_iexph_spec k s x (x \in M)).
   apply: classic_bind => [[M HM]].
   apply/classicP=> [] []; exists M => x.
@@ -432,7 +432,7 @@ elim: (enum _) => [|a l] //.
   by apply/classicP=> [] []; exists setT=> x; rewrite inE.
 apply: classic_bind => [[M HM]].
 have /classic_bind := @classic_pick _
- (fun p : {poly R} => a = inDivPoly h p /\ is_ipoly k s p).
+ (fun p : {poly R} => a = in_qpoly h p /\ is_ipoly k s p).
 apply => [] [[ma [maE maI]]|Ha].
   apply/classicP => [] []; exists (a |: M) => x.
   rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
@@ -449,16 +449,15 @@ Qed.
 
 (*109*)
 Lemma lower_bound_card_Qh (F : finFieldType) (h : {poly F}) k s p
-         (M : {set 'Z_k}) (Q : {set {divpoly h}})   :
+         (M : {set 'Z_k}) (Q : {set {qpoly h}})   :
   Mk_spec F s M -> Qh_spec k s Q -> p \in [char F] -> 1 < order_modn k p ->
   coprime k p -> monic_irreducible_poly h -> 1 < k -> rdvdp h ('X^k - 1) -> 
   poly_order h 'X k = k -> 0 < s < p ->
   2 ^ minn s #|M| <= #|Q|.
 Proof.
 move=> HMk HQh pC pO_gt1 kCp hMI k_gt1 hDxk XoE sB.
-have hQE : divpoly_quotient h = h.
-  by rewrite /divpoly_quotient !hMI.
-rewrite -/(fdivpoly hMI) in Q HQh *.
+have hQE : mk_qpoly h = h by rewrite /mk_qpoly !hMI.
+rewrite -/{qfpoly hMI} in Q HQh *.
 set t := minn _ _.
 have Mk_gt1 : 1 < #|M|.
   apply: leq_trans pO_gt1 _.
@@ -520,7 +519,7 @@ have <- : #|m| = 2 ^ t.
   by rewrite !ffunE liftK.
 pose f := fun (b : {ffun 'I_t.+1 -> bool}) (i : 'I_t.+1) =>
         ('X + (i%:R)%:P : {poly F}) ^+ b i.
-pose g b : {divpoly h}:= inDivPoly h (\prod_(i < t.+1) f b i).
+pose g b : {qpoly h}:= in_qpoly h (\prod_(i < t.+1) f b i).
 have F3 b : b \in m -> size (\prod_(i < t.+1) f b i)%R <= #|M|.
   have vE i : #|((fun i0 : 'I_t.+1 => i0 != i) : pred _)| = t.
     set v := #|_|; rewrite -[t]/(t.+1.-1) -[t.+1]card_ord.
@@ -648,14 +647,14 @@ Qed.
 Lemma is_iexp_root (F : fieldType) (h : {poly F}) k s m n p :
   0 < k -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) -> 
   is_iexp F k s m -> is_iexp F k s n -> n = m %[mod k] ->
-  is_ipoly k s p -> inDivPoly h (('X^n - 'X^m) \Po p) = 0.  
+  is_ipoly k s p -> in_qpoly h (('X^n - 'X^m) \Po p) = 0.  
 Proof.
 move=> k_gt0 hMI hDxk1 mI nI mMn pP.
-apply/val_inj; rewrite /= irr_divpoly_quotientE // -[RHS](rmod0p h).
+apply/val_inj; rewrite /= mk_qpolyE // -[RHS](rmod0p h).
 pose z : {poly F}:= 'X^k - 1.
 have zM : z \is monic by apply: monic_Xn_sub_1.
 apply: rmodn_trans hDxk1 _; rewrite ?hMI -/z // rmod0p.
-rewrite comp_polyB !comp_polyXn rmodp_sub //.
+rewrite comp_polyB !comp_polyXn rmodpB //.
 apply/eqP; rewrite subr_eq0; apply/eqP.
 have F0 : rmodp 'X^k z = 1.
   rewrite -['X^k](subrK 1) rmodpD // rmodpp // add0r rmodp_small //.
@@ -663,8 +662,8 @@ have F0 : rmodp 'X^k z = 1.
 have F1 : rmodp 'X^n z = rmodp 'X^m z.
   rewrite (divn_eq n k) (divn_eq m k) !exprD mMn.
   rewrite ![(_ * k)%N]mulnC !exprM ![_ * 'X^(_ %% _)]mulrC.
-  rewrite -rmodp_mulmr // -rmodp_exp // F0 expr1n rmodp_mulmr // mulr1.
-  rewrite -rmodp_mulmr // -[in RHS] rmodp_exp //.
+  rewrite -rmodp_mulmr // -rmodpX // F0 expr1n rmodp_mulmr // mulr1.
+  rewrite -rmodp_mulmr // -[in RHS] rmodpX //.
   by rewrite F0 expr1n rmodp_mulmr // mulr1.
 have F2 : rmodp (p ^+ n) z = rmodp (p \Po 'X^n) z by apply/eqP/pP.
 have F3 : rmodp (p ^+ m) z = rmodp (p \Po 'X^m) z by apply/eqP/pP.
@@ -677,7 +676,7 @@ Qed.
 (* in order to be able to talk about Qh I need to limit this theorem to 
    finField *)
 Lemma is_iexp_inj (F : finFieldType) (h : {poly F}) k s
-     (M : {set 'Z_k}) (Q : {set {divpoly h}}) p q :
+     (M : {set 'Z_k}) (Q : {set {qpoly h}}) p q :
    Mk_spec F s M -> Qh_spec k s Q -> 
   1 < k -> monic_irreducible_poly h -> rdvdp h ('X^k - 1) ->
   1 < p -> is_iexp F k s p -> (1 < q) -> is_iexp F k s q ->
@@ -687,15 +686,15 @@ Proof.
 move=> hMK hQh k_gt1 hMI hDxk1 p_gt1 pIN q_gt1 qIN pqLqh i j iIN jIN.
 move=> /(congr1 val); rewrite /= {5 10}Zp_cast // => imEjm.
 have k_gt0 : 0 < k by rewrite -ltnS ltnW.
-pose r := map_poly (divpoly_const h) ('X^i - 'X^j).
+pose r := map_poly (qpoly_const h) ('X^i - 'X^j).
 suff : r == 0.
   rewrite /r rmorphB /= subr_eq0 => /eqP/map_poly_div_inj.
   move=> /(congr1 (size : {poly F} -> nat)).
   by rewrite !size_polyXn => [] [] /eqP /val_eqP.
-apply/eqP/(@roots_geq_poly_eq0 [idomainType of (fdivpoly hMI)] _ (enum Q)).
+apply/eqP/(@roots_geq_poly_eq0 [idomainType of {qfpoly hMI}] _ (enum Q)).
 - apply/allP => /= x.
   rewrite mem_enum; case: hQh => // p1 -> p1I _.
-  apply/eqP; rewrite -inDivPoly_comp_horner.
+  apply/eqP; rewrite -in_qpoly_comp_horner.
   apply: is_iexp_root p1I => //.
     case/imsetP: jIN => [[i1 j1] _ -> /=].
     rewrite modn_small.
@@ -859,10 +858,10 @@ exists h; split => //.
   by rewrite map_polyC /= scale1r.
 apply: poly_orderE=> [||k1 k1_gt0 /eqP]; first by rewrite k_gt0 leqnn.
   apply/eqP; rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
-  rewrite -subr_eq0 -rmodp_sub //.
+  rewrite -subr_eq0 -rmodpB //.
   by rewrite -[_ == 0]/(rdvdp h ('X^k - 1)) -dvdpE.
 rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
-rewrite -subr_eq0 -rmodp_sub //.
+rewrite -subr_eq0 -rmodpB //.
 rewrite -[_ == 0]/(rdvdp h ('X^k1 - 1)) -dvdpE => hDk1.
 apply: dvdn_leq => //.
 suff: minPoly 1%AS z %| 'X^k1 - 1.
@@ -1357,7 +1356,7 @@ move=> k_gt0 n_gt1 vsE; rewrite !PolyZE.
 have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
 rewrite mulr_sumr rmodp_sum  //= -[k]prednK // big_ord_recl big_ord_recr addrC.
 congr (_ + _); last first.
-  rewrite expr0 alg_polyC -scalerAr -exprS rmodp_scale ?prednK //.
+  rewrite expr0 alg_polyC -scalerAr -exprS rmodpZ ?prednK //.
   rewrite [in 'X^_]prednK // [in modnp_mulX _ _]prednK //.
   rewrite -{1}['X^k](subrK 1) // rmodpD // rmodpp // add0r.
   rewrite rmodp_small; last by rewrite size_poly1 size_Xn_sub_1.
@@ -1366,7 +1365,7 @@ congr (_ + _); last first.
   case: v vsE => [|a v1 <- /=]; first by rewrite nth_nil.
   by rewrite (last_nth 0%N).
 apply: eq_bigr => j _.
-rewrite -scalerAr -exprS rmodp_scale ?prednK //.
+rewrite -scalerAr -exprS rmodpZ ?prednK //.
 congr (inZp _ *: _); last first.
   rewrite rmodp_small //= prednK // size_Xn_sub_1 //.
   by rewrite  size_polyXn !ltnS -{2}[k]prednK // ltnS ltn_ord.
@@ -1600,7 +1599,7 @@ Definition inZpm : {rmorphism 'Z_n -> 'F_p} :=
 
 Lemma eqp_rmodp_dvd (R : ringType) (p1 q r  :  {poly R}) :
   p1 \is monic ->  (rmodp q p1 == rmodp r p1) = (rdvdp p1 (q - r)).
-Proof. by move=> pM; rewrite -subr_eq0 -rmodp_sub. Qed.
+Proof. by move=> pM; rewrite -subr_eq0 -rmodpB. Qed.
 
 Lemma inZpm_poly_intro_range k s : 0 < k ->
   poly_intro_range [ringType of 'Z_n] k n s -> 

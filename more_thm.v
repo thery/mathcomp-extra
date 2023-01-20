@@ -39,10 +39,7 @@ Section Ccomp_poly.
 Variable R : comRingType.
 
 Lemma comp_poly_exp n (p q : {poly R}) : (p \Po q) ^+ n = (p ^+ n) \Po q.
-Proof.
-elim: n => [|n IH]; first by rewrite !expr0 comp_polyC.
-by rewrite !exprS IH comp_polyM.
-Qed.
+Proof. by rewrite rmorphX. Qed.
 
 End Ccomp_poly.
 
@@ -173,6 +170,8 @@ exists r => //.
 by apply: dvdp_trans qDp.
 Qed.
 
+End Firreducible.
+
 Section irreducible.
 
 Variable R : idomainType.
@@ -192,8 +191,6 @@ by apply: dvdp_trans pDg (dvdp_gcdr _ _).
 Qed. 
 
 End irreducible.
-
-End Firreducible.
 
 (* Separable *)
 
@@ -265,11 +262,11 @@ rewrite {1}(rdivp_eq dM p) opprD // -mulNr rmodp_addl_mul_small //.
 by rewrite size_opp ltn_rmodp //monic_neq0.
 Qed.
 
-Lemma rmodp_sub (d p q : {poly R}) : 
+Lemma rmodpB (d p q : {poly R}) : 
   d \is monic -> rmodp (p - q) d = (rmodp p d - rmodp q d)%R.
 Proof. by move=> dM; rewrite rmodpD // rmodp_opp. Qed.
 
-Lemma rmodp_scale (d : {poly R}) a p :
+Lemma rmodpZ (d : {poly R}) a p :
   d \is monic -> rmodp (a *: p) d = a *: (rmodp p d).
 move=> dM. 
 case: (altP (a =P 0%R)) => [-> | cn0]; first by rewrite !scale0r rmod0p.
@@ -304,7 +301,7 @@ Lemma rmodp_mulml (p q r : {poly R}) :
 Proof. by move=> dM; rewrite [in LHS]mulrC [in RHS]mulrC rmodp_mulmr.
 Qed.
 
-Lemma rmodp_exp (p q : {poly R}) n :
+Lemma rmodpX (p q : {poly R}) n :
   q \is monic -> rmodp ((rmodp p q) ^+ n) q = rmodp (p ^+ n) q.
 Proof.
 move=> qM; elim: n => [|n IH]; first by rewrite !expr0.
@@ -334,6 +331,9 @@ Variable R : ringType.
 Lemma poly_natmul p : p%:R%:P = p%:R :> {poly R}.
 Proof. by elim: p => //= p IH; rewrite !mulrS -IH polyCD. Qed.
 
+Lemma scale_polyC a b : a *: b%:P = (a * b)%:P :> {poly R}.
+Proof. by rewrite -mul_polyC polyCM. Qed.
+
 End natmul.
 
 (* charpoly *)
@@ -350,19 +350,6 @@ Qed.
 
 End charpoly.
 
-(* horner *)
-
-Section horner.
-
-Variable R : ringType.
-
-Lemma hornerXn n (x : R) : ('X^n).[x] = x^+ n.
-Proof.
-elim: n=> [|n IH]; rewrite ?exprS ?expr0 ?hornerE //.
-by rewrite  -commr_polyX hornerMX IH -exprSr exprS.
-Qed.
-
-End horner.
 
 Section alreadyin.
 
@@ -405,7 +392,7 @@ have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
 rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
 exists L.
-have charL: p \in [char L] by rewrite char_lalg /= char_Fp.
+have charL: p \in [char L] by  rewrite char_lalg /= char_Fp.
 have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
 pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
 have{splitLq} [zs DqL defL] := splitLq.
@@ -440,7 +427,6 @@ Qed.
 
 End FinField.
 
-
 Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
   n \in [char F] -> c%:R ^+ n = c%:R :> F.
 Proof.
@@ -450,7 +436,6 @@ have Cn : [char F].-nat n by rewrite pnatE.
 elim: c => [|c IH]; first by rewrite -natrX exp0n ?prime_gt0.
 by rewrite -addn1 natrD exprDn_char // IH -natrX exp1n.
 Qed.
-
 
 Lemma poly_geom (R : comRingType) n (p : {poly R}) : 
   p ^+ n.+1 - 1 = (p - 1) * \sum_(i < n.+1) p ^+ i.
