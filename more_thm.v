@@ -398,12 +398,12 @@ pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
 have{splitLq} [zs DqL defL] := splitLq.
 have Uzs: uniq zs.
   rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
-  rewrite /root !hornerE subr_eq0 eq_sym hornerXn expr0n gtn_eqF ?oner_eq0 //.
+  rewrite /root !hornerE subr_eq0 eq_sym expr0n gtn_eqF ?oner_eq0 //.
   rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
   by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
 have in_zs: zs =i Em.
   move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
-  rewrite /root !hornerE subr_eq0 /= hornerXn /m; congr (_ == z).
+  rewrite /root !hornerE subr_eq0 /= /m; congr (_ == z).
   elim: (d) => [|i IHi]; first by rewrite gal_id.
   by rewrite expgSr expnSr exprM IHi galM ?Da ?memvf // card_Fp.
 have defEm: Em = {:L}%VS.

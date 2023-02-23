@@ -852,7 +852,7 @@ rewrite comp_polyE /map_poly poly_def horner_sum /=.
 apply: val_inj.
 rewrite /= rmodp_sum // poly_of_qpoly_sum.
 apply: eq_bigr => i  _.
-rewrite !hornerE hornerXn /in_qpoly /=.
+rewrite !hornerE /in_qpoly /=.
 rewrite mul_polyC // !rmodpZ //=.
 by rewrite poly_of_qpolyX rmodp_mod // rmodpX // rmodp_mod.
 Qed.

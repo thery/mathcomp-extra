@@ -221,6 +221,17 @@ rewrite geq_max; apply/andP; split;
 by apply: bound_step.
 Qed.
 
+Fact stepE1 m n w p : 
+  w ^ (2 ^ n) = -1 ->
+  i
+  let l := i / 2 ^ n.+1 in 
+  let j := i % 2 ^ n.+1 in 
+  let j1 := j % 2 ^ n in
+  step m n w p)`_i =
+      p`_(j1 + l * l * 2 ^ n.+1) + 
+      p`_(j1 * l * 2 ^ n.+1 + 2 ^ n) * w ^+ j.
+
+
 Lemma take_step m n w (p : {poly R}) :
   (size p <= 2 ^ (m + n).+2)%N ->
   take_poly (2 ^ (m + n).+1) (step m.+1 n w p) =

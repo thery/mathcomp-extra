@@ -836,7 +836,7 @@ have hS : size h = d.+1.
 have minD : minPoly 1%AS z %| 'X^k - 1.
   apply: minPoly_dvdp.
     by rewrite !(rpredB, rpredX, rpred1, polyOverX).
-  rewrite rootE !hornerE hornerXn -exprM divnK //.
+  rewrite rootE !hornerE -exprM divnK //.
   by rewrite prim_expr_order // subrr.
 have hD : h %| 'X^k - 1.
   move: minD.
@@ -869,7 +869,7 @@ suff: minPoly 1%AS z %| 'X^k1 - 1.
   rewrite (prim_order_dvd kPr).
   have : ('X^k1 - 1).[z] == 0.
     by case/dvdpP: Hk1 => r ->; rewrite hornerE minPolyxx mulr0.
-  by rewrite !hornerE !hornerXn subr_eq0.
+  by rewrite !hornerE subr_eq0.
 rewrite hE.
 have ->: 'X^k1 - 1 = map_poly (in_alg L) ('X^k1 - 1).
   by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
