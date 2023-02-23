@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect all_algebra ssrnum.
-Require Import digitn splitpoly.
+Require Import digitn.
 
 (******************************************************************************)
 (*                                                                            *)
