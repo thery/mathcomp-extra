@@ -221,16 +221,68 @@ rewrite geq_max; apply/andP; split;
 by apply: bound_step.
 Qed.
 
-Fact stepE1 m n w p : 
-  w ^ (2 ^ n) = -1 ->
-  i
-  let l := i / 2 ^ n.+1 in 
-  let j := i % 2 ^ n.+1 in 
-  let j1 := j % 2 ^ n in
-  step m n w p)`_i =
-      p`_(j1 + l * l * 2 ^ n.+1) + 
-      p`_(j1 * l * 2 ^ n.+1 + 2 ^ n) * w ^+ j.
-
+Fact stepE1 (m n : nat) w p i : 
+  w ^+ (2 ^ n) = -1 ->
+  (i < 2 ^ (m + n).+1)%N ->
+  let l := (i %/ 2 ^ n.+1)%N in 
+  let j := (i %% 2 ^ n.+1)%N in 
+  let j1 := (i %% 2 ^ n)%N in
+  (step m n w p)`_i =
+      p`_(j1 + l * 2 ^ n.+1) + 
+      p`_(j1 + l * 2 ^ n.+1 + 2 ^ n) * w ^+ j.
+Proof.
+move=> Hw Hi l j j1.
+have lL2m : (l < 2 ^ m)%N.
+  by rewrite ltn_divLR ?expn_gt0 // -expnD addnS.
+have jL2n : (j < 2 ^ n.+1)%N by rewrite ltn_mod // expn_gt0.
+have j1L2n : (j1 < 2 ^ n)%N by rewrite ltn_mod // expn_gt0.
+have F1 : (2 ^ n <= j -> j = 2 ^ n + j1)%N.
+  move=> Hj.
+  rewrite (divn_eq j (2 ^ n)) modn_dvdm -/j1 ?dvdn_Pexp2l //.
+  suff-> : (j %/ 2 ^ n = 1)%N by rewrite mul1n.
+  have F1 : (j - 2 ^ n < 2 ^ n)%N.
+    by rewrite ltn_subLR // addnn -mul2n -expnS.
+  rewrite -(subnK Hj) divnD ?expn_gt0 // divn_small ?F1 //.
+  rewrite add0n divnn expn_gt0 //=.
+  by rewrite modn_small ?(ltnW F1) // modnn addn0 leqNgt F1 addn0.
+have F2 : (j < 2 ^ n -> j = j1)%N.
+  move=> F2.
+  by rewrite -(modn_small F2) modn_dvdm // dvdn_Pexp2l.
+rewrite coef_sum (bigD1 (Ordinal lL2m)) //= [X in _ + X]big1 ?addr0.
+  rewrite coef_sum (bigD1 (Ordinal j1L2n)) //= [X in _ + X]big1 ?addr0.
+    rewrite !(coefD, coefZ, coefXn, coef_poly).
+    rewrite j1L2n (divn_eq i (2 ^ n.+1)) -/l [(l * _ + _)%N]addnC.
+    rewrite [(_ + 2 ^ n)%N]addnC addnA !eqn_add2r -/j -/j1.
+    have [Hul|Hlu] := leqP (2 ^ n) j.
+      rewrite F1 // -[X in _ == X]add0n eqn_add2r expn_eq0 mulr0 add0r.
+      by rewrite eqxx mulr1 exprD Hw mulN1r mulrN.
+    by rewrite F2 // eqxx mulr1 -[X in X == _]add0n eqn_add2r eq_sym 
+               expn_eq0 mulr0 addr0.
+  move=> i1 /eqP/val_eqP/= Hi1.   
+  rewrite !(coefD, coefZ, coefXn, coef_poly).
+  rewrite ltn_ord // (divn_eq i (2 ^ n.+1)) -/l [(l * _ + _)%N]addnC.
+  rewrite [(_ + 2 ^ n)%N]addnC addnA !eqn_add2r -/j -/j1.
+  have [Hul|Hlu] := leqP (2 ^ n) j.
+    rewrite eqn_leq [(j <= _)%N]leqNgt (leq_trans (ltn_ord _)) //=.
+    rewrite mulr0 add0r.
+    by rewrite F1 // eqn_add2l eq_sym (negPf Hi1) mulr0.
+  rewrite [(_ == (_ + _))%N]eqn_leq [(_ <= j)%N]leqNgt.
+  rewrite (leq_trans Hlu) ?leq_addr // andbF mulr0 addr0.
+  by rewrite F2 // eq_sym (negPf Hi1) mulr0.
+move=> i1 /eqP/val_eqP/= Hi1.
+rewrite coef_sum big1 // => i2 _.
+rewrite !(coefD, coefZ, coefXn, coef_poly).
+rewrite (_ : _ == _ = false); last first.
+  apply/idP => /eqP iE; have /eqP[] := Hi1.
+  rewrite /l iE divnDMl ?expn_gt0 // divn_small //.
+  by rewrite (leq_trans (ltn_ord _)) // leq_exp2l.
+rewrite (_ : _ == _ = false) ?mulr0 ?addr0 //.
+apply/idP => /eqP iE; have /eqP[] := Hi1.
+rewrite addnC addnA in iE.
+rewrite /l iE divnDMl ?expn_gt0 // divn_small //.
+rewrite expnS mul2n -addnn ltn_add2l.
+by rewrite (leq_trans (ltn_ord _)) // leq_exp2l.
+Qed.
 
 Lemma take_step m n w (p : {poly R}) :
   (size p <= 2 ^ (m + n).+2)%N ->
