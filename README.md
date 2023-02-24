@@ -68,19 +68,19 @@ A note about sorting network is available [here](https://hal.inria.fr/hal-035856
 - License: [MIT License](LICENSE)
 - Compatible Coq versions: 8.16 or later
 - Additional dependencies:
-  - [MathComp ssreflect 1.15 or later](https://math-comp.github.io)
-  - [MathComp ssreflect 1.15 or later](https://math-comp.github.io)
-  - [MathComp fingroup 1.15 or later](https://math-comp.github.io)
-  - [MathComp algebra 1.15 or later](https://math-comp.github.io)
-  - [MathComp field 1.15 or later](https://math-comp.github.io)
-  - [MathComp zify 1.2 or later](https://github.com/math-comp/mczify)
+  - [MathComp ssreflect 1.16 or later](https://math-comp.github.io)
+  - [MathComp ssreflect 1.16 or later](https://math-comp.github.io)
+  - [MathComp fingroup 1.16 or later](https://math-comp.github.io)
+  - [MathComp algebra 1.16 or later](https://math-comp.github.io)
+  - [MathComp field 1.16 or later](https://math-comp.github.io)
+  - [MathComp zify 1.3 or later](https://github.com/math-comp/mczify)
   - [MathComp Algebra Tactics 1.0.0 or later](https://github.com/math-comp/algebra-tactics)
 - Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 
 ## Building and installation instructions
 
-To instead build and install manually, do:
+To build and install manually, do:
 
 ``` shell
 git clone https://github.com/thery/mathcomp-extra.git
