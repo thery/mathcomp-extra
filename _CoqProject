@@ -15,7 +15,6 @@ rootn.v
 bgcdn.v
 digitn.v
 tplayer.v
-splitpoly.v
 fft.v
 more_tuple.v
 nsort.v
