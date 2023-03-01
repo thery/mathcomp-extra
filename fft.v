@@ -1,3 +1,4 @@
+(* Copyright (c)  Inria. All rights reserved. *)
 From mathcomp Require Import all_ssreflect all_algebra ssrnum.
 Require Import digitn.
 
