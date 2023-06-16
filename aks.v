@@ -841,7 +841,7 @@ have minD : minPoly 1%AS z %| 'X^k - 1.
 have hD : h %| 'X^k - 1.
   move: minD.
   have ->: 'X^k - 1 = map_poly (in_alg L) ('X^k - 1).
-    by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
+    by rewrite raddfB /= rmorphXn /= map_polyX /= rmorph1.
   by rewrite hE dvdp_map.
 have hM : h \is monic.
   have := monic_minPoly 1 z.
@@ -872,7 +872,7 @@ suff: minPoly 1%AS z %| 'X^k1 - 1.
   by rewrite !hornerE subr_eq0.
 rewrite hE.
 have ->: 'X^k1 - 1 = map_poly (in_alg L) ('X^k1 - 1).
-  by rewrite raddfB /= rmorphX /= map_polyX /= rmorph1.
+  by rewrite raddfB /= rmorphXn /= map_polyX /= rmorph1.
 by rewrite dvdp_map.
 Qed.
 
@@ -1618,7 +1618,7 @@ rewrite (_ : 'X^k - 1 = map_poly inZpm ('X^k - 1)); last first.
 have cE : inZp (c%:R : 'Z_n) = c%:R :> 'F_p.
   by apply/val_eqP; 
      rewrite /= !Zp_nat /= Fp_cast // Zp_cast // modn_dvdm // pDn.
-rewrite -rmorphM -pE !(rmorphB, rmorphX, rmorphD) /=.
+rewrite -rmorphM -pE !(rmorphB, rmorphXn, rmorphD) /=.
 by rewrite (map_polyX inZpm) (map_polyC inZpm) /= cE.
 Qed.
 
@@ -1652,13 +1652,13 @@ case: eqP  => mE; last first.
     apply: leq_ltn_trans (size_exp_leq _ _) _.
     rewrite size_polyC size_Xn_sub_1 //.
     by case: (_ != _).
-  rewrite -rmorphX; congr (_ %:P).
+  rewrite -rmorphXn; congr (_ %:P).
   pose i := inZpm n_gt1 nP (dvdnn n).
   suff : i (c%:R ^+ n) = i c%:R.
     move/val_eqP/eqP=> /=; rewrite Fp_cast //.
     rewrite !modn_small //; try by rewrite -[n]Zp_cast ?prime_gt1.
     by move=> H; apply/val_eqP/eqP.
-  rewrite rmorphX rmorph_nat.
+  rewrite rmorphXn rmorph_nat.
   by apply: fin_little_fermat c (char_Fp nP).
 rewrite -pnE.
 case: poly_intro_range_aux (IH c.+1) => // H c1.

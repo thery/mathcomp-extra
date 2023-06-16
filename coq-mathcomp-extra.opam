@@ -62,14 +62,14 @@ A note about sorting network is available [here](https://hal.inria.fr/hal-035856
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  "coq" {(>= "8.16")}
-  "coq-mathcomp-ssreflect" {(>= "1.15.0")}
-  "coq-mathcomp-ssreflect" {(>= "1.16.0")}
-  "coq-mathcomp-fingroup" {(>= "1.16.0")}
-  "coq-mathcomp-algebra" {(>= "1.16.0")}
-  "coq-mathcomp-field" {(>= "1.16.0")}
+  "coq" {(>= "8.17")}
+  "coq-mathcomp-ssreflect" {(>= "1.17.0")}
+  "coq-mathcomp-ssreflect" {(>= "1.17.0")}
+  "coq-mathcomp-fingroup" {(>= "1.17.0")}
+  "coq-mathcomp-algebra" {(>= "1.17.0")}
+  "coq-mathcomp-field" {(>= "1.17.0")}
   "coq-mathcomp-zify" {(>= "1.3.0")}
-  "coq-mathcomp-algebra-tactics" {(>= "1.0.0")}
+  "coq-mathcomp-algebra-tactics" {(>= "1.1.0")}
 ]
 
 tags: [

@@ -39,7 +39,7 @@ Section Ccomp_poly.
 Variable R : comRingType.
 
 Lemma comp_poly_exp n (p q : {poly R}) : (p \Po q) ^+ n = (p ^+ n) \Po q.
-Proof. by rewrite rmorphX. Qed.
+Proof. by rewrite rmorphXn. Qed.
 
 End Ccomp_poly.
 
@@ -390,7 +390,7 @@ pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
 have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
-rewrite [map_poly _ _]rmorphB rmorphX /= map_polyX -/(q L) in splitLq.
+rewrite [map_poly _ _]rmorphB rmorphXn /= map_polyX -/(q L) in splitLq.
 exists L.
 have charL: p \in [char L] by  rewrite char_lalg /= char_Fp.
 have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.

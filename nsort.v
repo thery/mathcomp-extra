@@ -381,7 +381,7 @@ Definition sorting :=
   [qualify n | [forall r : m.-tuple bool, sorted <=%O (nfun n r)]].
 
 Lemma sorted_sorting n (x1 x2 : A) : 
-  x1 != x2 -> (forall t : m.-tupleA, sorted <=%O (nfun n t)) -> n \is sorting.
+  x1 != x2 -> (forall t : m.-tuple A, sorted <=%O (nfun n t)) -> n \is sorting.
 Proof.
 wlog x1Lx2 : x1 x2 / (x1 < x2)%O => [Hgs x1Dx2 Hs|].
   case: (ltgtP x1 x2) => [/Hgs->|/Hgs->|] //; first by rewrite eq_sym.
