@@ -95,7 +95,7 @@ dependencies:
   description: |-
     [MathComp algebra 2.0.0 or later](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-foeld
+    name: coq-mathcomp-field
     version: '{(>= "2.0.0")}'
   description: |-
     [MathComp field 2.0.0 or later](https://math-comp.github.io)

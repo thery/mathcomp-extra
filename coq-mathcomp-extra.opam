@@ -67,7 +67,7 @@ depends: [
   "coq-mathcomp-ssreflect" {(>= "2.0.0")}
   "coq-mathcomp-fingroup" {(>= "2.0.0")}
   "coq-mathcomp-algebra" {(>= "2.0.0")}
-  "coq-mathcomp-foeld" {(>= "2.0.0")}
+  "coq-mathcomp-field" {(>= "2.0.0")}
   "coq-mathcomp-zify" {(>= "1.5.0+2.0+8.16")}
   "coq-mathcomp-algebra-tactics" {(>= "1.2.1")}
 ]
