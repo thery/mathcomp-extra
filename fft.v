@@ -438,10 +438,9 @@ split.
 rewrite add0n.
 have -> : drop_poly (2 ^ n) (reverse_poly n.+1 p) =
          \poly_(i < 2 ^ n) (reverse_poly n.+1 p)`_(i + 2 ^ n).
-  apply/polyP=> i; rewrite coef_drop_poly coef_poly.
-  case: leqP => // nLn; rewrite nth_default //.
-  apply: leq_trans (size_reverse_poly _ _) _.
-  by rewrite expnS mul2n -addnn leq_add2r.
+  apply/polyP=> i; rewrite !coef_drop_poly !coef_poly.
+  rewrite expnS mul2n -addnn ltn_add2r.
+  by case: leqP => // nLn; rewrite nth_default.
 rewrite reverse_polyS poly_def.
 under eq_bigr do rewrite coefD coefMXn ltnNge leq_addl /= addnK scalerDl.
 rewrite big_split /= big1 ?add0r => [|i _]; last first.

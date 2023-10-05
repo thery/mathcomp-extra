@@ -225,7 +225,7 @@ have [iLm|mLi]:= leqP i m; last first.
   pose smax := nseq (i - m) b ++ nseq j true ++ nseq k b.
   have mE : m = i - m + j + k.
     by rewrite -addnA addnBAC 1?ltnW // addnA -mmE addnK.
-  have ttE : ttake t1 = if fb then smax else smin :> seq bool.
+  have ttE : ttake t1 = (if fb then smax else smin) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by case: (fb); rewrite size_tuple !size_cat !size_nseq addnA.
     rewrite size_tuple => uLm.
@@ -238,7 +238,7 @@ have [iLm|mLi]:= leqP i m; last first.
     rewrite !(tnth_nth false) /= tE !nth_cat !size_nseq !nth_nseq -uE.
     by case: (fb); rewrite !nth_cat !size_nseq !nth_nseq;
        repeat (case: leqP => ?; try lia); case: (b).
-  have tdE : tdrop t1 = if fb then smin else smax :> seq bool.
+  have tdE : tdrop t1 = (if fb then smin else smax) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by rewrite fun_if size_tuple !size_cat !size_nseq addnA if_same.
     rewrite size_tuple => uLn.
@@ -277,7 +277,7 @@ have [ijLm|mLij]:= leqP (i + j) m.
   have mE : m = i + j + k - m by rewrite -mmE addnK.
   pose smin := nseq i b ++ nseq j false ++ nseq (m - (i + j)) b.
   pose smax := nseq i b ++ nseq j true ++ nseq (m - (i + j)) b.
-  have ttE : ttake t1 = if fb then smax else smin :> seq bool.
+  have ttE : ttake t1 = (if fb then smax else smin) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
     rewrite size_tuple => uLm.
@@ -289,7 +289,7 @@ have [ijLm|mLij]:= leqP (i + j) m.
     rewrite !(tnth_nth false) /= tE !nth_cat !size_nseq !nth_nseq -uE.
     by case: (fb); rewrite !nth_cat !size_nseq !nth_nseq;
        repeat (case: leqP => ?; try lia); case: (b).
-  have tdE : tdrop t1 = if fb then smin else smax :> seq bool.
+  have tdE : tdrop t1 = (if fb then smin else smax) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
     rewrite size_tuple => uLn.
@@ -328,7 +328,7 @@ have [jLm|mLj]:= leqP j m.
   ***)
   pose smin := nseq (i + j - m) false ++ nseq (m - j) b ++ nseq (m - i) false.
   pose smax := nseq (i + j - m) true ++ nseq (m - j) b ++ nseq (m - i) true.
-  have ttE : ttake t1 = if fb then smax else smin :> seq bool.
+  have ttE : ttake t1 = (if fb then smax else smin) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
     rewrite size_tuple => uLm.
@@ -340,7 +340,7 @@ have [jLm|mLj]:= leqP j m.
     rewrite !(tnth_nth false) /= tE !nth_cat !size_nseq !nth_nseq -uE.
     by case: (fb); rewrite !nth_cat !size_nseq !nth_nseq;
        repeat (case: leqP => ?; try lia); case: (b).
-  have tdE : tdrop t1 = if fb then smin else smax :> seq bool.
+  have tdE : tdrop t1 = (if fb then smin else smax) :> seq bool.
     apply: (@eq_from_nth _ false) => [|u].
       by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
     rewrite size_tuple => uLm.
@@ -377,7 +377,7 @@ have [jLm|mLj]:= leqP j m.
 ***)
 pose smin := nseq i false ++ nseq (j - m) (~~b) ++ nseq k false.
 pose smax := nseq i true ++ nseq (j - m) (~~ b) ++ nseq k true.
-have ttE : ttake t1 = if fb then smax else smin :> seq bool.
+have ttE : ttake t1 = (if fb then smax else smin) :> seq bool.
   apply: (@eq_from_nth _ false) => [|u].
     by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
   rewrite size_tuple => uLm.
@@ -389,7 +389,7 @@ have ttE : ttake t1 = if fb then smax else smin :> seq bool.
   rewrite !(tnth_nth false) /= tE !nth_cat !size_nseq !nth_nseq -uE.
   by case: (fb); rewrite !nth_cat !size_nseq !nth_nseq;
      repeat (case: leqP => ?; try lia); case: (b).
-have tdE : tdrop t1 = if fb then smin else smax :> seq bool.
+have tdE : tdrop t1 = (if fb then smin else smax) :> seq bool.
   apply: (@eq_from_nth _ false) => [|u].
     by case: (fb); rewrite size_tuple !size_cat !size_nseq; lia.
   rewrite size_tuple => uLm.

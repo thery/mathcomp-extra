@@ -1,4 +1,5 @@
 (* A version of Coqprime Elliptic for mathcomp *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra ring.
 
 Set Implicit Arguments.
@@ -70,8 +71,7 @@ apply: (iffP andP) => [[/eqP x1E /eqP x2E]| [-> ->]//].
 by apply: curve_elt_irr.
 Qed.
 
-Canonical elt_eqMixin := EqMixin eq_eltP.
-Canonical elt_eqType := Eval hnf in EqType elt elt_eqMixin.
+HB.instance Definition _ := hasDecEq.Build elt eq_eltP.
 
 Lemma oppe_lem x y :
   y ^+ 2 = x ^+ 3 + A * x + B -> (- y) ^+ 2 = x ^+ 3 + A * x + B.
@@ -1028,13 +1028,6 @@ move=> [|x y e] //=; case: eqP => // p1.
 by congr (Some _); apply: curve_elt_irr.
 Qed.
 
-Definition elt_choiceMixin := PcanChoiceMixin elt_pcancel.
-Canonical elt_choiceType := 
-   Eval hnf in ChoiceType elt elt_choiceMixin.
-
-Definition elt_zmodMixin := ZmodMixin addeA addeC add0e addNe.
-Canonical elt_zmodType := Eval hnf in ZmodType elt elt_zmodMixin.
-
 End ELLIPTIC.
 
 Section ELLIPTIC_FINE.
@@ -1049,8 +1042,11 @@ Variable K : finFieldType.
 Variable A B : K.
 Variable Eth : ell_theory A B.
 
-Canonical felt_choiceType := elt_choiceType A B.
-Canonical felt_zmodType := elt_zmodType Eth.
+HB.instance Definition _ := 
+  Choice.copy (elt A B) (pcan_type (@elt_pcancel K A B)).
+HB.instance Definition _ := 
+  GRing.isZmodule.Build (elt A B) 
+   (addeA Eth) (addeC Eth) (add0e Eth) (addNe Eth).
 
 Open Scope ring_scope.
 
@@ -1092,13 +1088,11 @@ exists (Some (x, y)) => /=; first by rewrite mem_enum.
 by case: eqP => // e1; congr (Some _); apply: curve_elt_irr.
 Qed.
 
-Definition elt_countMixin := PcanCountMixin (@elt_pcancel K A B).
-Canonical elt_countType := 
-   Eval hnf in CountType (elt A B) elt_countMixin.
+HB.instance Definition _ := Countable.copy (elt A B)
+  (pcan_type (@elt_pcancel K A B)).
 
-Definition elt_finMixin :=
-  Eval hnf in UniqFinMixin elt_enum_uniq mem_elt_enum.
-Canonical elt_finType := Eval hnf in FinType (elt A B) elt_finMixin.
+HB.instance Definition _ := isFinite.Build (elt A B)
+  (Finite.uniq_enumP elt_enum_uniq mem_elt_enum).
 
 Lemma card_elt : (#|[finType of elt A B]| <= #|K|.*2.+1)%N.
 Proof.
@@ -1177,8 +1171,7 @@ apply: (iffP idP) => [/and3P[/eqP xE /eqP yE /eqP zE]|
 by subst x y z; apply: curve_pelt_irr.
 Qed.
 
-Canonical pelt_eqMixin := EqMixin eq_peltP.
-Canonical pelt_eqType := Eval hnf in EqType pelt pelt_eqMixin.
+HB.instance Definition _ := hasDecEq.Build pelt eq_peltP.
 
 Definition poppe (p: pelt) := 
  let (x, y, z, e) := p in

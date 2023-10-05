@@ -292,7 +292,7 @@ Definition inext m : 'I_m -> 'I_m :=
   else fun i => i.
 
 Lemma val_inext m (i : 'I_m) : 
-  inext i = if i == m.-1 :> nat then i : nat else i.+1 :> nat.
+  inext i = (if i == m.-1 :> nat then i : nat else i.+1) :> nat.
 Proof.
 case: m i => [[]//|n i /=].
 have:= (ltn_ord i); rewrite ltnS leq_eqVlt.
@@ -313,7 +313,7 @@ Definition iadd m k : 'I_m -> 'I_m :=
   else fun i => i.
 
 Lemma val_iadd m (i : 'I_m) k : 
-  iadd k i = if k + i < m then k + i else i :> nat.
+  iadd k i = (if k + i < m then k + i else i) :> nat.
 Proof.
 case: m i => [[]//|n i /=]; have iLn := ltn_ord i.
 by rewrite modn_small ?ltnS //=; case: (leqP (k + i)).
@@ -332,7 +332,7 @@ Definition isub m k : 'I_m -> 'I_m :=
   if m is m1.+1 then fun i => inZp (if k <= i then i - k else i)
   else fun i => i.
 
-Lemma val_isub m (i : 'I_m) k : isub k i = if k <= i then i - k else i :> nat.
+Lemma val_isub m (i : 'I_m) k : isub k i = (if k <= i then i - k else i) :> nat.
 Proof.
 case: m i => [[]//|n i /=]; have iLn := ltn_ord i.
 rewrite modn_small //=; case: (leqP k) => // _.

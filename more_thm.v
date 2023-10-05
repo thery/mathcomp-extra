@@ -73,18 +73,18 @@ have cp0q : (p \Po q)`_((size p).-1 * (size q).-1) == 1.
   case: size => //= k _ pkE.
   rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r.
     have := monic_exp k qM.
-    by rewrite qualifE /lead_coef size_exp_monic //= mulnC.
+    by rewrite qualifE /= /lead_coef size_exp_monic //= mulnC.
   move=> i _; rewrite coefZ [_`_(k * _)]nth_default ?mulr0 //.
   rewrite size_exp_monic // mulnC.
   suff : (1 < size q)%nat.
     by case: size => // [] [|v] //_ ; rewrite ltn_mul2r ltn_ord.
   case E : size => [|[|v]] //.
     have /eqP := E; rewrite size_poly_eq0 => /eqP qE0.
-    by move: qM; rewrite qualifE qE0 lead_coefC eq_sym oner_eq0.
+    by move: qM; rewrite qualifE /= qE0 lead_coefC eq_sym oner_eq0.
   have /eqP/size_poly1P[c cD0 qE] := E.
-  by case/eqP: qD1; move: qM; rewrite qE qualifE lead_coefC => /eqP->.
+  by case/eqP: qD1; move: qM; rewrite qE qualifE /= lead_coefC => /eqP->.
 have := size_comp_poly_leq p q.
-rewrite qualifE /lead_coef leq_eqVlt => /orP[/eqP-> //|].
+rewrite qualifE /= /lead_coef leq_eqVlt => /orP[/eqP-> //|].
 rewrite ltnS => sLp; move: cp0q.
 by rewrite nth_default // eq_sym oner_eq0.
 Qed.
@@ -233,7 +233,7 @@ Lemma separable_polyXnsub1 (R : fieldType) n :
 Proof.
 move=> nC.
 have n_gt0 : 0 < n by case: n nC => //; rewrite eqxx.
-rewrite /separable_poly !derivE subr0.
+rewrite unlock !derivE subr0.
 suff ->: 'X^n - 1 = (n%:R^-1 *: 'X) * ('X^n.-1 *+ n) + (-1) :> {poly R}.
   rewrite coprimep_sym coprimep_addl_mul.
   by rewrite -scaleN1r coprimepZr ?coprimep1 // oppr_eq0 oner_eq0.
@@ -248,6 +248,12 @@ End separable.
 Section Rmodp.
 
 Variable R : ringType.
+
+Lemma rmodp_id d (p : {poly R}) :
+  d \is monic -> rmodp (rmodp p d) d = rmodp p d.
+Proof.
+move=> dM; rewrite rmodp_small // ltn_rmodpN0 // monic_neq0 //.
+Qed.
 
 Lemma rmodp_mod (d p : {poly R}) :
   d \is monic -> rmodp (rmodp p d) d = rmodp p d.
@@ -388,7 +394,7 @@ have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
 pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
-have /FinSplittingFieldFor[/= L splitLq]: q [ringType of 'F_p] != 0.
+have /FinSplittingFieldFor[/= L splitLq]: q (GRing.Ring.clone _ 'F_p) != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monic_Xn_sub_1.
 rewrite [map_poly _ _]rmorphB rmorphXn /= map_polyX -/(q L) in splitLq.
 exists L.

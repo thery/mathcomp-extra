@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 
 From mathcomp Require Import all_algebra.
@@ -42,8 +43,7 @@ Definition eqs s1 s2 := (s1 == s2 :> nat).
 Lemma eqsP : Equality.axiom eqs.
 Proof. by do 2!case; constructor. Qed.
 
-Canonical state_eqMixin := EqMixin eqsP.
-Canonical state_eqType := Eval hnf in EqType state state_eqMixin.
+HB.instance Definition _ := hasDecEq.Build state eqsP.
 
 Definition smin s1 s2 := if s1 <= s2 then s1 else s2.
 
@@ -64,8 +64,8 @@ Proof. by case. Qed.
 Lemma sminnl : right_zero loss smin.
 Proof. by case. Qed.
 
-Canonical smin_monoid := Monoid.Law sminA sminwn sminnw.
-Canonical smin_comoid := Monoid.ComLaw sminC.
+HB.instance Definition _ :=
+  Monoid.isComLaw.Build state win smin sminA sminC sminwn.
 
 Definition smax s1 s2 := if s1 <= s2 then s2 else s1. 
 
@@ -87,8 +87,8 @@ Proof. by case. Qed.
 Lemma smaxnw : right_zero win smax.
 Proof. by case. Qed.
 
-Canonical smax_monoid := Monoid.Law smaxA smaxln smaxnl.
-Canonical smax_comoid := Monoid.ComLaw smaxC.
+HB.instance Definition _ :=
+  Monoid.isComLaw.Build state loss smax smaxA smaxC smaxln.
 
 Notation "\smin_ ( i <- l ) F" := (\big[smin/win]_(i <- l) F)
  (at level 41, F at level 41, i, l at level 50,
@@ -651,8 +651,7 @@ Definition eqes es1 es2 := (es1 == es2 :> nat).
 Lemma eqesP : Equality.axiom eqes.
 Proof. by do 2!case; constructor. Qed.
 
-Canonical estate_eqMixin := EqMixin eqesP.
-Canonical estate_eqType := Eval hnf in EqType estate estate_eqMixin.
+HB.instance Definition _ := hasDecEq.Build estate eqesP.
 
 Definition esflip e :=
   match e with 

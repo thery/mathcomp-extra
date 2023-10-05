@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
 From mathcomp
@@ -7,7 +8,8 @@ Require Import perm fingroup matrix mxalgebra mxpoly vector countalg.
 Require Import more_thm.
 
 (******************************************************************************)
-(* This file minic the zmod file for polynomial                               *)
+(* This file defines the algebras R[X]/<p> and their theory.                  *)
+(* It mimics the zmod file for polynomials                                    *)
 (* First, it defines polynomials of bounded size (equivalent of 'I_n),        *)
 (* gives it a structure of choice, finite and countable ring, ..., and        *)
 (* lmodule, when possible.                                                    *)
@@ -26,30 +28,15 @@ Require Import more_thm.
 (* as bounded polynomial. As we are aiming to build a ring structure we need  *)
 (* the polynomial to be monic and of size greater than one. If it is not the  *)
 (* case we quotient by 'X                                                     *)
-(*     mk_qpoly p == the actual polynomial on which we quotient               *)
-(*                   if p is monic ans of size> 1 it is p otherwise 'X        *)
-(*      {qpoly p} == defined as {poly_(size (mk_poly p)).-1 R} on which       *)
+(*     mk_monic p == the actual polynomial on which we quotient               *)
+(*                   if p is monic and dof size > 1 it is p otherwise 'X      *)
+(*    {poly %/ p} == defined as {poly_(size (mk_poly p)).-1 R} on which       *)
 (*                   there is a ring structure                                *)
-(*     in_qpoly p == turn the polynomial p into an element of {qpoly p} by    *)
+(*     in_qpoly q == turn the polynomial q into an element of {poly %/ p} by  *)
 (*                   taking a modulo                                          *)
-(*            'qX == in_qpoly 'X                         *)
-(* Third, it defines polynomials quotiented by a poly  (equivalent of 'F_p),  *)
-(* as {qpoly p}. As we are aiming to build a field structure we need          *)
-(* the polynomial to be monic and irreducible. As irreducible is not          *)
-(* decidable in general, this is done by giving a proof.                      *)
-(*      monic_irreducible_poly p == proof that p is monic is irreducible      *)
-(*     {qfpoly mi} == defined as {qpoly p} if mi proves that                  *)
-(*                    monic_irreducible_poly p                                *)
-(* Finally, it constructs the discrete logarithm with a primitive polynomial  *)
-(* on a final field                                                           *)
-(*    primitive_poly p == p is a primitive polynome                           *)
-(*     qlog sp_gt2' q == is the discrete log of q where q is an element of    *)
-(*                       the quotient field with respect to a primitive       *)
-(*                       polynomial p, sp_gt2 is a proof that the size of p   *)
-(*                       is greater than                                      *)
-(*     plog p q == is the discrete log of q with respect to p in {poly F}     *)
-(*                 this makes only sense if p is a primitive polynomial of    *)
-(*                 size > 2                                                   *)
+(*            'qX == in_qpoly 'X                                              *)
+(* The last part that defines the field structure when the quotient is an     *)
+(* irreducible polynomial is defined in field/qfpoly                          *)
 (******************************************************************************)
 
 Set Implicit Arguments.
@@ -63,6 +50,18 @@ Import Pdiv.Field.
 Import FinRing.Theory.
 Local Open Scope ring_scope.
 
+Lemma polyC_natr (R : ringType) n : n%:R%:P = n%:R :> {poly R}.
+Proof. by rewrite rmorph_nat. Qed.
+
+Reserved Notation "'{poly_' n R }"
+  (at level 0, n at level 2, format "'{poly_' n  R }").
+Reserved Notation "''nX^' i"  (at level 3, i at level 2, format "''nX^' i").
+Reserved Notation "x .-lagrange" (at level 2, format "x .-lagrange").
+Reserved Notation "x .-lagrange_" (at level 2, format "x .-lagrange_").
+Reserved Notation "'qX"  (at level 0).
+Reserved Notation "{ 'poly' '%/' p }"
+  (at level 0, p at level 2, format "{ 'poly'  '%/'  p }").
+
 Section poly_of_size_zmod.
 Context {R : ringType}.
 Implicit Types (phR : phant R) (n : nat).
@@ -70,24 +69,23 @@ Implicit Types (phR : phant R) (n : nat).
 Section poly_of_size.
 Variable (n : nat).
 
-Definition poly_of_size :=
-  [qualify a p | size (p : {poly R}) <= n].
-Fact poly_of_size_key : pred_key poly_of_size. Proof. by []. Qed.
-Canonical poly_of_size_keyd := KeyedQualifier poly_of_size_key.
+Definition poly_of_size_pred := fun p : {poly R} => size p <= n.
+Arguments poly_of_size_pred _ /.
+Definition poly_of_size := [qualify a p | poly_of_size_pred p].
 
 Lemma npoly_submod_closed : submod_closed poly_of_size.
 Proof.
-split=> [|x p q sp sq]; rewrite qualifE ?size_polyC ?eqxx//.
+split=> [|x p q sp sq]; rewrite qualifE/= ?size_polyC ?eqxx//.
 rewrite (leq_trans (size_add _ _)) // geq_max.
 by rewrite (leq_trans (size_scale_leq _ _)).
 Qed.
 
-Canonical npoly_opprPred := OpprPred npoly_submod_closed.
-Canonical npoly_addrPred := AddrPred npoly_submod_closed.
-Canonical npoly_zmodPred := ZmodPred npoly_submod_closed.
-Canonical npoly_submodPred := SubmodPred npoly_submod_closed.
+HB.instance Definition _ :=
+  GRing.isSubmodClosed.Build R {poly R} poly_of_size_pred npoly_submod_closed.
 
 End poly_of_size.
+
+Arguments poly_of_size_pred _ _ /.
 
 Section npoly.
 
@@ -98,29 +96,24 @@ Record npoly_of phR n : predArgType := NPoly_of {
 
 Variable (n : nat).
 
-Local Notation npolyR := (@npoly_of (Phant R) n).
+Local Notation "'{poly_' n R }" := (@npoly_of (Phant R) n).
 
-Canonical npoly_subType := [subType for @polyn (Phant R) n].
+HB.instance Definition _ := [isSub for @polyn (Phant R) n].
 
-Lemma npoly_is_a_poly_of_size (p : npolyR) : val p \is a poly_of_size n.
+Lemma npoly_is_a_poly_of_size (p : {poly_n R}) : val p \is a poly_of_size n.
 Proof. by case: p. Qed.
 Hint Resolve npoly_is_a_poly_of_size : core.
 
-Lemma size_npoly (p : npolyR) : size p <= n.
+Lemma size_npoly (p : {poly_n R}) : size p <= n.
 Proof. exact: npoly_is_a_poly_of_size. Qed.
 Hint Resolve size_npoly : core.
 
-Definition npoly_eqMixin := [eqMixin of npolyR by <:].
-Canonical npoly_eqType := EqType npolyR npoly_eqMixin.
-Definition npoly_choiceMixin := [choiceMixin of npolyR by <:].
-Canonical npoly_choiceType := ChoiceType npolyR npoly_choiceMixin.
-Definition npoly_zmodMixin := [zmodMixin of npolyR by <:].
-Canonical npoly_zmodType := ZmodType npolyR npoly_zmodMixin.
-Definition npoly_lmodMixin := [lmodMixin of npolyR by <:].
-Canonical npoly_lmodType := LmodType R npolyR npoly_lmodMixin.
+HB.instance Definition _ := [Choice of {poly_n R} by <:].
+HB.instance Definition _ := [SubChoice_isSubLmodule of {poly_n R} by <:].
 
-Definition npoly_rV : npolyR -> 'rV[R]_n := poly_rV \o val.
-Definition rVnpoly : 'rV[R]_n -> npolyR := insubd (0 : npolyR) \o rVpoly.
+Definition npoly_rV : {poly_n R} -> 'rV[R]_n := poly_rV \o val.
+Definition rVnpoly : 'rV[R]_n -> {poly_n R} :=
+  insubd (0 : {poly_n R}) \o rVpoly.
 Arguments rVnpoly /.
 Arguments npoly_rV /.
 
@@ -133,45 +126,35 @@ Lemma rVnpolyK : cancel rVnpoly npoly_rV.
 Proof. by move=> p /=; rewrite val_insubd [_ \is a _]size_poly rVpolyK. Qed.
 Hint Resolve npoly_rV_K rVnpolyK : core.
 
-Lemma npoly_vect_axiom : Vector.axiom n npolyR.
+Lemma npoly_vect_axiom : Vector.axiom n (Phant {poly_n R}).
 Proof. by exists npoly_rV; [move=> ???; exact: linearP|exists rVnpoly]. Qed.
 
-Definition npoly_vect_mixin := VectMixin npoly_vect_axiom.
-Canonical npoly_vect_type := VectType R npolyR npoly_vect_mixin.
+HB.instance Definition _ := Lmodule_hasFinDim.Build R {poly_n R}
+  npoly_vect_axiom.
 
 End npoly.
 End poly_of_size_zmod.
 
-Notation "'{poly_' n R }" := (npoly_of (Phant R) n)
-  (at level 0, n at level 2, format "'{poly_' n  R }").
+Notation "'{poly_' n R }" := (npoly_of (Phant R) n) : type_scope.
 Notation NPoly := (NPoly_of (Phant _)).
 #[global]
 Hint Resolve size_npoly npoly_is_a_poly_of_size : core.
 
-Definition npoly_countMixin (R : countRingType) n :=
-  [countMixin of {poly_n R} by <:].
-Canonical npoly_countType (R : countRingType) n :=
-  CountType {poly_n R} (@npoly_countMixin R n).
-Canonical npoly_subCountType (R : countRingType) n :=
-  [subCountType of {poly_n R}].
+Arguments poly_of_size_pred _ _ _ /.
 
-Section npoly_fin.
-Variable (R : finRingType) (n : nat).
+HB.instance Definition _ (R : countRingType) n :=
+  [Countable of {poly_n R} by <:].
 
-Definition npoly_finMixin (R : finRingType) (n : nat) :=
-  CanFinMixin (@npoly_rV_K [ringType of R] n).
-Canonical npoly_finType (R : finRingType) n :=
-  FinType {poly_n R} (@npoly_finMixin R n).
-Canonical npoly_subFinType := [subFinType of {poly_n R}].
-End npoly_fin.
+HB.instance Definition _  (R : finRingType) n : isFinite {poly_n R} :=
+  CanIsFinite (@npoly_rV_K R n).
 
 Section npoly_theory.
 Context (R : ringType) {n : nat}.
 
 Lemma polyn_is_linear : linear (@polyn _ _ _ : {poly_n R} -> _).
 Proof. by []. Qed.
-Canonical polyn_additive := Additive polyn_is_linear.
-Canonical polyn_linear := Linear polyn_is_linear.
+HB.instance Definition _ :=
+  GRing.isLinear.Build R {poly_n R} {poly R} _ (polyn (n:=n)) polyn_is_linear.
 
 Canonical npoly (E : nat -> R) : {poly_n R} :=
    @NPoly_of _ (Phant R) _ (\poly_(i < n) E i) (size_poly _ _).
@@ -254,7 +237,7 @@ End fin_npoly.
 
 Section Irreducible.
 
-Variable R : finIdomainType.
+Variable R : finIntegralDomainType.
 Variable p : {poly R}.
 
 Definition irreducibleb :=
@@ -292,8 +275,7 @@ Lemma dim_polyn : \dim (fullv : {vspace {poly_n K}}) = n.
 Proof. by rewrite [LHS]mxrank_gen mxrank1. Qed.
 
 Definition npolyX : n.-tuple {poly_n K} := [tuple npolyp n 'X^i | i < n].
-Notation "''nX^' i" := (tnth npolyX i)
-  (at level 3, i at level 2, format "''nX^' i").
+Notation "''nX^' i" := (tnth npolyX i).
 
 Lemma npolyXE (i : 'I_n) : 'nX^i = 'X^i :> {poly _}.
 Proof. by rewrite tnth_map tnth_ord_tuple npolypK // size_polyXn. Qed.
@@ -427,90 +409,109 @@ End lagrange.
 
 End Vspace.
 
-Notation "''nX^' i" := (tnth (npolyX _) i)
-  (at level 3, i at level 2, format "''nX^' i").
-Notation "x .-lagrange" := (lagrange x)
-  (at level 2, format "x .-lagrange") : ring_scope.
-Notation "x .-lagrange_" := (tnth x.-lagrange)
-  (at level 2, format "x .-lagrange_") : ring_scope.
+Notation "''nX^' i" := (tnth (npolyX _) i) : ring_scope.
+Notation "x .-lagrange" := (lagrange x) : ring_scope.
+Notation "x .-lagrange_" := (tnth x.-lagrange) : ring_scope.
 
 Section Qpoly.
 
 Variable R : ringType.
 Variable h : {poly R}.
 
-Definition mk_qpoly := 
+Definition mk_monic := 
   if (1 < size h)%N && (h \is monic) then h else 'X.
 
-Definition qpoly := {poly_(size mk_qpoly).-1 R}.
+Definition qpoly := {poly_(size mk_monic).-1 R}.
+End Qpoly.
 
-Local Notation "{qpoly}" := qpoly.
+Notation "{ 'poly' '%/' p }" := (qpoly p) : type_scope.
+ 
+Section QpolyProp.
 
-Lemma monic_mk_qpoly : mk_qpoly \is monic.
+Variable R : ringType.
+Variable h : {poly R}.
+
+Lemma monic_mk_monic : (mk_monic h) \is monic.
 Proof.
-rewrite /mk_qpoly; case: leqP=> [_|/=]; first by apply: monicX.
+rewrite /mk_monic; case: leqP=> [_|/=]; first by apply: monicX.
 by case E : (h \is monic) => [->//|] => _; apply: monicX.
 Qed. 
 
-Lemma size_mk_qpoly_gt1 : (1 < size mk_qpoly)%N.
+Lemma size_mk_monic_gt1 : (1 < size (mk_monic h))%N.
 Proof. 
 by rewrite !fun_if size_polyX; case: leqP => //=; rewrite if_same.
 Qed.
 
-Lemma size_mk_qpoly_gt0 : (0 < size mk_qpoly)%N.
-Proof. by rewrite (leq_trans _ size_mk_qpoly_gt1). Qed.
+Lemma size_mk_monic_gt0 : (0 < size (mk_monic h))%N.
+Proof. by rewrite (leq_trans _ size_mk_monic_gt1). Qed.
 
-Lemma mk_qpoly_neq0 : mk_qpoly != 0.
-Proof. by rewrite -size_poly_gt0 size_mk_qpoly_gt0. Qed.
+Lemma mk_monic_neq0 : mk_monic h != 0.
+Proof. by rewrite -size_poly_gt0 size_mk_monic_gt0. Qed.
 
-Lemma size_mk_qpoly (p : {qpoly}) : size p < size mk_qpoly.
+Lemma size_mk_monic (p : {poly %/ h}) : size p < size (mk_monic h).
 Proof.
-have: (p : {poly R}) \is a poly_of_size (size mk_qpoly).-1 by case: p.
-by rewrite qualifE -ltnS prednK // size_mk_qpoly_gt0.
+have: (p : {poly R}) \is a poly_of_size (size (mk_monic h)).-1 by case: p.
+by rewrite qualifE/= -ltnS prednK // size_mk_monic_gt0.
 Qed.
 
 (* standard inject *)
 Lemma poly_of_size_mod p :
-  (rmodp p mk_qpoly) \is a poly_of_size (size mk_qpoly).-1.
+  rmodp p (mk_monic h) \is a poly_of_size (size (mk_monic h)).-1.
 Proof.
-rewrite qualifE -ltnS prednK ?size_mk_qpoly_gt0 //.
-by apply: ltn_rmodpN0; rewrite mk_qpoly_neq0.
+rewrite qualifE/= -ltnS prednK ?size_mk_monic_gt0 //.
+by apply: ltn_rmodpN0; rewrite mk_monic_neq0.
 Qed.
 
-Definition in_qpoly p : {qpoly} := NPoly_of _ (poly_of_size_mod p).
+Definition in_qpoly p : {poly %/ h} := NPoly_of _ (poly_of_size_mod p).
 
-Lemma in_qpoly_small (p : {poly R}) : 
-  size p < size mk_qpoly -> in_qpoly p = p :> {poly R}.
+Lemma in_qpoly_small (p : {poly R}) :
+  size p < size (mk_monic h) -> in_qpoly p = p :> {poly R}.
 Proof. exact: rmodp_small. Qed.
 
-Lemma qpoly_const_proof k : 
-  (k%:P : {poly R}) \is a poly_of_size (size mk_qpoly).-1.
+Lemma in_qpoly0 : in_qpoly 0 = 0.
+Proof. by apply/val_eqP; rewrite /= rmod0p. Qed.
+
+Lemma in_qpolyD p q : in_qpoly (p + q) = in_qpoly p + in_qpoly q.
+Proof. by apply/val_eqP=> /=; rewrite rmodpD ?monic_mk_monic. Qed.
+
+Lemma in_qpolyZ a p : in_qpoly (a *: p) = a *: in_qpoly p.
+Proof. apply/val_eqP=> /=; rewrite rmodpZ ?monic_mk_monic //. Qed.
+
+Fact in_qpoly_is_linear : linear in_qpoly.
+Proof. by move=> k p q; rewrite in_qpolyD in_qpolyZ. Qed.
+
+HB.instance Definition _ :=
+  GRing.isLinear.Build R {poly R} {poly_(size (mk_monic h)).-1 R} _ in_qpoly
+    in_qpoly_is_linear.
+
+Lemma qpolyC_proof k :
+  (k%:P : {poly R}) \is a poly_of_size (size (mk_monic h)).-1.
 Proof.
-rewrite qualifE -ltnS size_polyC prednK ?size_mk_qpoly_gt0 //.
-by rewrite (leq_ltn_trans _ size_mk_qpoly_gt1) //; case: eqP.
+rewrite qualifE/= -ltnS size_polyC prednK ?size_mk_monic_gt0 //.
+by rewrite (leq_ltn_trans _ size_mk_monic_gt1) //; case: eqP.
 Qed.
 
-Definition qpoly_const k : {qpoly} :=  NPoly_of _ (qpoly_const_proof k).
+Definition qpolyC k : {poly %/ h} :=  NPoly_of _ (qpolyC_proof k).
 
-Lemma qpoly_constE k : qpoly_const k = k%:P :> {poly R}.
+Lemma qpolyCE k : qpolyC k = k%:P :> {poly R}.
 Proof. by []. Qed.
 
-Lemma qpoly_const0 : qpoly_const 0 = 0.
+Lemma qpolyC0 : qpolyC 0 = 0.
 Proof. by apply/val_eqP/eqP. Qed.
 
-Definition qpoly1 := qpoly_const 1.
+Definition qpoly1 := qpolyC 1.
 
-Definition qpoly_mul (q1 q2 : {qpoly}) : {qpoly} := 
+Definition qpoly_mul (q1 q2 : {poly %/ h}) : {poly %/ h} :=
   in_qpoly ((q1 : {poly R}) * q2).
 
 Lemma qpoly_mul1z : left_id qpoly1 qpoly_mul.
 Proof.
-by move=> x; apply: val_inj; rewrite /= mul1r rmodp_small // size_mk_qpoly.
-Qed. 
+by move=> x; apply: val_inj; rewrite /= mul1r rmodp_small // size_mk_monic.
+Qed.
 
 Lemma qpoly_mulz1 : right_id qpoly1 qpoly_mul.
 Proof.
-by move=> x; apply: val_inj; rewrite /= mulr1 rmodp_small // size_mk_qpoly.
+by move=> x; apply: val_inj; rewrite /= mulr1 rmodp_small // size_mk_monic.
 Qed.
 
 Lemma qpoly_nontrivial : qpoly1 != 0.
@@ -522,23 +523,26 @@ Notation "'qX" := qpolyX.
 Lemma qpolyXE : 2 < size h -> h \is monic -> 'qX = 'X :> {poly R}.
 Proof.
 move=> sh_gt2 h_mo.
-by rewrite in_qpoly_small // size_polyX /mk_qpoly ifT // (ltn_trans _ sh_gt2).
+by rewrite in_qpoly_small // size_polyX /mk_monic ifT // (ltn_trans _ sh_gt2).
 Qed.
 
-End Qpoly.
+End QpolyProp.
 
-Notation "'qX" := (qpolyX _).
-Notation "{qpoly  p }" := (qpoly p).
+Notation "'qX" := (qpolyX _) : ring_scope.
 
-Lemma mk_qpoly_X (R : ringType) : mk_qpoly 'X = 'X :> {poly R}.
-Proof. by rewrite /mk_qpoly size_polyX monicX. Qed.
+Lemma mk_monic_X (R : ringType) : mk_monic 'X = 'X :> {poly R}.
+Proof. by rewrite /mk_monic size_polyX monicX. Qed.
 
-Lemma mk_qpoly_Xn (R : ringType) n : mk_qpoly 'X^n = 'X^n.-1.+1 :> {poly R}.
-Proof. by case: n => [|n]; rewrite /mk_qpoly size_polyXn monicXn /= ?expr1. Qed.
+Lemma mk_monic_Xn (R : ringType) n : mk_monic 'X^n = 'X^n.-1.+1 :> {poly R}.
+Proof. by case: n => [|n]; rewrite /mk_monic size_polyXn monicXn /= ?expr1. Qed.
 
 Lemma card_qpoly (R : finRingType) (h : {poly R}):
-   #|{qpoly h}| = #|R| ^ (size (mk_qpoly h)).-1.
+   #|{poly %/ h}| = #|R| ^ (size (mk_monic h)).-1.
 Proof. by rewrite card_npoly. Qed.
+
+Lemma card_monic_qpoly (R : finRingType) (h : {poly R}):
+  1 < size h -> h \is monic ->  #|{poly %/ h}| = #|R| ^ (size h).-1.
+Proof. by move=> sh_gt1 hM; rewrite card_qpoly /mk_monic sh_gt1 hM. Qed.
 
 Section QRing.
 
@@ -552,86 +556,103 @@ Proof. by move=> p q; apply: val_inj; rewrite /= mulrC. Qed.
 
 Lemma qpoly_mulA : associative (@qpoly_mul A h).
 Proof.
-have rPM := monic_mk_qpoly h; move=> p q r; apply: val_inj.
+have rPM := monic_mk_monic h; move=> p q r; apply: val_inj.
 by rewrite /= rmodp_mulml // rmodp_mulmr // mulrA.
 Qed.
 
 Lemma qpoly_mul_addr : right_distributive (@qpoly_mul A h) +%R.
 Proof.
-have rPM := monic_mk_qpoly h; move=> p q r; apply: val_inj.
+have rPM := monic_mk_monic h; move=> p q r; apply: val_inj.
 by rewrite /= !(mulrDr, rmodp_mulmr, rmodpD).
 Qed.
 
 Lemma qpoly_mul_addl : left_distributive (@qpoly_mul A h) +%R.
 Proof. by move=> p q r; rewrite -!(qpoly_mulC r) qpoly_mul_addr. Qed.
 
-Definition qpoly_ringMixin :=
-  ComRingMixin qpoly_mulA qpoly_mulC (@qpoly_mul1z _ h) qpoly_mul_addl
-               (@qpoly_nontrivial _ h).
+HB.instance Definition _ := GRing.Zmodule_isComRing.Build {poly__ A} qpoly_mulA
+  qpoly_mulC (@qpoly_mul1z _ h) qpoly_mul_addl (@qpoly_nontrivial _ h).
+HB.instance Definition _ := GRing.ComRing.on {poly %/ h}.
 
-Canonical qpoly_ringType := Eval hnf in RingType {qpoly h} qpoly_ringMixin.
-Canonical npoly_ringType := Eval hnf in RingType {poly_ _ A} qpoly_ringMixin.
-Canonical qpoly_comRingType := Eval hnf in ComRingType {qpoly h} qpoly_mulC.
-Canonical npoly_comRingType := Eval hnf in ComRingType {poly_ _ A} qpoly_mulC.
+Lemma in_qpoly1 : in_qpoly h 1 = 1.
+Proof.
+apply/val_eqP/eqP/in_qpoly_small.
+by rewrite size_polyC oner_eq0 /= size_mk_monic_gt1.
+Qed.
 
+Lemma in_qpolyM q1 q2 : in_qpoly h (q1 * q2) = in_qpoly h q1 * in_qpoly h q2.
+Proof.
+apply/val_eqP => /=.
+by rewrite rmodp_mulml ?rmodp_mulmr // monic_mk_monic.
+Qed.
 
-Lemma poly_of_qpoly_sum I (r : seq I) (P1 : pred I) (F : I -> {qpoly h}) :
+Fact in_qpoly_multiplicative : multiplicative (in_qpoly h).
+Proof. by split; [ apply: in_qpolyM | apply: in_qpoly1]. Qed.
+
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build {poly A} {poly %/ h} (in_qpoly h)
+    in_qpoly_multiplicative.
+
+Lemma poly_of_qpoly_sum I (r : seq I) (P1 : pred I) (F : I -> {poly %/ h}) :
   ((\sum_(i <- r | P1 i) F i) =
     \sum_(p <- r | P1 p) ((F p) : {poly A}) :> {poly A})%R.
 Proof. by elim/big_rec2: _ => // i p q IH <-. Qed.
 
-Lemma poly_of_qpolyD (p q : {qpoly h}) : 
+Lemma poly_of_qpolyD (p q : {poly %/ h}) :
   p + q= (p : {poly A}) + q :> {poly A}.
 Proof. by []. Qed.
 
-Lemma qpoly_natmul p : (p%:R : {qpoly h}) = p%:R :> {poly A}.
-Proof.  by elim: p => //= p IH; rewrite !mulrS poly_of_qpolyD IH. Qed.
+Lemma qpolyC_natr p : (p%:R : {poly %/ h}) = p%:R :> {poly A}.
+Proof. by elim: p => //= p IH; rewrite !mulrS poly_of_qpolyD IH. Qed.
 
-Lemma char_qpoly : [char {qpoly h}] =i [char A].
+Lemma char_qpoly : [char {poly %/ h}] =i [char A].
 Proof.
 move=> p; rewrite !inE; congr (_ && _).
 apply/eqP/eqP=> [/(congr1 val) /=|pE]; last first.
-  by apply: val_inj => //=; rewrite qpoly_natmul /= -poly_natmul pE.
-rewrite !qpoly_natmul -!poly_natmul=> /(congr1 val) /=.
+  by apply: val_inj => //=; rewrite qpolyC_natr /= -polyC_natr pE.
+rewrite !qpolyC_natr -!polyC_natr => /(congr1 val) /=.
 by rewrite polyseqC polyseq0; case: eqP.
 Qed.
 
-Lemma poly_of_qpolyM (p q : {qpoly h}) : 
-  p * q = rmodp ((p : {poly A}) * q) (mk_qpoly h) :> {poly A}.
+Lemma poly_of_qpolyM (p q : {poly %/ h}) :
+  p * q = rmodp ((p : {poly A}) * q) (mk_monic h) :> {poly A}.
 Proof. by []. Qed.
 
-Lemma poly_of_qpolyX (p : {qpoly h}) n : 
-  p ^+ n = rmodp ((p : {poly A}) ^+ n) (mk_qpoly h) :> {poly A}.
+Lemma poly_of_qpolyX (p : {poly %/ h}) n :
+  p ^+ n = rmodp ((p : {poly A}) ^+ n) (mk_monic h) :> {poly A}.
 Proof.
-have HhQ := monic_mk_qpoly h.
+have HhQ := monic_mk_monic h.
 elim: n => //= [|n IH].
-  rewrite rmodp_small // size_polyC ?(leq_ltn_trans _ (size_mk_qpoly_gt1 _)) //.
+  rewrite rmodp_small // size_polyC ?(leq_ltn_trans _ (size_mk_monic_gt1 _)) //.
   by case: eqP.
 by rewrite exprS /= IH // rmodp_mulmr // -exprS.
 Qed.
 
-Lemma qpoly_constN (a : A) : qpoly_const h (- a) = -(qpoly_const h a).
+Lemma qpolyCN (a : A) : qpolyC h (- a) = -(qpolyC h a).
 Proof. apply: val_inj; rewrite /= raddfN //= raddfN. Qed.
 
-Lemma qpoly_constD : {morph (qpoly_const h) : a b / a + b >-> a + b}%R.
+Lemma qpolyCD : {morph (qpolyC h) : a b / a + b >-> a + b}%R.
 Proof. by move=> a b; apply/val_eqP/eqP=> /=; rewrite -!raddfD. Qed.
 
-Lemma qpoly_constM : {morph (qpoly_const h) : a b / a * b >-> a * b}%R.
+Lemma qpolyCM : {morph (qpolyC h) : a b / a * b >-> a * b}%R.
 Proof.
 move=> a b; apply/val_eqP/eqP=> /=; rewrite -polyCM rmodp_small //=.
-have := qpoly_const_proof h (a * b).
-by rewrite qualifE -ltnS prednK // size_mk_qpoly_gt0.
+have := qpolyC_proof h (a * b).
+by rewrite qualifE/= -ltnS prednK // size_mk_monic_gt0.
 Qed.
 
-Lemma qpoly_const_is_rmorphism : rmorphism (qpoly_const h).
-Proof.
-do ?split; move=> // x y /=; first by rewrite qpoly_constD qpoly_constN.
-by rewrite qpoly_constM.
-Qed.
+Lemma qpolyC_is_additive : additive (qpolyC h).
+Proof. by move=> x y; rewrite qpolyCD qpolyCN. Qed.
 
-Canonical qpoly_const_rmorphism := RMorphism qpoly_const_is_rmorphism.
+Lemma qpolyC_is_multiplicative : multiplicative (qpolyC h).
+Proof. by split=> // x y; rewrite qpolyCM. Qed.
 
-Definition qpoly_scale k (p : {qpoly h}) := (k *: p)%R.
+HB.instance Definition _ := GRing.isAdditive.Build A {poly %/ h} (qpolyC h)
+  qpolyC_is_additive.
+HB.instance Definition _ :=
+  GRing.isMultiplicative.Build A {poly %/ h} (qpolyC h)
+    qpolyC_is_multiplicative.
+
+Definition qpoly_scale k (p : {poly %/ h}) : {poly %/ h} := (k *: p)%R.
 
 Fact qpoly_scaleA a b p :
   qpoly_scale a (qpoly_scale b p) = qpoly_scale (a * b) p.
@@ -647,126 +668,80 @@ Fact qpoly_scaleDl p : {morph qpoly_scale^~ p : a b / a + b}%R.
 Proof. by move=> a b; apply/val_eqP; rewrite /= scalerDl. Qed.
 
 Fact qpoly_scaleAl a p q : qpoly_scale a (p * q) = (qpoly_scale a p * q).
-Proof. by apply/val_eqP; rewrite /= -scalerAl rmodpZ // monic_mk_qpoly. Qed.
+Proof. by apply/val_eqP; rewrite /= -scalerAl rmodpZ // monic_mk_monic. Qed.
 
 Fact qpoly_scaleAr a p q : qpoly_scale a (p * q) = p * (qpoly_scale a q).
-Proof. by apply/val_eqP; rewrite /= -scalerAr rmodpZ // monic_mk_qpoly. Qed.
+Proof. by apply/val_eqP; rewrite /= -scalerAr rmodpZ // monic_mk_monic. Qed.
 
-Canonical qpoly_lalgType :=
-  Eval hnf in LalgType A ({qpoly h}) qpoly_scaleAl.
-Canonical npoly_lalgType :=
-  Eval hnf in LalgType A ({poly_ _ _}) qpoly_scaleAl.
+HB.instance Definition _ := GRing.Lmodule_isLalgebra.Build A {poly__ A}
+  qpoly_scaleAl.
+HB.instance Definition _ := GRing.Lalgebra.on {poly %/ h}.
 
-Canonical qpoly_algType := AlgType A {qpoly h} qpoly_scaleAr.
-Canonical npoly_algType := AlgType A {poly_ _ _} qpoly_scaleAr.
+HB.instance Definition _ := GRing.Lalgebra_isAlgebra.Build A {poly__ A}
+  qpoly_scaleAr.
+HB.instance Definition _ := GRing.Algebra.on {poly %/ h}.
 
-Lemma poly_of_qpolyZ (p : {qpoly h}) a :
+Lemma poly_of_qpolyZ (p : {poly %/ h}) a :
   a *: p = a *: (p : {poly A})  :> {poly A}.
 Proof. by []. Qed.
 
 End QRing.
-
-Section iDomain.
-
-Variable R : idomainType.
-Variable h : {poly R}.
-         
-Definition monic_irreducible_poly  (p : {poly R}) := 
-  ((irreducible_poly p) * (p \is monic))%type.
-Hypothesis hI : monic_irreducible_poly h.
-
-Definition qfpoly : monic_irreducible_poly h -> Type := fun=> {qpoly h}.
-Notation "{qfpoly}" := (qfpoly hI).
-
-Canonical qfpoly_eqType := [eqType of {qfpoly}].
-Canonical qfpoly_choiceType := [choiceType of {qfpoly}].
-Canonical qfpoly_zmodType := [zmodType of {qfpoly}].
-Canonical qfpoly_ringType := [ringType of {qfpoly}].
-
-End iDomain.
-
-Notation "{qfpoly  p }" := (qfpoly p).
-
-Section finIDomain.
-
-Variable R : finIdomainType.
-Variable h : {poly R}.
-Hypothesis hI : monic_irreducible_poly h.
-
-Canonical qfpoly_finZmodType := [finZmodType of {qfpoly hI}].
-Canonical qfpoly_finRingType := [finRingType of {qfpoly hI}].
-
-End finIDomain.
 
 Section Field.
 
 Variable R : fieldType.
 Variable h : {poly R}.
 
-Notation hQ := (mk_qpoly h).
+Local Notation hQ := (mk_monic h).
 
-Definition qpoly_inv (p : {qpoly h}) := 
-  if coprimep hQ p then let v : {qpoly h} := in_qpoly h (egcdp hQ p).2 in 
+Definition qpoly_inv (p : {poly %/ h}) :=
+  if coprimep hQ p then let v : {poly %/ h} := in_qpoly h (egcdp hQ p).2 in
                         ((lead_coef (v * p)) ^-1 *: v) else p.
 
 (* Ugly *)
-Lemma qpoly_mulVz (p : {qpoly h}) : coprimep hQ p -> (qpoly_inv p * p = 1)%R.
+Lemma qpoly_mulVz (p : {poly %/ h}) : coprimep hQ p -> (qpoly_inv p * p = 1)%R.
 Proof.
-have hQM := monic_mk_qpoly h.
+have hQM := monic_mk_monic h.
 move=> hCp; apply: val_inj; rewrite /qpoly_inv /in_qpoly hCp /=.
 have p_neq0 : p != 0%R.
   apply/eqP=> pZ; move: hCp; rewrite pZ.
   rewrite coprimep0 -size_poly_eq1.
-  by case: size (size_mk_qpoly_gt1 h) => [|[]].
+  by case: size (size_mk_monic_gt1 h) => [|[]].
 have F : (egcdp hQ p).1 * hQ + (egcdp hQ p).2 * p %= 1.
   apply: eqp_trans _ (_ : gcdp hQ p %= _).
     rewrite eqp_sym.
-    by case: (egcdpP (mk_qpoly_neq0 h) p_neq0).
+    by case: (egcdpP (mk_monic_neq0 h) p_neq0).
   by rewrite -size_poly_eq1.
 rewrite rmodp_mulml // -scalerAl rmodpZ // rmodp_mulml //.
 rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE //.
 have := eqp_modpl hQ F.
 rewrite modpD // modp_mull add0r // .
 rewrite [(1 %% _)%R]modp_small => // [egcdE|]; last first.
-  by rewrite size_polyC oner_eq0 size_mk_qpoly_gt1.
+  by rewrite size_polyC oner_eq0 size_mk_monic_gt1.
 rewrite {2}(eqpfP egcdE) lead_coefC divr1 alg_polyC scale_polyC mulVf //.
 rewrite lead_coef_eq0.
 apply/eqP => egcdZ.
 by move: egcdE; rewrite -size_poly_eq1 egcdZ size_polyC eq_sym  eqxx.
 Qed.
 
-Lemma qpoly_mulzV (p : {qpoly h}) :
+Lemma qpoly_mulzV (p : {poly %/ h}) :
   coprimep hQ p -> (p * (qpoly_inv p) = 1)%R.
 Proof. by move=> hCp; rewrite /= mulrC qpoly_mulVz. Qed.
 
-Lemma qpoly_intro_unit (p q : {qpoly h}) : (q * p = 1)%R -> coprimep hQ p.
+Lemma qpoly_intro_unit (p q : {poly %/ h}) : (q * p = 1)%R -> coprimep hQ p.
 Proof.
-have hQM := monic_mk_qpoly h.
+have hQM := monic_mk_monic h.
 case; rewrite -[rmodp]/Pdiv.Ring.rmodp -!Pdiv.IdomainMonic.modpE // => qp1.
 have:= coprimep1 hQ.
 rewrite -coprimep_modr -[1%R]qp1 !coprimep_modr coprimepMr; by case/andP.
 Qed.
 
-Lemma qpoly_inv_out (p : {qpoly h}) : ~~ coprimep hQ p -> qpoly_inv p = p.
+Lemma qpoly_inv_out (p : {poly %/ h}) : ~~ coprimep hQ p -> qpoly_inv p = p.
 Proof. by rewrite /qpoly_inv => /negPf->. Qed.
 
-Definition qpoly_unitRingMixin :=
-  ComUnitRingMixin qpoly_mulVz qpoly_intro_unit qpoly_inv_out.
-Canonical qpoly_unitRingType :=
-  Eval hnf in UnitRingType {qpoly h} qpoly_unitRingMixin.
-Canonical npoly_unitRingType :=
-  Eval hnf in UnitRingType {poly_ _ _} qpoly_unitRingMixin.
-Canonical qpoly_comUnitRingType :=
-  Eval hnf in [comUnitRingType of {qpoly h}].
-
-Hypothesis hI : monic_irreducible_poly h.
-
-Canonical qfpoly_unitRingType := [unitRingType of {qfpoly hI}].
-Canonical qfpoly_comRingType := [comRingType of {qfpoly hI}].
-Canonical qfpoly_comUnitRingType := [comUnitRingType of {qfpoly hI}].
-
-Lemma mk_qpolyE : mk_qpoly h = h.
-Proof. by rewrite /mk_qpoly !hI. Qed.
+HB.instance Definition _ := GRing.ComRing_hasMulInverse.Build {poly__ _}
+  qpoly_mulVz qpoly_intro_unit qpoly_inv_out.
+HB.instance Definition _ := GRing.ComUnitAlgebra.on {poly %/ h}.
 
 Lemma irreducible_poly_coprime (A : idomainType) (p q : {poly A}) :
   irreducible_poly p -> coprimep p q = ~~(p %| q)%R.
@@ -779,277 +754,4 @@ rewrite -size_poly_eq1; case: eqP => // /eqP /(H2 _) => /(_ dDp) dEp.
 by case: pNDq; rewrite -(eqp_dvdl _ dEp).
 Qed.
 
-Lemma coprimep_unit (p : {qpoly h}) : p != 0%R -> coprimep hQ p.
-Proof.
-move=> pNZ.
-rewrite irreducible_poly_coprime //; last first.
-  by case: hI; rewrite mk_qpolyE.
-apply: contra pNZ => H; case: eqP => // /eqP /dvdp_leq /(_ H).
-by rewrite leqNgt size_mk_qpoly.
-Qed.
-
-Lemma qpoly_mulVp (p : {qpoly h}) : p != 0%R -> (qpoly_inv p * p = 1)%R.
-Proof. by move=> pNZ; apply/qpoly_mulVz/coprimep_unit. Qed.
-
-Lemma qpoly_inv0 : qpoly_inv 0%R = 0%R :> {qpoly h}.
-Proof.
-rewrite /qpoly_inv /= coprimep0 -size_poly_eq1.
-rewrite [in X in X == _]mk_qpolyE.
-by have [[]] := hI; case: size => [|[]].
-Qed.
-
-Definition qpoly_fieldUnitMixin := FieldUnitMixin qpoly_mulVp qpoly_inv0.
-
-Lemma qpoly_fieldMixin : GRing.Field.mixin_of [unitRingType of {qpoly h}].
-Proof. by apply: coprimep_unit. Qed.
-
-Definition qpoly_fieldIdomainMixin := FieldIdomainMixin qpoly_fieldMixin.
-
-Canonical qpoly_idomainType :=
-  Eval hnf in IdomainType {qfpoly hI} qpoly_fieldIdomainMixin.
-Canonical qpoly_fieldType :=
-  Eval hnf in FieldType {qfpoly hI} qpoly_fieldMixin.
-
 End Field.
-
-Section FinField.
-
-Variable R : finFieldType.
-Variable h : {poly R}.
-Notation hQ := (mk_qpoly h).
-
-Canonical qpoly_finUnitRingType :=
-  Eval hnf in [finUnitRingType of {qpoly h}].
-Canonical qpoly_finComUnitRingType :=
-  Eval hnf in [finComUnitRingType of {qpoly h}].
-
-Hypothesis hI : monic_irreducible_poly h.
-
-Canonical qfpoly_finUnitRingType := 
-  Eval hnf in [finUnitRingType of {qfpoly hI}].
-Canonical qfpoly_finComRingType := 
-  Eval hnf in [comRingType of {qfpoly hI}].
-Canonical qfpoly_finComUnitRingType :=
-  Eval hnf in [comUnitRingType of {qfpoly hI}].
-Canonical qpoly_finIdomainType :=
-  Eval hnf in [finIdomainType of {qfpoly hI}].
-Canonical qpoly_finFieldType :=
-  Eval hnf in [finFieldType of {qfpoly hI}].
-
-End FinField.
-
-Section inPoly.
-
-Variable R : comRingType.
-Variable h : {poly R}.
-
-Lemma in_qpoly_comp_horner (p q : {poly R}) :
- in_qpoly h (p \Po q) =
-     (map_poly (qpoly_const h) p).[in_qpoly h q].
-Proof.
-have hQM := monic_mk_qpoly h.
-rewrite comp_polyE /map_poly poly_def horner_sum /=.
-apply: val_inj.
-rewrite /= rmodp_sum // poly_of_qpoly_sum.
-apply: eq_bigr => i  _.
-rewrite !hornerE /in_qpoly /=.
-rewrite mul_polyC // !rmodpZ //=.
-by rewrite poly_of_qpolyX rmodp_mod // rmodpX // rmodp_mod.
-Qed.
-
-Lemma map_poly_div_inj : injective (map_poly (qpoly_const h)).
-Proof.
-apply: map_inj_poly => [x y /val_eqP /eqP /polyC_inj //|].
-by rewrite qpoly_const0.
-Qed.
-
-End inPoly.
-
-Section finPoly.
-
-(* Unfortunately we need some duplications so inference 
-   propagate qfpoly :-( )*)
-Definition qfpoly_const (R : idomainType) (h : {poly R})
-   (hMI : monic_irreducible_poly h) : R -> {qfpoly hMI} := qpoly_const h.
-
-Lemma map_fpoly_div_inj
-	  (R : idomainType) (h : {poly R}) (hMI : monic_irreducible_poly h) : 
-       injective (map_poly (qfpoly_const hMI)).
-Proof. by apply: (@map_poly_div_inj R h). Qed.
-
-End finPoly.
-
-Section PrimitivePoly.
-
-Variable F : finFieldType.
-Variable h : {poly F}.
-Hypothesis sh_gt2 : 2 < size h.
-Let sh_gt1 : 1 < size h.
-Proof. by apply: leq_ltn_trans sh_gt2. Qed.
-
-Definition primitive_poly (p: {poly F}) := 
-  let v := (#|F|^(size p).-1).-1 in 
-  [&& p \is monic,
-      irreducibleb p,
-      p %| 'X^v - 1 &
-      [forall n : 'I_v, (p %| 'X^n - 1) ==> (n == 0%N :> nat)]].
-
-Lemma primitive_polyP (p : {poly F}) :
-  reflect 
-    (let v := (#|F|^(size p).-1).-1 in 
-      [/\ monic_irreducible_poly p,
-          p %| 'X^v - 1 &
-          forall n, 0 < n < v -> ~~ (p %| 'X^n - 1)])
-    (primitive_poly p).
-Proof.
-apply: (iffP and4P) => [[H1 H2 H3 /forallP H4] v|[[H1 H2] H3 H4]]; split => //.
-- by split => //; apply/irreducibleP.
-- move=> n /andP[n_gt0 nLv]; apply/negP => /(implyP (H4 (Ordinal nLv))) /=.
-  by rewrite eqn0Ngt n_gt0.
-- by apply/irreducibleP.
-apply/forallP=> [] [[|n] Hn] /=; apply/implyP => pDX //.
-by case/negP: (H4 n.+1 Hn).
-Qed.
-
-Hypothesis Hh : primitive_poly h.
-
-Lemma primitive_mi : monic_irreducible_poly h.
-Proof. by case/primitive_polyP: Hh. Qed.
-
-Lemma qX_ni_unit :  ('qX : {qfpoly primitive_mi}) \in GRing.unit.
-Proof.
-rewrite unitfE /=.
-apply/eqP => /val_eqP/=.
-rewrite [rmodp _ _]qpolyXE ?polyX_eq0 //.
-by case: primitive_mi.
-Qed.
-
-Definition gX := FinRing.unit {qfpoly primitive_mi} qX_ni_unit.
-
-Lemma dvdp_order n : (h %| 'X^n - 1) = (gX ^+ n == 1)%g.
-Proof.
-have [hM hI] := primitive_mi.
-have eqr_add2r (r : ringType) (a b c : r) : (a + c == b + c) = (a == b).
-  by apply/eqP/eqP => [H|->//]; rewrite -(addrK c a) H addrK.
-rewrite -val_eqE /= val_unitX /= -val_eqE /=.
-rewrite (poly_of_qpolyX) qpolyXE // mk_qpolyE //.
-rewrite -[in RHS](subrK 1 'X^n) rmodpD //.
-rewrite [rmodp 1 h]rmodp_small ?size_poly1 //.
-rewrite -[1%:P]add0r polyC1 /= eqr_add2r.
-by rewrite dvdpE /=; apply/rmodp_eq0P/eqP.
-Qed.
-
-Lemma card_finField_gt0 : 0 < (#|F|^(size h).-1).-1.
-Proof.
-have cF : 1 < #|F|.
-  by rewrite (cardD1 0) inE ltnS (cardD1 1) !inE oner_eq0.
-rewrite -ltnS prednK ?expn_gt0 ?(leq_ltn_trans _ cF) //.
-rewrite -[1%N](exp1n (size h).-1) ltn_exp2r //.
-by rewrite  -ltnS prednK // (leq_ltn_trans _ sh_gt2).
-Qed.
-
-Lemma gX_order : #[gX]%g  = (#|F|^(size h).-1).-1.
-Proof.
-have /primitive_polyP[Hp1 Hp2 Hp3] := Hh.
-set n := _.-1 in Hp2 Hp3 *.
-have [hM hI] := primitive_mi.
-have gX_neq1 : gX != 1%g.
-  apply/eqP/val_eqP/eqP/val_eqP=> /=.
-  rewrite [X in X != _]qpolyXE /= //.
-  by apply/eqP=> Hx1; have := @size_polyX F; rewrite Hx1 size_poly1.
-have Hx : (gX ^+ n)%g = 1%g by apply/eqP; rewrite -dvdp_order.
-have Hf i : 0 < i < n -> (gX ^+ i != 1)%g by rewrite -dvdp_order => /Hp3.
-have o_gt0 : 0 < #[gX]%g by rewrite order_gt0.
-have : n <= #[gX]%g.
-  rewrite leqNgt; apply/negP=> oLx.
-  have /Hf/eqP[] : 0 < #[gX]%g < n by rewrite o_gt0.
-  by rewrite expg_order.
-case: ltngtP => nLo _ //.
-have: uniq (path.traject (mulg gX) 1%g #[gX]%g).
-  by apply/card_uniqP; rewrite path.size_traject -(eq_card (cycle_traject gX)).
-case: #[gX]%g o_gt0 nLo => //= n1 _ nLn1 /andP[/negP[]].
-apply/path.trajectP; exists n.-1; first by rewrite prednK ?card_finField_gt0.
-rewrite -iterSr prednK ?card_finField_gt0 // -[LHS]Hx.
-by elim: (n) => //= n2 <-; rewrite expgS.
-Qed.
-
-Lemma card_finField_unit : #|[set: {unit F}]| = #|F|.-1.
-by rewrite -(cardC1 0) cardsT card_sub; apply: eq_card => x; rewrite unitfE.
-Qed.
-
-Lemma gX_all : <[gX]>%g = [set: {unit {qfpoly primitive_mi}}]%G.
-Proof.
-apply/eqP; rewrite eqEcard; apply/andP; split.
-  by apply/subsetP=> i; rewrite inE.
-rewrite leq_eqVlt; apply/orP; left; apply/eqP.
-rewrite -orderE gX_order -[in RHS](mk_qpolyE primitive_mi).
-rewrite -card_qpoly -(cardC1 (0 : {qfpoly primitive_mi})) cardsT card_sub.
-by apply: eq_card => x; rewrite unitfE.
-Qed.
-
-Definition qlog (p : {qfpoly primitive_mi}) : nat := 
-  odflt (Ordinal card_finField_gt0) 
-        (pick [pred i in 'I_(#|F|^(size h).-1).-1 | 'qX ^+ i == p]). 
-
-Lemma qlog_lt p : qlog p < (#|F|^(size h).-1).-1.
-Proof. by rewrite /qlog; case: pickP. Qed.
-
-Lemma qlog_eq (p : {qfpoly primitive_mi}) : p != 0 -> 'qX ^+ (qlog p) = p.
-Proof.
-move=> p_neq0.
-have Up : p \in GRing.unit by rewrite unitfE.
-pose gp : {unit {qfpoly primitive_mi}}:= FinRing.unit _ Up.
-have /cyclePmin[i iLc iX] : gp \in <[gX]>%g by rewrite gX_all inE.
-rewrite gX_order in iLc.
-rewrite /qlog; case: pickP => [j /eqP//|/(_ (Ordinal iLc))] /eqP[].
-by have /val_eqP/eqP/= := iX; rewrite FinRing.val_unitX.
-Qed. 
-
-End PrimitivePoly.
-
-Section PLog.
-
-Variable F : finFieldType.
-
-Definition plog (p q : {poly F}) :=
-  if boolP (2 < size p) is AltTrue sp_gt2 then 
-    if boolP (primitive_poly p) is AltTrue Hh then 
-       qlog sp_gt2 ((in_qpoly p q) : {qfpoly primitive_mi Hh})
-    else 0%N
-  else 0%N.
-
-Lemma plog_lt (p q : {poly F}) :
-  2 < size p -> plog p q < (#|F|^(size p).-1).-1.
-Proof.
-move=> sp_gt2.
-have cF := card_finField_gt0 sp_gt2.
-rewrite /plog.
-case (boolP (2 < size p)) => // sp_gt2'.
-case (boolP (primitive_poly p)) => // Hh.
-by apply: qlog_lt.
-Qed.
-
-Lemma plog_eq (p q : {poly F}) :
-  2 < size p -> primitive_poly p -> ~~ (p %| q) -> p %| q - 'X ^+ plog p q.
-Proof.
-move=> sp_gt2 Hh pNDq.
-have cF := card_finField_gt0 sp_gt2.
-rewrite /plog.
-case (boolP (2 < size p)) => // sp_gt2'; last by case/negP: sp_gt2'.
-case (boolP (primitive_poly p)) => // Hh'; last by case/negP: Hh'.
-have pM : p \is monic by case/and4P: Hh'.
-have pMi : monic_irreducible_poly p by apply: primitive_mi.
-set q' : {qfpoly primitive_mi Hh'} := in_qpoly p q.
-apply/modp_eq0P; rewrite modpD modpN; apply/eqP; rewrite subr_eq0; apply/eqP.
-rewrite !Pdiv.IdomainMonic.modpE //=.
-suff /val_eqP/eqP/= : 'qX ^+ qlog sp_gt2' q' = q'.
-  rewrite /= [X in rmodp _ X]mk_qpolyE // => <-.
-  by rewrite poly_of_qpolyX /= mk_qpolyE // [rmodp 'X p]rmodp_small ?size_polyX.
-apply: qlog_eq.
-apply/eqP=> /val_eqP/eqP.
-rewrite /= mk_qpolyE // => /rmodp_eq0P; rewrite -dvdpE => pDq.
-by case/negP: pNDq.
-Qed.
-
-End PLog.
-
