@@ -95,7 +95,7 @@ Lemma sorted_nfun_batcher_merge_rec m (t : (`2^ m.+1).-tuple bool) :
 Proof.
 elim: m t => [t tS dS|m IH t tS dS /=].
   rewrite [batcher_merge_rec_aux 0]/= tsorted2 /=.
-  by rewrite cswapE_min // cswapE_max // le_minl le_maxr lexx.
+  by rewrite cswapE_min // cswapE_max // ge_min le_max lexx.
 rewrite nfun_rcons nfun_eodup.
 set n1 := nfun _ _; set n2 := nfun _ _.
 have n1P : perm_eq n1 (tetake t) by apply: perm_nfun.

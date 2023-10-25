@@ -64,15 +64,15 @@ A note about sorting network is available [here](https://hal.inria.fr/hal-035856
 - Author(s):
   - Laurent Théry
 - License: [MIT License](LICENSE)
-- Compatible Coq versions: 8.17 or later
+- Compatible Coq versions: 8.18 or later
 - Additional dependencies:
   - [ Hierarchy Builder 1.6.0 or later](https://github.com/math-comp/hierarchy-builder)
-  - [MathComp ssreflect 2.0.0 or later](https://math-comp.github.io)
-  - [MathComp fingroup 2.0.0 or later](https://math-comp.github.io)
-  - [MathComp algebra 2.0.0 or later](https://math-comp.github.io)
-  - [MathComp field 2.0.0 or later](https://math-comp.github.io)
+  - [MathComp ssreflect 2.1.0 or later](https://math-comp.github.io)
+  - [MathComp fingroup 2.1.0 or later](https://math-comp.github.io)
+  - [MathComp algebra 2.1.0 or later](https://math-comp.github.io)
+  - [MathComp field 2.1.0 or later](https://math-comp.github.io)
   - [MathComp zify 1.5.0+2.0+8.16 or later](https://github.com/math-comp/mczify)
-  - [MathComp Algebra Tactics 1.2.1 or later](https://github.com/math-comp/algebra-tactics)
+  - [MathComp Algebra Tactics 1.2.2 or later](https://github.com/math-comp/algebra-tactics)
 - Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 

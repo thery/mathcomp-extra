@@ -26,11 +26,11 @@ Unset Printing Implicit Defensive.
 
 Import GRing.Theory Num.Theory Order.POrderTheory Num.ExtraDef Num.
 
-
 Section FFT.
 
 Local Open Scope ring_scope.
 
+Notation nat := Datatypes.nat.
 (* Arbitary idomain                                                           *)
 (* In fact  it works for an arbitray ring. We ask for idomain in order to use *)
 (* primitive-root and sqr_eqf1                                                *)

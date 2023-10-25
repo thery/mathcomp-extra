@@ -474,7 +474,7 @@ have [->|/eqP cD] := clink c a =P a; last case: (cTl _ cD) => cE.
       apply/t1Lt2; last by apply: ltW.
       by rewrite cE leqnSn.
     move=> t1aLt1c.
-    rewrite le_minr !t1Lt2 => //; try by apply: ltnW.
+    rewrite le_min !t1Lt2 => //; try by apply: ltnW.
     by apply: le_trans C1.
   have cLb : clink c b < b.
     by rewrite cE /=; case: (nat_of_ord b) aLb.
@@ -482,38 +482,38 @@ have [->|/eqP cD] := clink c a =P a; last case: (cTl _ cD) => cE.
     by rewrite -ltnS cE prednK.
   rewrite (leqNgt b) cLb /=.
   case: (ltP (tnth t1 b)) => C1.
-    by rewrite le_maxr=>/(t1Lt2 _ _ aLc) ->; rewrite orbT.
-  by rewrite le_maxr=>/(t1Lt2 _ _ (ltnW aLb)) ->.
+    by rewrite le_max =>/(t1Lt2 _ _ aLc) ->; rewrite orbT.
+  by rewrite le_max =>/(t1Lt2 _ _ (ltnW aLb)) ->.
 - rewrite !cTf cE leqnSn /=.
   have [->|/eqP /cTl[] c1E] := clink c b =P b.
   - rewrite leqnn !minxx.
-    case: (ltP (tnth t1 a)); rewrite le_minl.
+    case: (ltP (tnth t1 a)); rewrite ge_min.
       by move=> _ /t1Lt2-> //; apply: ltnW.
     move=> _ /t1Lt2-> //; first by rewrite orbT.
     by rewrite cE.
   - rewrite c1E leqnSn.
-    case: (ltP (tnth t1 a)); rewrite !le_minr.
+    case: (ltP (tnth t1 a)); rewrite !le_min.
       move=> t1aLt1c; rewrite min_l.
         move/andP => [] /t1Lt2-> // /t1Lt2 -> //.
         by rewrite c1E (leq_trans aLLb).
       apply: t1Lt2; first by rewrite cE.
       by apply: ltW.
-    rewrite !le_minl => H /andP[] /t1Lt2 -> //; last by rewrite cE.
+    rewrite !ge_min => H /andP[] /t1Lt2 -> //; last by rewrite cE.
     move=> /t1Lt2 ->; rewrite ?orbT //.
     by rewrite cE c1E ltnS.
   have /negPf-> : ~~ (b <= clink c b).
     by rewrite c1E; case: (nat_of_ord b) aLb => //= n; rewrite ltnn.
   have [<-|/eqP aD] := a =P clink c b.
-    by rewrite !(le_minl, le_maxr) !lexx !orbT.
+    by rewrite !(ge_min, le_max) !lexx !orbT.
   have aLb1 : a <= b.-1 by 
     by rewrite -ltnS prednK //; case: (nat_of_ord b) aLb.
-  rewrite !(le_minl, le_maxr) -orbA => /or4P[] /t1Lt2->//; 
+  rewrite !(ge_min, le_max) -orbA => /or4P[] /t1Lt2->//; 
       rewrite ?(orbT, cE, c1E) //.  
   by rewrite ltn_neqAle -c1E aD c1E.
 rewrite leqNgt ltn_neqAle cD cE leq_pred !cTf /=.
 have [->|/eqP /cTl[] c1E] := clink c b =P b.
 - rewrite leqnn !minxx.
-  case: (ltP (tnth t1 a)); rewrite le_maxl.
+  case: (ltP (tnth t1 a)); rewrite ge_max.
     move=> t1aLt1c t1cLtb; rewrite !t1Lt2 //.
       by rewrite cE (leq_trans (leq_pred _)).
     by apply: le_trans (ltW t1aLt1c) _.
@@ -521,12 +521,12 @@ have [->|/eqP /cTl[] c1E] := clink c b =P b.
   have t2aLt2b : (tnth t2 a <= tnth t2 b)%O by apply: t1Lt2.
   rewrite t2aLt2b (le_trans _ t2aLt2b) // t1Lt2 //.
   by rewrite cE leq_pred.
-- rewrite c1E leqnSn !le_maxl !le_minr -!andbA => 
+- rewrite c1E leqnSn !ge_max !le_min -!andbA => 
      /and4P[t1aLtb t1aLt1c t1cLtb t1cLt1c].
   by rewrite !t1Lt2 ?(cE, c1E, (leq_trans (leq_pred _))) // ltnW.
 have /negPf-> : ~~ (b <= clink c b).
   by rewrite c1E; case: (nat_of_ord b) aLb => //= n; rewrite ltnn.
-rewrite !(le_maxl, le_maxr) => /andP[] /orP[] /t1Lt2-> //=; last first.
+rewrite !(ge_max, le_max) => /andP[] /orP[] /t1Lt2-> //=; last first.
 - by rewrite c1E -ltnS prednK.
 - rewrite !orbT /=; case/orP => /t1Lt2-> //; rewrite ?orbT //.
     by rewrite cE (leq_trans (leq_pred _)).

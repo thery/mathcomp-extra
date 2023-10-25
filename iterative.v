@@ -17,6 +17,8 @@ Variable R : ringType.
 
 Implicit Type p : {poly R}.
 
+Local Notation nat := Datatypes.nat.
+
 Variable left : nat -> {poly R} -> {poly R}.
 Variable right : nat -> {poly R} -> {poly R}.
 Variable merge : nat -> {poly R} -> {poly R} -> {poly R}.

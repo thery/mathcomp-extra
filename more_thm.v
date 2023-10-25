@@ -1,6 +1,6 @@
 (* Theorems to be added to the mathcomp library  *)
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
-From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
+From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -14,12 +14,15 @@ Import Pdiv.RingMonic.
 Local Open Scope ring_scope.
 
 Lemma inZp0 p : inZp 0 = 0 :> 'Z_p.
-Proof. by apply/val_eqP; rewrite /= mod0n. Qed.
+Proof. by rewrite -Zp_nat. Qed.
 
 (* More on comp_compy *)
 Section Rcomp_poly.
 
 Variable R : ringType.
+
+(*
+comp_Xn_poly
 
 Lemma comp_polyXn n (p : {poly R}) : 'X^n \Po p = p ^+ n.
 Proof.
@@ -27,6 +30,7 @@ rewrite comp_polyE size_polyXn.
 rewrite (bigD1 ord_max) //= coefXn eqxx scale1r big1 ?addr0 //.
 by move=> i /eqP/val_eqP /= iDn; rewrite coefXn (negPf iDn) scale0r.
 Qed.
+*)
 
 Lemma comp_polyXsub1 n : 
   ('X - 1) \Po 'X^n = 'X^n - 1 :> {poly R}.
@@ -65,28 +69,28 @@ Lemma monic_comp_poly (p q : {poly R}) :
   p \is monic -> q \is monic -> q != 1 -> p \Po q \is monic.
 Proof.
 move=> pM qM qD1.
-have cp0q : (p \Po q)`_((size p).-1 * (size q).-1) == 1.
-  rewrite comp_polyE coef_sum.
-  have := (pM); rewrite monicE /lead_coef.
-  have : (0 < size p)%nat.
-    by have := monic_neq0 pM; rewrite -size_poly_eq0; case: size.
-  case: size => //= k _ pkE.
-  rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r.
-    have := monic_exp k qM.
-    by rewrite qualifE /= /lead_coef size_exp_monic //= mulnC.
-  move=> i _; rewrite coefZ [_`_(k * _)]nth_default ?mulr0 //.
-  rewrite size_exp_monic // mulnC.
-  suff : (1 < size q)%nat.
-    by case: size => // [] [|v] //_ ; rewrite ltn_mul2r ltn_ord.
-  case E : size => [|[|v]] //.
-    have /eqP := E; rewrite size_poly_eq0 => /eqP qE0.
-    by move: qM; rewrite qualifE /= qE0 lead_coefC eq_sym oner_eq0.
-  have /eqP/size_poly1P[c cD0 qE] := E.
-  by case/eqP: qD1; move: qM; rewrite qE qualifE /= lead_coefC => /eqP->.
 have := size_comp_poly_leq p q.
-rewrite qualifE /= /lead_coef leq_eqVlt => /orP[/eqP-> //|].
-rewrite ltnS => sLp; move: cp0q.
-by rewrite nth_default // eq_sym oner_eq0.
+suff cp0q : (p \Po q)`_((size p).-1 * (size q).-1) == 1.
+  rewrite qualifE /= /lead_coef leq_eqVlt => /orP[/eqP-> //|]; last first.
+  rewrite ltnS => sLp; move: cp0q.
+  by rewrite nth_default // eq_sym oner_eq0.
+rewrite comp_polyE coef_sum.
+have := (pM); rewrite monicE /lead_coef.
+have : (0 < size p)%nat.
+  by have := monic_neq0 pM; rewrite -size_poly_eq0; case: size.
+case: size => //= k _ pkE.
+rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r.
+  have := monic_exp k qM.
+  by rewrite qualifE /= /lead_coef size_exp_monic //= mulnC.
+move=> i _; rewrite coefZ [_`_(k * _)]nth_default ?mulr0 //.
+rewrite size_exp_monic // mulnC.
+suff : (1 < size q)%nat.
+  by case: size => // [] [|v] //_ ; rewrite ltn_mul2r ltn_ord.
+case E : size => [|[|v]] //.
+  have /eqP := E; rewrite size_poly_eq0 => /eqP qE0.
+  by move: qM; rewrite qualifE /= qE0 lead_coefC eq_sym oner_eq0.
+have /eqP/size_poly1P[c cD0 qE] := E.
+by case/eqP: qD1; move: qM; rewrite qE qualifE /= lead_coefC => /eqP->.
 Qed.
 
 End Poly.
@@ -124,50 +128,21 @@ End Crdvdp.
 
 Section Firreducible.
 
-Variable F : finFieldType.
-
-Definition irreducibleb (p : {poly F}) :=
-  (1 < size p) && 
-  [forall q : (size p).-1.-tuple F, (Poly q %| p) ==> (size (Poly q) <= 1)].
-
-Lemma irreducibleP (p : {poly F}) : 
-  reflect (irreducible_poly p) (irreducibleb p).
-Proof.
-rewrite /irreducibleb /irreducible_poly.
-apply: (iffP idP) => [/andP[Sp /forallP Fp]|[Sp Fpoly]].
-  split => // q SqD1 qDp.
-  rewrite -dvdp_size_eqp //.
-  have pD0 : p != 0 by rewrite -size_poly_eq0; case: size Sp.
-  have: size q <= size p by apply: dvdp_leq.
-  rewrite leq_eqVlt => /orP[//|SqLp].
-  have xF : size (q ++ nseq ((size p).-1 - size q) 0) == (size p).-1.
-    by rewrite size_cat size_nseq addnC subnK //;  case: size Sp SqLp.
-  have /implyP/= := Fp (Tuple xF).
-  rewrite (_ : Poly _ = q) // => [/(_ qDp)|].
-    case E : size SqD1 qDp => [|[|k]] //.
-    have /eqP  := E. 
-    rewrite size_poly_eq0 => /eqP-> _; rewrite dvd0p => /eqP->.
-    by rewrite size_polyC eqxx.
-  apply/polyP => i; rewrite coef_Poly nth_cat.
-  by case: leqP => qLi //; first by rewrite nth_nseq if_same nth_default.
-rewrite Sp /=; apply/forallP => q; apply/implyP=> qDp.
-have [/eqP->//|/Fpoly/(_ qDp)/eqp_size ES] := boolP (size (Poly q) == 1%N).
-have := size_Poly q; rewrite ES size_tuple.
-by case: size Sp => // k; rewrite ltnn.
-Qed.
+Variable F : finIdomainType.
 
 Lemma irreducible_dvdp (p : {poly F}) :
-  1 < size p -> exists2 q, irreducible_poly q & q %| p.
+  1 < size p -> exists2 q : {poly F}, irreducible_poly q & q %| p.
 Proof.
 elim: {p}_.+1 {-2}p  (ltnSn (size p)) => // k IH p SpLk Sp_gt1.
 have [/irreducibleP pI|] := boolP (irreducibleb p); first by exists p.
-rewrite /irreducibleb Sp_gt1 negb_forall => /existsP[q].
+rewrite /irreducibleb Sp_gt1 negb_forall => /existsP[/= q].
 rewrite negb_imply -ltnNge => /andP[qDp Sq_gt1].
-case: (IH _ _ Sq_gt1) => [|r rI rDq].
-  apply: leq_ltn_trans (size_Poly _) _.
-  by rewrite size_tuple; case: size SpLk Sp_gt1.
-exists r => //.
-by apply: dvdp_trans qDp.
+rewrite -Pdiv.WeakIdomain.dvdpE in qDp.
+case: (IH _ _ Sq_gt1) => [|r rI rDq]; last first.
+  by exists r => //; apply: dvdp_trans qDp.
+rewrite -ltnS; apply: leq_ltn_trans SpLk.
+rewrite -[X in _ < X]prednK ?ltnS; first apply: size_npoly.
+by apply: leq_ltn_trans Sp_gt1.
 Qed.
 
 End Firreducible.
@@ -188,7 +163,7 @@ have /(irredp_XsubCP pI)[pCq|/andP[_ pDg] _] : gcdp p q %| p.
 - by rewrite dvdp_gcdl.
 - by case/negP: pNCq; rewrite /coprimep size_poly_eq1.
 by apply: dvdp_trans pDg (dvdp_gcdr _ _).
-Qed. 
+Qed.
 
 End irreducible.
 
@@ -243,143 +218,6 @@ Qed.
 
 End separable.
 
-(*  About rmodp and monic *)
-
-Section Rmodp.
-
-Variable R : ringType.
-
-Lemma rmodp_id d (p : {poly R}) :
-  d \is monic -> rmodp (rmodp p d) d = rmodp p d.
-Proof.
-move=> dM; rewrite rmodp_small // ltn_rmodpN0 // monic_neq0 //.
-Qed.
-
-Lemma rmodp_mod (d p : {poly R}) :
-  d \is monic -> rmodp (rmodp p d) d = rmodp p d.
-Proof.
-by move=> dM; rewrite rmodp_small // ltn_rmodpN0 // monic_neq0.
-Qed.
-
-Lemma rmodp_opp (d p : {poly R}) : d \is monic -> rmodp (- p) d = - rmodp p d.
-Proof.
-move=> dM.
-rewrite {1}(rdivp_eq dM p) opprD // -mulNr rmodp_addl_mul_small //.
-by rewrite size_opp ltn_rmodp //monic_neq0.
-Qed.
-
-Lemma rmodpB (d p q : {poly R}) : 
-  d \is monic -> rmodp (p - q) d = (rmodp p d - rmodp q d)%R.
-Proof. by move=> dM; rewrite rmodpD // rmodp_opp. Qed.
-
-Lemma rmodpZ (d : {poly R}) a p :
-  d \is monic -> rmodp (a *: p) d = a *: (rmodp p d).
-move=> dM. 
-case: (altP (a =P 0%R)) => [-> | cn0]; first by rewrite !scale0r rmod0p.
-have -> : ((a *: p) = (a *: (rdivp p d)) * d + a *: (rmodp p d))%R.
-  by rewrite -scalerAl -scalerDr -rdivp_eq.
-rewrite  rmodp_addl_mul_small //.
-rewrite -mul_polyC; apply: leq_ltn_trans (size_mul_leq _ _) _.
-  rewrite size_polyC cn0 addSn add0n /= ltn_rmodp.
-by apply: monic_neq0.
-Qed.
-
-Lemma rmodp_sum (I : Type) (r : seq I) (P : pred I) (F : I -> {poly R}) d :
-   d \is monic ->
-   rmodp (\sum_(i <- r | P i) F i) d = (\sum_(i <- r | P i) (rmodp (F i) d)).
-Proof.
-move=> dM.
-by elim/big_rec2: _ => [|i p q _ <-]; rewrite ?(rmod0p, rmodpD).
-Qed.
-
-Lemma coef_comp_poly (p q : {poly R}) n :
-  (p \Po q)`_n = \sum_(i < size p) p`_i * (q ^+ i)`_n.
-Proof. by rewrite comp_polyE coef_sum; apply: eq_bigr => i; rewrite coefZ. Qed.
-
-End Rmodp.
-
-Section CRmodp.
-
-Variable R : comRingType.
-
-Lemma rmodp_mulml (p q r : {poly R}) :
-  r \is monic -> rmodp (rmodp p r * q) r = rmodp (p * q) r.
-Proof. by move=> dM; rewrite [in LHS]mulrC [in RHS]mulrC rmodp_mulmr.
-Qed.
-
-Lemma rmodpX (p q : {poly R}) n :
-  q \is monic -> rmodp ((rmodp p q) ^+ n) q = rmodp (p ^+ n) q.
-Proof.
-move=> qM; elim: n => [|n IH]; first by rewrite !expr0.
-rewrite !exprS -rmodp_mulmr // IH rmodp_mulmr //.
-by rewrite mulrC rmodp_mulmr // mulrC.
-Qed.
-
-Lemma rmodp_compr (p q d : {poly R}) :
-  d \is monic -> rmodp (p \Po (rmodp q d)) d = (rmodp (p \Po q) d).
-Proof.
-move=> dM.
-elim/poly_ind: p => [|p c IH].
-  by rewrite !comp_polyC !rmod0p.
-rewrite !comp_polyD !comp_polyM addrC rmodpD //.
- rewrite mulrC -rmodp_mulmr // IH rmodp_mulmr //.
- rewrite !comp_polyX !comp_polyC.
-by rewrite mulrC rmodp_mulmr // -rmodpD // addrC.
-Qed.
-
-End CRmodp.
-
-(* natmul *)
-Section natmul.
-
-Variable R : ringType.
-
-Lemma poly_natmul p : p%:R%:P = p%:R :> {poly R}.
-Proof. by elim: p => //= p IH; rewrite !mulrS -IH polyCD. Qed.
-
-Lemma scale_polyC a b : a *: b%:P = (a * b)%:P :> {poly R}.
-Proof. by rewrite -mul_polyC polyCM. Qed.
-
-End natmul.
-
-(* charpoly *)
-Section charpoly.
-
-Variable R : ringType.
-
-Lemma char_poly : [char {poly R}] =i [char R].
-Proof.
-move=> p; rewrite !inE; congr (_ && _).
-apply/eqP/eqP=> [/(congr1 val) /=|]; last by rewrite -poly_natmul => ->.
-by rewrite polyseq0 -poly_natmul polyseqC; case: eqP.
-Qed.
-
-End charpoly.
-
-
-Section alreadyin.
-
-Variable R : idomainType.
-Implicit Type p : {poly R}.
-
-Theorem max_poly_roots p rs :
-  p != 0 -> all (root p) rs -> uniq rs -> size rs < size p.
-Proof.
-elim: rs p => [p pn0 _ _ | r rs ihrs p pn0] /=; first by rewrite size_poly_gt0.
-case/andP => rpr arrs /andP [rnrs urs]; case/factor_theorem: rpr => q epq.
-case: (altP (q =P 0)) => [q0 | ?]; first by move: pn0; rewrite epq q0 mul0r eqxx.
-have -> : size p = (size q).+1.
-   by rewrite epq size_Mmonic ?monicXsubC // size_XsubC addnC.
-suff /eq_in_all h : {in rs, root q =1 root p} by apply: ihrs => //; rewrite h.
-move=> x xrs; rewrite epq rootM root_XsubC orbC; case: (altP (x =P r)) => // exr.
-by move: rnrs; rewrite -exr xrs.
-Qed.
-
-Lemma roots_geq_poly_eq0 p (rs : seq R) : all (root p) rs -> uniq rs ->
-  size rs >= size p -> p = 0.
-Proof. by move=> ??; apply: contraTeq => ?; rewrite leqNgt max_poly_roots. Qed.
-
-End alreadyin.
 
 Section FinField.
 
@@ -587,7 +425,6 @@ rewrite -card_units_Zp // /order_modn.
 case: insubP => //= u uU uE.
 by apply/subset_leq_card/subsetP=> i; rewrite inE.
 Qed.
-
 
 Lemma modn_prodm I r (P : pred I) F d :
   \prod_(i <- r | P i) (F i %% d) = \prod_(i <- r | P i) F i %[mod d].

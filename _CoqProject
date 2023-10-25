@@ -9,8 +9,6 @@ matroid.v
 rsa.v
 aks_algo.v
 aks.v
-qpoly.v
-qfpoly.v
 more_thm.v
 rootn.v
 bgcdn.v

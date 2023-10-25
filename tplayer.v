@@ -87,8 +87,10 @@ Proof. by case. Qed.
 Lemma smaxnw : right_zero win smax.
 Proof. by case. Qed.
 
+(*
 HB.instance Definition _ :=
   Monoid.isComLaw.Build state loss smax smaxA smaxC smaxln.
+*)
 
 Notation "\smin_ ( i <- l ) F" := (\big[smin/win]_(i <- l) F)
  (at level 41, F at level 41, i, l at level 50,

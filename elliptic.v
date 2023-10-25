@@ -1071,7 +1071,7 @@ Qed.
 (******************************************************************************)
 
 Definition elt_enum := 
-  pmap (elt_g A B) (enum [finType of option (K * K)%type]).
+  pmap (elt_g A B) (enum (Finite.clone _ (option (K * K)%type))).
 
 Lemma elt_enum_uniq : uniq elt_enum.
 Proof.
@@ -1094,7 +1094,7 @@ HB.instance Definition _ := Countable.copy (elt A B)
 HB.instance Definition _ := isFinite.Build (elt A B)
   (Finite.uniq_enumP elt_enum_uniq mem_elt_enum).
 
-Lemma card_elt : (#|[finType of elt A B]| <= #|K|.*2.+1)%N.
+Lemma card_elt : (#|(Finite.clone _ (elt A B))| <= #|K|.*2.+1)%N.
 Proof.
 rewrite !cardT.
 pose ff b x := if Kroot (x ^+ 3 +  A * x + B) is Some y 

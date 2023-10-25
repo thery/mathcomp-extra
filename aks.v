@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect all_fingroup all_field.
-From mathcomp Require Import ssralg finalg poly polydiv zmodp vector.
+From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 From mathcomp Require cyclic.
-Require Import more_thm rootn qpoly qfpoly lcm_lbound.
+Require Import more_thm rootn lcm_lbound.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -60,16 +60,16 @@ have XmD1 : 'X^m.+1 != 1 :> {poly R}.
 case: k => [|k mIp nIp].
   rewrite /introspective !subrr !rmodp0 exprM => /eqP->.
   rewrite comp_poly_exp => /eqP->.
-  by rewrite -comp_polyA comp_polyXn -exprM.
+  by rewrite -comp_polyA comp_Xn_poly -exprM.
 have XM : ('X^k.+1 - 1 : {poly R}) \is monic.
   rewrite qualifE /= lead_coefDl ?lead_coefXn ?unitr1 //.
   by rewrite size_polyXn size_opp size_polyC oner_neq0.
 rewrite /introspective exprM -rmodpX // (eqP mIp) rmodpX //.
-rewrite exprM -['X^m.+1 ^+_]comp_polyXn comp_poly_exp comp_polyA.
+rewrite exprM -['X^m.+1 ^+_]comp_Xn_poly comp_poly_exp comp_polyA.
 rewrite -subr_eq0 -rmodpB // -comp_polyB.
 apply: rdvdp_trans (_ : rdvdp (('X^k.+1 -1) \Po 'X^m.+1) _) => //.
 - by apply: monic_comp_poly => //; rewrite qualifE /= lead_coefXn.
-- rewrite comp_polyB comp_polyXn comp_polyC -exprM mulnC exprM.
+- rewrite comp_polyB comp_Xn_poly comp_polyC -exprM mulnC exprM.
   by apply: dvdp_geom.
 apply: rdvdp_comp_poly => //; first by rewrite qualifE /= lead_coefXn.
 by rewrite /rdvdp rmodpB // subr_eq0.
@@ -109,13 +109,13 @@ have kNZ : k%:R != 0 :> F.
 have pCF : [char {poly F}].-nat p.
   rewrite /pnat prime_gt0 //=; apply/allP => q.
   rewrite primes_prime //= inE => /eqP->.
-  rewrite inE pP -poly_natmul polyC_eq0 /=.
+  rewrite inE pP -polyC_natr polyC_eq0 /=.
   by case/andP : pC.
 rewrite -subr_eq0 -modpN -modpD -[_ == 0]/(_ %| _).
 rewrite -(separable_exp _ (separable_polyXnsub1 _) (prime_gt0 pP)) //.
 rewrite exprDn_char // exprNn_char // -exprM divnK //.
 rewrite comp_polyD comp_polyC [_ ^+ p]exprDn_char //.
-rewrite comp_poly_exp comp_polyXn -exprM divnK //.
+rewrite comp_poly_exp comp_Xn_poly -exprM divnK //.
 rewrite -polyC_exp fin_little_fermat //.
 rewrite /dvdp modpD modpN subr_eq0 //.
 move: nIkX.
@@ -654,7 +654,7 @@ apply/val_inj; rewrite /= /mk_monic !hMI //= -[RHS](rmod0p h).
 pose z : {poly F}:= 'X^k - 1.
 have zM : z \is monic by apply: monic_Xn_sub_1.
 apply: rmodn_trans hDxk1 _; rewrite ?hMI -/z // rmod0p.
-rewrite comp_polyB !comp_polyXn rmodpB //.
+rewrite comp_polyB !comp_Xn_poly rmodpB //.
 apply/eqP; rewrite subr_eq0; apply/eqP.
 have F0 : rmodp 'X^k z = 1.
   rewrite -['X^k](subrK 1) rmodpD // rmodpp // add0r rmodp_small //.
@@ -1469,7 +1469,7 @@ congr (_ + _).
 rewrite -mulr_algr -Zp_nat scaler_nat.
 rewrite rmodp_small // size_Xn_sub_1 //.
 apply: leq_trans (size_mul_leq _ _) _.
-rewrite -poly_natmul size_polyC.
+rewrite -polyC_natr size_polyC.
 apply: leq_trans (size_PolyZ n k v1).
 case: eqP=> _; first by rewrite addn0 leq_pred.
 by rewrite addn1.
@@ -1504,7 +1504,7 @@ Lemma poly_modnp_pow n k p v : 0 < k -> 1 < n ->
     rmodp (PolyZ n k v ^+ Pos.to_nat p) ('X^k - 1).
 Proof.
 move=> k_gt0 n_gt1 sv2E.
-have xnM := monic_Xn_sub_1 [ringType of 'Z_n] k_gt0.
+have xnM := monic_Xn_sub_1 (GRing.Ring.clone _ 'Z_n) k_gt0.
 elim: p => [p1 IH|p1 IH|] /=; last first.
 - by rewrite expr1 rmodp_small // size_Xn_sub_1 // ltnS size_PolyZ.
 - rewrite poly_modnp_mul ?size_modnp_pow //= IH.
