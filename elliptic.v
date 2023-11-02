@@ -1028,9 +1028,15 @@ move=> [|x y e] //=; case: eqP => // p1.
 by congr (Some _); apply: curve_elt_irr.
 Qed.
 
+HB.instance Definition _ := 
+  Choice.copy elt (pcan_type elt_pcancel).
+
+Definition ell_Zmod := GRing.isZmodule.Build elt addeA  addeC add0e addNe.
+
 End ELLIPTIC.
 
 Section ELLIPTIC_FINE.
+
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1042,11 +1048,7 @@ Variable K : finFieldType.
 Variable A B : K.
 Variable Eth : ell_theory A B.
 
-HB.instance Definition _ := 
-  Choice.copy (elt A B) (pcan_type (@elt_pcancel K A B)).
-HB.instance Definition _ := 
-  GRing.isZmodule.Build (elt A B) 
-   (addeA Eth) (addeC Eth) (add0e Eth) (addNe Eth).
+HB.instance Definition _ := ell_Zmod Eth. 
 
 Open Scope ring_scope.
 
