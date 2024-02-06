@@ -684,7 +684,7 @@ Lemma is_iexp_inj (F : finFieldType) (h : {poly F}) k s
   {in Nbar p q (sqrtn #|M|) &, injective (fun i : 'I_ _ => inZp i : 'Z_k)}.
 Proof.
 move=> hMK hQh k_gt1 hMI hDxk1 p_gt1 pIN q_gt1 qIN pqLqh i j iIN jIN.
-move=> /(congr1 val); rewrite /= {5 10}Zp_cast // => imEjm.
+move=> /(congr1 val); rewrite /= [X in  _ = _ %[mod X]]Zp_cast // => imEjm.
 have k_gt0 : 0 < k by rewrite -ltnS ltnW.
 pose r := map_poly (qfpoly_const hMI) ('X^i - 'X^j).
 suff : r == 0.

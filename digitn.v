@@ -155,7 +155,7 @@ Lemma Fp_exprnD (p1 p2 : {poly 'F_p}) : (p1 + p2) ^+ p = p1 ^+ p + p2 ^+ p.
 Proof.
 rewrite -[X in _ ^+ X](prednK (prime_gt0 Pp)).
 rewrite exprDn big_ord_recl /= subn0 mulr1 bin0 mulr1n.
-rewrite big_ord_recr /bump add1n //= !prednK ?prime_gt0 //; congr (_ + _).
+rewrite big_ord_recr /bump add1n //= prednK // ?prime_gt0 //; congr (_ + _).
 rewrite subnn binn mul1r mulr1n big1 ?add0r // => i _.
 have /dvdnP[k ->] : (p %| 'C(p, (0 <= i) + i))%N.
    apply: prime_dvd_bin Pp _ => //.

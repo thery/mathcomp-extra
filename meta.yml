@@ -76,29 +76,29 @@ supported_coq_versions:
 dependencies:
 - opam:
     name: coq-hierarchy-builder
-    version: '{(>= "1.6.0")}'
+    version: '{(>= "1.7.0")}'
   description: |- 
-    [ Hierarchy Builder 1.6.0 or later](https://github.com/math-comp/hierarchy-builder)
+    [ Hierarchy Builder 1.7.0 or later](https://github.com/math-comp/hierarchy-builder)
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{(>= "2.1.0")}'
+    version: '{(>= "2.2.0")}'
   description: |-
-    [MathComp ssreflect 2.1.0 or later](https://math-comp.github.io)
+    [MathComp ssreflect 2.2.0 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-fingroup
-    version: '{(>= "2.1.0")}'
+    version: '{(>= "2.2.0")}'
   description: |-
-    [MathComp fingroup 2.1.0 or later](https://math-comp.github.io)
+    [MathComp fingroup 2.2.0 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-algebra
-    version: '{(>= "2.1.0")}'
+    version: '{(>= "2.2.0")}'
   description: |-
-    [MathComp algebra 2.1.0 or later](https://math-comp.github.io)
+    [MathComp algebra 2.2.0 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-field
-    version: '{(>= "2.1.0")}'
+    version: '{(>= "2.2.0")}'
   description: |-
-    [MathComp field 2.1.0 or later](https://math-comp.github.io)
+    [MathComp field 2.2.0 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-zify
     version: '{(>= "1.5.0+2.0+8.16")}'
@@ -106,12 +106,12 @@ dependencies:
     [MathComp zify 1.5.0+2.0+8.16 or later](https://github.com/math-comp/mczify)
 - opam:
     name: coq-mathcomp-algebra-tactics
-    version: '{(>= "1.2.2")}'
+    version: '{(>= "1.2.3")}'
   description: |-
-    [MathComp Algebra Tactics 1.2.2 or later](https://github.com/math-comp/algebra-tactics)
+    [MathComp Algebra Tactics 1.2.3 or later](https://github.com/math-comp/algebra-tactics)
 
 tested_coq_opam_versions:
-- version: '2.1.0-coq-8.18'
+- version: '2.2.0-coq-8.19'
   repo: 'mathcomp/mathcomp'
 
 namespace: mathcomp-extra
