@@ -17,7 +17,7 @@ Record montgomery := {
     p : nat;
     b : nat;
     n : nat;
-    co: [&& coprime p b & b ^ n.-1 < p < b ^ n]
+    co: [&& coprime p b, b * p != 0 & p < b ^ n]
   }.
 
 Lemma coprime_bp m : coprime (b m) (p m).
@@ -25,41 +25,33 @@ Proof. by rewrite coprime_sym; case: m => p b n /= /and3P[]. Qed.
 
 Implicit Type m : montgomery.
 
-Lemma p_pos m : 0 < p m.
-Proof. by case: m => [] [|p] [|b] n /andP[] /=. Qed.
+Lemma p_gt0 m : 0 < p m.
+Proof. by case: m => [] [|p] [|b] n /and3P[] //=; rewrite muln0. Qed.
 
-Lemma b_pos m : 0 < b m.
-Proof.
-by case: m => [] p [|b] [|[|n]] /andP[_ /andP[]] //=; case: (ltngtP 1 p).
-Qed.
-
-Lemma b_gt1 m : 1 < b m.
-Proof.
-case: m (b_pos m) => [] p [|[|b]] n //=.
-by rewrite !exp1n; case: ltngtP; rewrite !andbF.
-Qed.
+Lemma b_gt0 m : 0 < b m.
+Proof. by case: m => [] [|p] [|b] n /and3P[] //=; rewrite muln0. Qed.
 
 Definition w m := b m ^ n m.
 
 Lemma pLw m : p m < w m.
 Proof. by rewrite /w; case: m => p b n /= /and3P[]. Qed.
 
-Lemma w_pos m : 0 < w m.
-Proof. by rewrite expn_gt0 b_pos. Qed.
+Lemma w_gt0 m : 0 < w m.
+Proof. by rewrite expn_gt0 b_gt0. Qed.
 
 Definition oppw m v := 
   let v1 := v %% w m in if v1 == 0 then 0 else w m - v1.
 
 Lemma ltn_oppw m v : oppw m v < w m.
 Proof.
-rewrite /oppw; case: (v %% w m) (ltn_pmod v (w_pos m)) => //= v1 v1Lw.
+rewrite /oppw; case: (v %% w m) (ltn_pmod v (w_gt0 m)) => //= v1 v1Lw.
 by case: w v1Lw => //= w1 _; rewrite subSS ltnS leq_subr.
 Qed.
 
 Lemma oppwE m v : v + oppw m v = 0 %[mod w m].
 Proof.
 rewrite /oppw -modnDml.
-case: (v %% w m) (ltn_pmod v (w_pos m)) => //= v1 v1Lw.
+case: (v %% w m) (ltn_pmod v (w_gt0 m)) => //= v1 v1Lw.
 by rewrite mod0n addnC subnK ?modnn // ltnW.
 Qed.
 
@@ -68,9 +60,9 @@ Proof. by rewrite /oppw modn_mod. Qed.
 
 Lemma oppwMr m v1 v2 : oppw m v1 * v2 = oppw m (v1 * v2) %[mod w m].
 Proof.
-have w_pos := w_pos m.
+have w_gt0 := w_gt0 m.
 rewrite /oppw -[(v1 * v2) %% _]modnMml.
-case: (v1 %% _) (ltn_pmod v1 w_pos) => [|v3]; rewrite /= ?mod0n // => v3Lw.
+case: (v1 %% _) (ltn_pmod v1 w_gt0) => [|v3]; rewrite /= ?mod0n // => v3Lw.
 case: eqP => [wL|wL].
   rewrite mulnBl modnB //.
     by rewrite wL subn0 modnMr addn0 ltnn mod0n.
@@ -83,7 +75,7 @@ by rewrite -modnMml modnn mod0n.
 Qed.
 
 Lemma coprime_pw m : coprime (p m) (w m).
-Proof. by apply: coprimeXr; case: m => /= p b n /and3P[]. Qed.
+Proof. by apply: coprimeXr; rewrite coprime_sym; apply: coprime_bp. Qed.
 
 (* A_h *)
 Definition high m a := a %/ w m.
@@ -99,7 +91,7 @@ Definition invp m := (egcdn (p m) (w m)).1 %% w m.
 Lemma invpE m : p m * invp m = 1 %[mod w m].
 Proof.
 rewrite /invp.
-case: egcdnP => [|/= km kn Hm _]; first by exact: p_pos.
+case: egcdnP => [|/= km kn Hm _]; first by exact: p_gt0.
 by rewrite modnMmr mulnC Hm (eqP (coprime_pw m)) modnMDl.
 Qed.
 
@@ -109,7 +101,7 @@ Definition invb m := (egcdn (b m) (p m)).1 %% p m.
 Lemma invbE m : b m * invb m = 1 %[mod p m].
 Proof.
 rewrite /invb.
-case: egcdnP => [|/= km kn Hm _]; first by exact: b_pos.
+case: egcdnP => [|/= km kn Hm _]; first by exact: b_gt0.
 by rewrite modnMmr mulnC Hm (eqP (coprime_bp m)) modnMDl.
 Qed.
 
@@ -144,7 +136,7 @@ case: leqP => // Hp; last by rewrite modn_small.
 suff hL2p : high m a1 < (p m).*2.
   rewrite -[in RHS](subnK Hp) -modnDmr modnn addn0 modn_small //.
   by rewrite ltn_subLR ?addnn.
-rewrite ltn_divLR ?w_pos // /a1 -addnn mulnDl.
+rewrite ltn_divLR ?w_gt0 // /a1 -addnn mulnDl.
 apply: leq_ltn_trans (_ : a + p m * w m < _).
   by rewrite leq_add2l mulnC leq_mul2l ltnW ?orbT // q_bound.
 by rewrite ltn_add2r mulnC.
@@ -160,33 +152,46 @@ move=> aLp.
 rewrite /encode reduceE /w2 -addnn expnD // -[b m ^ n m]/(w m).
   by rewrite -modnMml modnMmr modnMml !mulnA -mulnA -modnMmr invwE modnMmr muln1.
 apply: leq_ltn_trans (_ : a * p m < _).
-  by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_pos.
-by rewrite ltn_mul2r p_pos.
+  by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
+by rewrite ltn_mul2r p_gt0.
 Qed.
 
 Definition decode m a := reduce m a.
 
 Definition mult m a b := decode m (reduce m (encode m a * encode m b)).
 
-Lemma multE m a b : a < w m -> b < w m -> mult m a b = a * b %% p m.
+Lemma multE m a b : a < p m -> b < p m -> mult m a b = a * b %% p m.
 Proof.
 move=> aL bL.
-rewrite /mult /decode !encodeE // !reduceE.
+have aL1 : a < w m by apply: ltn_trans aL (pLw _).
+have bL1 : b < w m by apply: ltn_trans bL (pLw _).
+rewrite /mult /decode !encodeE // ?reduceE.
 - rewrite modnMml -!mulnA modnMml mulnC -!mulnA modnMml.
   rewrite [invw m * (a * _)]mulnC !mulnA -mulnA.
   rewrite -modnMmr invwE modnMmr muln1 mulnC !mulnA -mulnA.
   by rewrite -modnMmr invwE modnMmr muln1.
 - apply: leq_ltn_trans (_ : (a * w m) %% p m * p m < _).
-    by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_pos.
-  rewrite ltn_mul2r p_pos.
-  by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_pos.
+    by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
+  rewrite ltn_mul2r p_gt0.
+  by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_gt0.
 - apply: leq_trans (_ : 1 * p m <= _).
-    by rewrite mul1n ltn_mod p_pos.
-  by rewrite leq_mul2r w_pos orbT.
+    by rewrite mul1n ltn_mod p_gt0.
+  by rewrite leq_mul2r w_gt0 orbT.
 apply: leq_ltn_trans (_ : (a * w m) %% p m * p m < _).
-  by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_pos.
-rewrite ltn_mul2r p_pos.
-by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_pos.
+  by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
+rewrite ltn_mul2r p_gt0.
+by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_gt0.
 Qed.
+
+(* An example *)
+
+Definition m0 := {| p := 293; b := 10; n := 3; co := isT |}.
+
+Compute (mult m0 234 167).
+
+Definition m1 := {| p := 293; b := 2; n := 9; co := isT |}.
+
+Compute (mult m1 234 167).
+
 
 End Montgomery.
