@@ -1,34 +1,5 @@
 (* Copyright (c)  Inria. All rights reserved. *)
 From mathcomp Require Import all_ssreflect all_algebra ssrnum.
-
-Context (i : Type).
-Context (Rich : i -> Prop).
-Context (mother : i -> i).
-Context (h : i).
-
-Theorem rich_mothers :
-(forall x, ~Rich(x) -> Rich(mother(x))) ->
-(forall x, ~Rich(mother(mother(x))) \/ ~Rich(x)) ->
-False.
-Proof.
-move=> H1 H2.
-have [H3|H3] := (H2) h.
-  have H4 := H1 _ H3.
-  case: (H2 (mother h)) => [[]//|/H1 H6].
-  by case: H3.
-have H4 := (H1) _ H3.
-case: (H2 (mother h))=> [[]|/(_ (H1 _ H3))//]; last first.
-apply: (H1) => H5.
-case: (H2 (mother (mother h)))=> [[]|[]//].
-apply: (H1) => H6.
-by case: (H2 (mother h)) => [] [].
-Qed.
-
-Goal forall m n, m + n.+1 = n + m.
-elim =>[n|n IH [|m]]; last first.
-   rewrite !addSn IH addSn.
-
-
 Require Import digitn.
 
 (******************************************************************************)
