@@ -19,7 +19,7 @@ Qed.
 
 Definition res_quad p a := has (fun i => (i * i) %% p == a) (iota 0 p).
 
-Compute res_quad 4 2.
+Compute res_quad 7 4.
 
 Lemma res_quadP a p : 
   reflect (exists i : 'I_p, (i * i) %% p = a) (res_quad p a).
