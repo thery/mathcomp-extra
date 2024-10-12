@@ -26,5 +26,7 @@ iterative.v
 sudoku.v
 montgomery.v
 rns.v
+euler.v
+
 
 

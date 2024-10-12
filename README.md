@@ -59,6 +59,10 @@ Some extra material for mathcomp
  
   [A formalisation of Montgomery reduction ](./montgomery.v)
 
+  [A formalisation of Residue Number System](./rns.v)
+  
+  [Euler Criterion](./euler.v)
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 ## Meta
