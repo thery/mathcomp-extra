@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect all_algebra.
 
 (******************************************************************************)
 (* This files contains a proof of Euler Criterion                             *)
-(*    qres p a == a is a residue quadratic of n                               *)
+(*    res_quad p a == a is a residue quadratic of n                           *)
 (*                                                                            *)
 (* Thanks to Bruno Rafael                                                     *)
 (******************************************************************************)
@@ -17,16 +17,25 @@ apply/eqP; elim/big_rec2: _ => // i m n _ /eqP nEm.
 by rewrite modnMml -modnMmr nEm modnMmr.
 Qed.
 
-Definition res_quad (p a : nat) : bool :=
-  [exists i : 'I_p, (i * i) %% p == a].
+Definition res_quad p a := has (fun i => (i * i) %% p == a) (iota 0 p).
+
+Compute res_quad 4 2.
 
 Lemma res_quadP a p : 
   reflect (exists i : 'I_p, (i * i) %% p = a) (res_quad p a).
-Proof. by apply: (iffP existsP) => [] [x Hx]; exists x; apply/eqP. Qed.
+Proof. 
+apply: (iffP hasP) => [[x /[!mem_iota] [/andP[_ xLp] /eqP xxE]]|[x xxE]].
+  by exists (Ordinal xLp).
+by exists (val x); [rewrite mem_iota /= | apply/eqP].
+Qed.
 
 Lemma res_quadPn a p : 
   reflect (forall i : 'I_p, (i * i) %% p != a) (~~ (res_quad p a)).
-Proof. by apply: (iffP existsPn) => Hx x; apply: Hx. Qed.
+Proof.
+apply: (iffP hasPn) => [xxE i| xxE i /[!mem_iota] /= iI].
+  by apply: xxE; rewrite mem_iota /=.
+by apply: (xxE (Ordinal iI)).
+Qed.
 
 Lemma fact_sqr_exp a p :
    prime p -> 0 < a < p -> ~~ res_quad p a ->  (p.-1`!) = a ^ p.-1./2 %[mod p].
