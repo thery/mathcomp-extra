@@ -58,7 +58,7 @@ by move=> p_gt0; case/dvdnP => k ->; rewrite -res_quad_mod modnMl res_quad0.
 Qed. 
 
 Lemma fact_sqr_exp a p :
-   prime p -> ~~ res_quad p a ->  (p.-1`!) = a ^ p.-1./2 %[mod p].
+   prime p -> ~~ res_quad p a -> (p.-1`!) = a ^ p.-1./2 %[mod p].
 Proof.
 move=> pP aR.
 have p_gt0 : 0 < p by apply: prime_gt0.
