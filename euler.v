@@ -37,16 +37,39 @@ apply: (iffP hasPn) => [xxE i| xxE i /[!mem_iota] /= iI].
 by apply: (xxE (Ordinal iI)).
 Qed.
 
-Lemma fact_sqr_exp a p :
-   prime p -> ~~ (p %| a) -> ~~ res_quad p a ->  (p.-1`!) = a ^ p.-1./2 %[mod p].
+Lemma res_qua0d a : ~~ res_quad 0 a.
+Proof. by []. Qed.
+
+Lemma res_qua1d a : res_quad 1 a.
+Proof. by rewrite /res_quad /= !modn1. Qed.
+
+Lemma res_quad0 p : 0 < p -> res_quad p 0.
+Proof. by case: p. Qed.
+
+Lemma res_quad1 p : 0 < p -> res_quad p 1.
+Proof. by case: p => // [] [|p]. Qed.
+
+Lemma res_quad_mod a p : res_quad p (a %% p) = res_quad p a.
+Proof. by rewrite /res_quad modn_mod. Qed.
+
+Lemma res_quad_div a p : 0 < p -> p %| a -> res_quad p a.
 Proof.
-move=> pP pNDa aR.
+by move=> p_gt0; case/dvdnP => k ->; rewrite -res_quad_mod modnMl res_quad0.
+Qed. 
+
+Lemma fact_sqr_exp a p :
+   prime p -> ~~ res_quad p a ->  (p.-1`!) = a ^ p.-1./2 %[mod p].
+Proof.
+move=> pP aR.
+have p_gt0 : 0 < p by apply: prime_gt0.
+have pNDa : ~~ (p %| a).
+  by apply/negP => pDa; case/negP : aR; apply: res_quad_div.
 have -> : p.-1`! = \prod_(i in 'F_p | i != 0%R) i.
   apply: etrans (_ : \prod_(i in 'F_p | i != 0 :> nat) i = _); last first.
     by apply: eq_bigl => i.
   rewrite /= Fp_cast //.
   rewrite fact_prod big_add1 /= big_mkord.
-  case: p {pNDa aR}pP => //= p pP.
+  case: p {p_gt0 pNDa aR}pP => //= p pP.
   by rewrite [RHS]big_mkcond /= big_ord_recl /= mul1n.
 pose a' : 'F_p := inZp a.
 have a'E : a' = a %% p :> nat by rewrite /= Fp_cast.
