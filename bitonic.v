@@ -29,7 +29,7 @@ Unset Printing Implicit Defensive.
 
 Section Bitonic.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition bitonic := [qualify s | 
@@ -98,7 +98,7 @@ Arguments bitonic {d A}.
 
 Section HalfCleaner.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition clink_half_cleaner m : {ffun 'I_(m + m) -> 'I_(m + m)} :=
@@ -445,7 +445,7 @@ Qed.
 
 Section RHalfCleaner.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition clink_rhalf_cleaner m : {ffun 'I_m -> 'I_m} := [ffun i => rev_ord i].
@@ -600,7 +600,7 @@ Qed.
 
 Section BitonicSort.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Fixpoint bsort m : network (`2^ m) :=
@@ -628,7 +628,7 @@ End BitonicSort.
 
 Section BitonicSort.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Fixpoint bfsort (b : bool) m : network (`2^ m) :=

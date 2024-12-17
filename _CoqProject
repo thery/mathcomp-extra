@@ -19,6 +19,7 @@ more_tuple.v
 nsort.v
 bitonic.v
 batcher.v
+upoly.v
 bjsort.v
 puzzleFF.v
 elliptic.v

@@ -147,7 +147,7 @@ Definition network := seq (connector m).
 (* Empty network *)
 Definition nempty : network := [::].
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Implicit Types t : m.-tuple A.
@@ -289,7 +289,7 @@ End Network.
 Section Merge.
 
 Variable m : nat.
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Implicit Types t : m.-tuple A.
@@ -347,7 +347,7 @@ End Merge.
 Section TMap.
 
 Variable m : nat.
-Variable d1 d2 : unit.
+Variable d1 d2 : disp_t.
 Variable A : orderType d1.
 Variable B : orderType d2.
 Variable f : A -> B.
@@ -373,7 +373,7 @@ End TMap.
 Section Sorting.
 
 Variable m : nat.
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 (* Decided sorting using boolean (we use the 0-1 theorem for the def) *)
@@ -450,7 +450,7 @@ End Transposition.
 
 Section LeqC.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Lemma leqt_cfun m (c : connector m) : 
@@ -572,7 +572,7 @@ End LeqC.
 Section EOMerge.
 
 Variable m : nat.
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Implicit Types t : m.-tuple A.
@@ -634,7 +634,7 @@ End EOMerge.
 
 Section OddJump.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition clink_odd_jump m k : {ffun 'I_m -> 'I_m} :=

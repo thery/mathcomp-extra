@@ -22,7 +22,7 @@ Unset Printing Implicit Defensive.
 
 Section Knuth.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition clink_eswap m : {ffun 'I_m -> 'I_m} :=
@@ -424,7 +424,7 @@ Qed.
 
 Section IKnuthExchance.
 
-Variables (d : unit) (A : orderType d).
+Variables (d : disp_t) (A : orderType d).
 
 Definition swap i j (s : seq A) :=
   if s is a :: _ then
@@ -484,7 +484,7 @@ Compute iknuth_exchange [::true; true; true; true; false; false; false; false].
 
 Section IKnuthExchangeProof.
 
-Variables (d : unit) (A : orderType d).
+Variables (d : disp_t) (A : orderType d).
 
 (******************************************************************************)
 (* Proof for swap                                                             *)

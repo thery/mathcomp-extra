@@ -20,7 +20,7 @@ Unset Printing Implicit Defensive.
 
 Section Batcher.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition batcher_merge {m} : connector m := codd_jump 1.

@@ -108,7 +108,7 @@ apply: etrans (_ : \prod_(j in 'F_p | j < f j) (j * f j) = _ %[mod p]).
   rewrite (bigD1 (f j)); last first.
     rewrite inE /can ifN.
       rewrite fI eqxx.
-      case: eqP => [fj_eq0|].
+      case: (f j =P 0%R) => [fj_eq0|].
         by rewrite fj_eq0 -[j]fI fj_eq0 f_eq0 ltnn in jLfj.
       by case: eqP => [fj_eqj|//]; rewrite fj_eqj ltnn in jLfj.
     by rewrite fI -leqNgt ltnW.
@@ -124,7 +124,7 @@ apply: etrans (_ : \prod_(j in 'F_p | j < f j) a' = _ %[mod p]).
   by congr (_ %% _); rewrite Fp_cast.
 congr (_ %% _).
 rewrite prod_nat_const.
-congr (_ ^  _).
+congr (_ ^  _)%nat.
 rewrite -[p in RHS](card_Fp pP).
 rewrite [in RHS](cardD1 0%R) inE add1n -pred_Sn.
 set A := [predD1 'F_p & 0%R].
@@ -163,7 +163,7 @@ have [/res_quadP[i Hi]|Hrn] := boolP (res_quad p a); last first.
   by rewrite modnn modnMl.
 rewrite -modnXm -Hi modnXm mulnn -expnM mul2n.
 have [pO|/(prime_oddPn pP) pE2]:= boolP (odd p); last first.
-  by rewrite [in X in _ ^ X]pE2 /= expn0.
+  by rewrite [in X in (_ ^ X)%nat]pE2 /= expn0.
 have i_gt0 : 0 < i.
   case: i Hi pNDa => [] [] //= _.
   by rewrite /dvdn => <- /[!mod0n].

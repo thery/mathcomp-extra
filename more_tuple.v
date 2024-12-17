@@ -219,7 +219,7 @@ case: b; apply/dsorted_boolP; first by exists (k, 0); rewrite cats0.
 by exists (0, k).
 Qed.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Lemma tsorted01 n (t : n.-tuple A) : n <= 1 -> sorted <=%O t.
@@ -673,7 +673,7 @@ Lemma eocat_nseq_catDS (T : Type) (v1 v2 : T) a b :
         (nseq (a + a).+1 v1 ++ nseq (b + b).+1 v2).
 Proof.
 elim: a b => // [b | a IH b].
-  by case: b => //= b; rewrite eocat_nseqD [(_ + _)%Nrec]addnS.
+  by case: b => //= b; rewrite eocat_nseqD [(_ + _)%coq_nat]addnS.
 by rewrite addnS (nseqS a) (nseqS a.+1) 2!(cat_cons v1) eocat_cons IH.
 Qed.
 
@@ -906,7 +906,7 @@ End TMap.
 
 Section LeqT.
 
-Variable d : unit.
+Variable d : disp_t.
 Variable A : orderType d.
 
 Definition leqt m (t1 t2 : m.-tuple A) :=
@@ -939,7 +939,7 @@ Proof.
 move=> sS; apply/leqtP => a b.
 rewrite leq_eqVlt => /orP[/val_eqP->//|aLb].
 pose v := tnth t1 a; rewrite leNgt !(tnth_nth v).
-by rewrite -DualPOrder.ltEdual lt_sorted_ltn_nth ?(aLb, inE, size_tuple).
+by rewrite -DualOrder.ltEdual lt_sorted_ltn_nth ?(aLb, inE, size_tuple).
 Qed.
 
 End LeqT.
@@ -972,7 +972,7 @@ Lemma maxbT x : max x true = true.
 Proof. by case: x. Qed.
 
 Variable m : nat.
-Variable d1 d2 : unit.
+Variable d1 d2 : disp_t.
 Variable A : orderType d1.
 Variable B : orderType d2.
 Variable f : A -> B.

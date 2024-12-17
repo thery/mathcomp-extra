@@ -126,7 +126,7 @@ have <- := digitn_uniq (Ordinal FF) _ G.
 move: n.-1 => u; elim: {i f1 G mLbn n_gt0 FF}n => [|n IH].
   by rewrite big_ord0 expn0.
 rewrite big_ord_recr /= -addSn.
-have -> : b ^ n.+1 = b ^ n + b.-1 * b ^ n.
+have -> : (b ^ n.+1 = b ^ n + b.-1 * b ^ n)%nat.
   by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
 rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
 by rewrite ltn_pdigit.
@@ -137,7 +137,7 @@ Proof.
 move=> b_gt0.
 elim: n m => [n |n IH m]; first by rewrite rdigit0n.
 rewrite rdigitnSMl // -addnS addnC.
-have -> : b ^ n.+1 = b ^ n + b.-1 * b ^ n.
+have -> : (b ^ n.+1 = b ^ n + b.-1 * b ^ n)%nat.
   by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
 rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
 by rewrite ltn_mod.
