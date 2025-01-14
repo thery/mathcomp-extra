@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect all_algebra.
 
 (******************************************************************************)
-(* This files contains the definitions of:                                    *)
+(* This file contains the definitions of:                                     *)
 (*     fib n == n.+1 th fibonacci number                                      *)
 (*                                                                            *)
 (*   lucas n == n.+1 lucas number                                             *)

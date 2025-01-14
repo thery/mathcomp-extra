@@ -63,6 +63,9 @@ Some extra material for mathcomp
   
   [Euler Criterion](./euler.v)
 
+  [Trivial fact about the ultra hex number](./ultrahex.v)
+  
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 ## Meta

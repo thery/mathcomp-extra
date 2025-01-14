@@ -28,6 +28,7 @@ sudoku.v
 montgomery.v
 rns.v
 euler.v
+ultrahex.v
 
 
 
