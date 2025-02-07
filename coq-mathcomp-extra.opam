@@ -65,6 +65,7 @@ Some extra material for mathcomp
 
   [Trivial fact about the ultra hex number](./ultrahex.v)
   
+  [Some facts about addition chain](./chain.v)
 
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618)."""
 

@@ -2,7 +2,7 @@
 From mathcomp Require Import all_ssreflect.
 
 (******************************************************************************)
-(* This file contain a proof that the last digit of the ultrahex is 6         *)
+(* This file contains a proof that the last digit of the ultrahex is 6        *)
 (******************************************************************************)
 
 Definition ultra_hex := 6 ^ 6 ^ 6 ^ 6 ^ 6 ^ 6.
