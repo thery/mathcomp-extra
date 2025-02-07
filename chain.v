@@ -5,7 +5,7 @@ Require Import ZArith.
 (******************************************************************************)
 (* This file contains some fact about addition chains                         *)
 (*                                                                            *)
-(*  'L(m, n)  = returns the list of coefficient of the continued fraction     *)                                                                          *)
+(*  'L(m, n)  = returns the list of coefficient of the continued fraction     *)
 (*              for m/n                                                       *)
 (*  'K l      = evaluates the continuant on the list l                        *)
 (*                                                                            *)
