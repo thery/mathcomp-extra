@@ -1,3 +1,5 @@
+Check 1 + 2.
+
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
 From mathcomp Require Import all_ssreflect.
 Require Import ZArith.
@@ -22,6 +24,10 @@ Definition nextz (b : Z) (c : Z * Z)  :=
 Definition test l := 
   ((run (1,2) (rcons l true)).2 ==
    (run (1,2) (rcons (rev l) true)).2).
+
+Compute run (1,2) (rcons [::true; false; false] true).
+
+Compute run (1,2) (rev [::true; false; false]).
 
 Compute test  [::true; false; false].
 Compute test  [::true; false; true; false].
