@@ -3,7 +3,7 @@ From mathcomp Require Import all_ssreflect.
 Require Import ZArith.
 
 (******************************************************************************)
-(* This file contains some fact about addition chains                         *)
+(* This file contains some fac-t about addition chains                         *)
 (*                                                                            *)
 (*  'L(m, n)  = returns the list of coefficient of the continued fraction     *)
 (*              for m/n                                                       *)
@@ -13,6 +13,74 @@ Require Import ZArith.
 
 Definition next (b : bool) (c : nat * nat)  :=
   if b then (c.1, c.1 + c.2) else (c.2, c.1 + c.2).
+
+Fixpoint nl2bl nl := 
+  if nl is n :: nl1 then 
+    if nl1 is _ :: _ then nseq n.-1 true ++ false :: nl2bl nl1 
+    else nseq n.-1 true
+  else [::].
+
+Lemma nl2bl_cons a l :
+  nl2bl (a :: l) = 
+    if l is _ :: _ then nseq a.-1 true ++ false :: nl2bl l 
+    else nseq a.-1 true.
+Proof. by []. Qed.
+
+Fixpoint bl2nl_aux n bl :=
+  if bl is b :: bl1 then
+    if b then bl2nl_aux n.+1 bl1 else n.+1 :: bl2nl_aux 0 bl1 
+  else [::n.+1].
+
+Definition bl2nl l := bl2nl_aux 0 l.
+
+Definition all_nz l := all (fun x => x != 0) l.
+
+Lemma all_nz_bl2nz l : all_nz (bl2nl l).
+Proof. by rewrite /bl2nl; elim: l 0 => // [] [] /=. Qed.
+
+Compute nl2bl [::1; 1].
+Compute bl2nl [::false].
+Compute nl2bl [::2;1;3].
+Compute bl2nl [:: true;  false;  false; true;  true] .
+Compute bl2nl (rev [:: true;  false;  false; true;  true]).
+
+Compute nl2bl [::1; 2; 3].
+Compute rev (nl2bl (rev [::1; 2; 3])).
+Compute bl2nl (rev ([:: false;  true;  false;  true;  true] )).
+
+Lemma bl2nlK l : nl2bl (bl2nl l) = l.
+Proof.
+case: (l =P [::]) => [->//|/eqP l_neq0].
+suff H m : nl2bl (bl2nl_aux m l) = nseq m true ++ l .
+  by apply H.
+elim: l m l_neq0 => //= [] [] [|b l] // IH m _.
+- by rewrite /= -(nseqD _ 1) addn1.
+- by rewrite IH // -addn1 nseqD /= -catA.
+rewrite nl2bl_cons.
+by case: bl2nl_aux (IH 0 isT) => // ? ? ->.
+Qed.
+
+Lemma bl2nl_nseq n : bl2nl (nseq n true) = [:: n.+1].
+Proof.
+suff: forall m, bl2nl_aux m (nseq n true) = [:: m + n.+1] by apply.
+elim: n => [m|n IH m] /=; first by rewrite addn1.
+by rewrite IH !addnS.
+Qed.
+
+Lemma bl2nl_nseq_false n l : 
+  bl2nl (nseq n true ++ (false :: l)) = n.+1 :: bl2nl l.
+Proof.
+suff: forall m, 
+  bl2nl_aux m (nseq n true ++ (false :: l)) = m + n.+1 :: bl2nl l by apply.
+elim: n => [m|n IH m] /=; first by rewrite addn1.
+by rewrite IH !addnS.
+Qed.
+
+Lemma nl2blK l : l != [::] -> all_nz l -> bl2nl (nl2bl l) = l.
+Proof.
+elim: l => //= []  [//|a] [|b l] IH _ /andP[_ nzl]; first by rewrite bl2nl_nseq.
+by rewrite bl2nl_nseq_false IH.
+Qed.
 
 Definition run b l := foldl (fun l b => next b l) b l.
 
@@ -84,6 +152,22 @@ by rewrite lfrac_aux_eq // ltnW // ltn_mod.
 Qed.
 
 Compute lfrac 29 23.
+
+Lemma nz_frac m n : 0 < n <= m -> all_nz (`L(m, n)).
+Proof.
+elim: m {-2}m (leqnn m) n => [|k IH m mLk n]; first by case => //  _ [].
+rewrite leq_eqVlt => /andP[] /orP[/eqP<-|n_pos nLm].
+  by rewrite lfrac_n1; case: (m).
+rewrite lfrac_rec /=; last by rewrite n_pos.
+rewrite -lt0n divn_gt0; last by rewrite ltnW.
+move: nLm; rewrite leq_eqVlt => /orP[/eqP->|nLm].
+  by rewrite eqxx modnn lfrac_n0.
+rewrite nLm orbT /=; case: (m %% n =P 0) => [->|]; first by rewrite lfrac_n0.
+move/eqP; rewrite -lt0n => mMn_pos.
+rewrite IH //.
+  by rewrite -ltnS (leq_trans nLm).
+by rewrite mMn_pos ltnW // ltn_mod ltnW.
+Qed.
 
 
 (* Continuants *)
