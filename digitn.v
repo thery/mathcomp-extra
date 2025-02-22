@@ -171,7 +171,6 @@ End ExtraLemma.
 
 Section Lucas.
 
-Variable R : ringType.
 Variable p : nat.
 Hypothesis Pp : prime p.
 
