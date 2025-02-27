@@ -38,7 +38,7 @@ Definition lfrac m n := lfrac_aux m m n.
 Notation " `L( m , n ) " := (lfrac m n) (at level 10, format "`L( m ,  n )").
 
 Compute `L(29, 23).
-Compute `L(8, 3).
+Compute `L(11, 8).
 
 Fact lfrac_aux_n0 k m : lfrac_aux k m 0 = [::].
 Proof. by case: k. Qed.
@@ -235,6 +235,7 @@ Qed.
 Lemma nseqS_rcons (A : Type) k (v : A) : nseq k.+1 v = rcons (nseq k v) v.
 Proof. by elim: k => //= k ->. Qed.
 
+Compute bl2nl [::true; false; false].
 Lemma bl2nl_nseq n : bl2nl (nseq n true) = [:: n.+1].
 Proof.
 suff: forall m, bl2nl_aux m (nseq n true) = [:: m + n.+1] by apply.
@@ -243,7 +244,7 @@ by rewrite IH !addnS.
 Qed.
 
 Lemma bl2nl_nseq_false n l : 
-  bl2nl (nseq n true ++ (false :: l)) = n.+1 :: bl2nl l.
+  bl2nl (nseq n true ++ false :: l) = n.+1 :: bl2nl l.
 Proof.
 suff: forall m, 
   bl2nl_aux m (nseq n true ++ (false :: l)) = m + n.+1 :: bl2nl l by apply.
@@ -362,26 +363,23 @@ suff H p : (let '(x, y) := run p l in x + y) = (run p (rcons l true)).2.
 by elim: l p => //=; case.
 Qed.
 
-
-Lemma run_lt m n bl : 
-  0 < n < m -> let: (m1, n1) := run (n, m) bl in 0 < m1 < n1.
+Lemma run_lt m n l : 
+  0 < n < m -> let: (m1, n1) := run (n, m) l in 0 < m1 < n1.
 Proof.
-elim: bl n m => //= [] [] l IH n m /andP[n_pos nLm] /=; apply: IH.
+elim: l n m => //= [] [] l IH n m /andP[n_pos nLm] /=; apply: IH.
   by rewrite n_pos (leq_trans _ (leq_addl _ _)).
 by rewrite (leq_trans _ nLm) // -{1}(add0n m) ltn_add2r.
 Qed.
 
-Lemma frac_run_bl2nl bl : 
-  let: (m, n) := run (1, 2) bl in `L(n, m) = bl2nl (rev (true :: bl)).
+Lemma frac_run_bl2nl l : 
+  let: (m, n) := run (1, 2) l in `L(n, m) = rev (bl2nl (true :: l)).
 Proof.
-elim/bnseqr_ind : bl => /= [k |b bl].
-  rewrite run_nseq rev_cons rev_nseq -nseqS_rcons bl2nl_nseq /=.
-  by rewrite muln1 add2n /= lfrac_n1.
+elim/bnseqr_ind : l => /= [k |b l].
+  by rewrite (bl2nl_nseq k.+1) run_nseq lfrac_n1 /= muln1 add2n.
 rewrite run_cat.
-case: run (run_lt _ _ bl (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
-rewrite rev_cons rev_cat rev_cons rev_nseq rcons_cat cat_rcons.
-rewrite bl2nl_nseq_false -rev_cons -IH.
-rewrite /= run_nseq /= lfrac_rec; last first.
+case: run (run_lt _ _ l (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
+rewrite -cat_cons bl2nl_false_nseq rev_rcons -IH /=.
+rewrite run_nseq /= lfrac_rec; last first.
   by rewrite (leq_trans _ nLm) //= (leq_trans _ (leq_addr _ _)) // leq_addl.
 rewrite -addnA mulnC -mulnS divnDr; last by rewrite dvdn_mulr.
 rewrite divn_small // mulKn; last by rewrite (leq_trans _ nLm).
@@ -395,11 +393,11 @@ case Hr : run (run_gcdn 1 2 (rcons l true)) (frac_run_bl2nl (rcons l true)) =>
    /= [m n] Hc Hf.
 rewrite (lfrac_cont_gcdl n m); last first.
   by have := run_lt 2 1 (rcons l true) isT; rewrite Hr; case/andP => _ /ltnW.
-rewrite gcdnC Hc muln1 -pcont_rev Hf rev_bl2nl revK.
+rewrite gcdnC Hc muln1 -pcont_rev Hf revK.
 case Hr1: run (run_gcdn 1 2 (rcons (rev l) true)) 
          (frac_run_bl2nl (rcons (rev l) true)) => /= [m1 n1] Hc1 Hf1.
 rewrite (lfrac_cont_gcdl n1 m1); last first.
   by have := run_lt 2 1 (rcons (rev l) true) isT; rewrite Hr1; 
      case/andP => _ /ltnW.
-by rewrite gcdnC Hc1 muln1 Hf1 rev_cons rev_rcons /= revK.
+by rewrite gcdnC Hc1 muln1 Hf1 /= rev_bl2nl rev_cons rev_rcons revK.
 Qed.
