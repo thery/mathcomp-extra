@@ -38,6 +38,7 @@ Definition lfrac m n := lfrac_aux m m n.
 Notation " `L( m , n ) " := (lfrac m n) (at level 10, format "`L( m ,  n )").
 
 Compute `L(29, 23).
+Compute `L(8, 3).
 
 Fact lfrac_aux_n0 k m : lfrac_aux k m 0 = [::].
 Proof. by case: k. Qed.
@@ -115,7 +116,7 @@ Lemma pcont_rec x y l : `K [:: x, y & l] = x * `K (y :: l) + `K l.
 Proof. by []. Qed.
 
 Lemma pcont_rcons x y l : 
-  `K (rcons (rcons l x) y) = y * `K (rcons l x) + `K l.
+  `K (rcons (rcons l y) x) = x * `K (rcons l y) + `K l.
 Proof.
 elim: {l}(size l) {-2}l (leqnn (size l)) => [[]|k IH [|x1[|y1 l]]] // Hl.
 - by rewrite /= mulnC.
@@ -124,7 +125,7 @@ elim: {l}(size l) {-2}l (leqnn (size l)) => [[]|k IH [|x1[|y1 l]]] // Hl.
 rewrite /= ltnS in Hl.
 rewrite [rcons _ _]/= pcont_rec -!rcons_cons !IH //; last by rewrite ltnW.
 rewrite !rcons_cons !pcont_rec !mulnDr !addnA !mulnA.
-by congr (_ + _); rewrite addnAC [_ * y]mulnC.
+by congr (_ + _); rewrite addnAC [_ * x]mulnC.
 Qed.
 
 Lemma pcont_rev l : `K (rev l) = `K l. 
@@ -323,9 +324,10 @@ Qed.
 Definition next (b : bool) (p : nat * nat)  :=
   let: (m, n) := p in if b then (m, m + n) else (n, m + n).
 
-Definition run p l := foldl (fun l b => next b l) p l.
+Definition run (p : nat * nat) (l : seq bool) := 
+  foldl (fun l b => next b l) p l.
 
-Definition frun l := let: (x, y) := run (1, 2) l in x + y.
+Definition frun l := let: (m, n) := run (1, 2) l in m + n.
 
 Compute next true (1, 2).
 Compute next false (1, 2).
@@ -361,39 +363,43 @@ by elim: l p => //=; case.
 Qed.
 
 
-Lemma run_lt m n bl : 0 < n < m -> 0 < (run (n, m) bl).1 < (run (n, m) bl).2.
+Lemma run_lt m n bl : 
+  0 < n < m -> let: (m1, n1) := run (n, m) bl in 0 < m1 < n1.
 Proof.
-elim: bl n m => // [] [] l IH n m /andP[n_pos nLm] /=; apply: IH.
+elim: bl n m => //= [] [] l IH n m /andP[n_pos nLm] /=; apply: IH.
   by rewrite n_pos (leq_trans _ (leq_addl _ _)).
 by rewrite (leq_trans _ nLm) // -{1}(add0n m) ltn_add2r.
 Qed.
 
 Lemma frac_run_bl2nl bl : 
-  `L((run (1, 2) bl).2, (run (1, 2) bl).1) = bl2nl (rev (true :: bl)).
+  let: (m, n) := run (1, 2) bl in `L(n, m) = bl2nl (rev (true :: bl)).
 Proof.
-elim/bnseqr_ind : bl => /= [k |b bl IH].
+elim/bnseqr_ind : bl => /= [k |b bl].
   rewrite run_nseq rev_cons rev_nseq -nseqS_rcons bl2nl_nseq /=.
   by rewrite muln1 add2n /= lfrac_n1.
-rewrite run_cat rev_cons rev_cat rev_cons rev_nseq rcons_cat cat_rcons.
+rewrite run_cat.
+case: run (run_lt _ _ bl (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
+rewrite rev_cons rev_cat rev_cons rev_nseq rcons_cat cat_rcons.
 rewrite bl2nl_nseq_false -rev_cons -IH.
-have : 1 <= (run (1, 2) bl).1 < (run (1, 2) bl).2 by apply:  run_lt.
-case: (run (1, 2) _) => n m /= /andP[n_pos nLm].
-rewrite run_nseq /= lfrac_rec; last first.
+rewrite /= run_nseq /= lfrac_rec; last first.
   by rewrite (leq_trans _ nLm) //= (leq_trans _ (leq_addr _ _)) // leq_addl.
 rewrite -addnA mulnC -mulnS divnDr; last by rewrite dvdn_mulr.
 rewrite divn_small // mulKn; last by rewrite (leq_trans _ nLm).
 by rewrite add0n addnC mulnC modnMDl modn_small.
 Qed.
 
-Lemma frun_rev l : frun l = frun (rev l).
+Lemma frun_rev l : frun (rev l) = frun l.
 Proof.
 rewrite !frunE.
-set r := run _ _.
-rewrite (@lfrac_cont_gcdl r.2 r.1); last first.
-  by have /andP[_ /ltnW]:= @run_lt 2 1 (rcons l true) isT.
-rewrite gcdnC run_gcdn muln1 -pcont_rev frac_run_bl2nl rev_bl2nl revK.
-set r1 := run _ _.
-rewrite (@lfrac_cont_gcdl r1.2 r1.1); last first.
-  by have /andP[_ /ltnW]:= @run_lt 2 1 (rcons (rev l) true) isT.
-by rewrite gcdnC run_gcdn muln1 frac_run_bl2nl rev_cons rev_rcons /= revK.
+case Hr : run (run_gcdn 1 2 (rcons l true)) (frac_run_bl2nl (rcons l true)) => 
+   /= [m n] Hc Hf.
+rewrite (lfrac_cont_gcdl n m); last first.
+  by have := run_lt 2 1 (rcons l true) isT; rewrite Hr; case/andP => _ /ltnW.
+rewrite gcdnC Hc muln1 -pcont_rev Hf rev_bl2nl revK.
+case Hr1: run (run_gcdn 1 2 (rcons (rev l) true)) 
+         (frac_run_bl2nl (rcons (rev l) true)) => /= [m1 n1] Hc1 Hf1.
+rewrite (lfrac_cont_gcdl n1 m1); last first.
+  by have := run_lt 2 1 (rcons (rev l) true) isT; rewrite Hr1; 
+     case/andP => _ /ltnW.
+by rewrite gcdnC Hc1 muln1 Hf1 rev_cons rev_rcons /= revK.
 Qed.
