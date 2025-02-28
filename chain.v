@@ -11,16 +11,17 @@ Require Import ZArith.
 (*                                                                            *)
 (*  `L(m, n)  = returns the list of coefficients of the continued fraction    *)
 (*              for m/n                                                       *)
-(*  `K l      = evaluates the continuant on the list l                        *)
+(*  `K s      = evaluates the continuant on the sequence s                    *)
 (*                                                                            *)
-(*   bl2nl l  = takes a list of boolean l and returns a list on numbers       *)
-(*   nl2bl l  = the converse operations                                       *)
+(*   bs2ns s  = takes a sequence of boolean numbers s and returns a sequence  *)
+(*              of natural numbers using false as separator                   *)
+(*   ns2bs s  = the converse operation                                        *)
 (*                                                                            *)
 (*   next b p  = given the boolean b computes one step of the addition chain  *)
 (*               on the pair p                                                *)
-(*   run p l  =  execute the addition chain given by the list of booleans l   *)
-(*               starting from the pair p                                     *)
-(*   frun p  =  execute the addition chain given by the list of booleans l    *)
+(*   run p s  =  execute the addition chain given by the sequence of boolean  *)
+(*               numbers s starting from the pair p                           *)
+(*   frun s  =  execute the addition chain given by the list of booleans l    *)
 (*               starting from (1,2) returning a number that is the sum of    *)
 (*               the element of the resulting pair                            *)
 (*                                                                            *)
@@ -76,7 +77,7 @@ rewrite leq_eqVlt in nLm; case/orP: nLm => [/eqP ->|nLm].
 by rewrite lfrac_aux_eq // ltnW // ltn_mod.
 Qed.
 
-Definition all_nz l := all (fun x => x != 0) l.
+Definition all_nz s := all (fun x => x != 0) s.
 
 Lemma nz_frac m n : 0 < n <= m -> all_nz (`L(m, n)).
 Proof.
@@ -95,14 +96,14 @@ by rewrite mMn_pos ltnW // ltn_mod ltnW.
 Qed.
 
 (* Continuants *)
-Fixpoint pcont l :=
-  if l is x1 :: l1 then 
-    if l1 is x2 :: l2 then 
-      x1 * pcont l1 + pcont l2
+Fixpoint pcont s :=
+  if s is x1 :: s1 then 
+    if s1 is x2 :: s2 then 
+      x1 * pcont s1 + pcont s2
     else x1
   else 1.
 
-Notation "`K l " := (pcont l) (at level 10).
+Notation "`K s " := (pcont s) (at level 10).
 
 Compute `K (`L(29, 23)).
 
@@ -112,13 +113,13 @@ Proof. by []. Qed.
 Lemma pcont_one x : `K [:: x] = x.
 Proof. by []. Qed.
 
-Lemma pcont_rec x y l : `K [:: x, y & l] = x * `K (y :: l) + `K l.
+Lemma pcont_rec x y s : `K [:: x, y & s] = x * `K (y :: s) + `K s.
 Proof. by []. Qed.
 
-Lemma pcont_rcons x y l : 
-  `K (rcons (rcons l y) x) = x * `K (rcons l y) + `K l.
+Lemma pcont_rcons x y s : 
+  `K (rcons (rcons s y) x) = x * `K (rcons s y) + `K s.
 Proof.
-elim: {l}(size l) {-2}l (leqnn (size l)) => [[]|k IH [|x1[|y1 l]]] // Hl.
+elim: {s}(size s) {-2}s (leqnn (size s)) => [[]|k IH [|x1[|y1 s]]] // Hl.
 - by rewrite /= mulnC.
 - by rewrite /= mulnC.
 - by rewrite /= !mulnDr !muln1 addnAC mulnA mulnC.
@@ -128,9 +129,9 @@ rewrite !rcons_cons !pcont_rec !mulnDr !addnA !mulnA.
 by congr (_ + _); rewrite addnAC [_ * x]mulnC.
 Qed.
 
-Lemma pcont_rev l : `K (rev l) = `K l. 
+Lemma pcont_rev s : `K (rev s) = `K s. 
 Proof.
-elim: {l}(size l) {-2}l (leqnn (size l)) => [[]|k IH [|x1[|y1 l]]] // Hl.
+elim: {s}(size s) {-2}s (leqnn (size s)) => [[]|k IH [|x1[|y1 s]]] // Hl.
 rewrite /= ltnS in Hl.
 by rewrite !rev_cons pcont_rcons -rev_cons !IH // ltnW.
 Qed.
@@ -179,145 +180,144 @@ rewrite lfrac_rec ?n_pos1 // -gcdn_modl gcdnC -lfrac_cont_gcdl //.
 by rewrite ltnW // ltn_mod ltnW.
 Qed.
 
-Lemma pcontD x y l : `K  (x + y :: l) = `K(x :: l) + y * `K l.
+Lemma pcontD x y s : `K  (x + y :: s) = `K(x :: s) + y * `K s.
 Proof.
-case: l => [|z l]; first by rewrite !pcont_one pcont_nil muln1.
+case: s => [|z s]; first by rewrite !pcont_one pcont_nil muln1.
 by rewrite !pcont_rec addnAC -mulnDl.
 Qed.
 
 (* Conversions between list of booleans and list of nat *)
 
-Fixpoint nl2bl l := 
-  if l is n :: l1 then 
-    if l1 is _ :: _ then nseq n.-1 true ++ false :: nl2bl l1 
+Fixpoint ns2bs s := 
+  if s is n :: s1 then 
+    if s1 is _ :: _ then nseq n.-1 true ++ false :: ns2bs s1 
     else nseq n.-1 true
   else [::].
 
-Fixpoint bl2nl_aux n l :=
-  if l is b :: l1 then
-    if b then bl2nl_aux n.+1 l1 else n.+1 :: bl2nl_aux 0 l1 
+Fixpoint bs2ns_aux n s :=
+  if s is b :: s1 then
+    if b then bs2ns_aux n.+1 s1 else n.+1 :: bs2ns_aux 0 s1 
   else [::n.+1].
 
-Definition bl2nl l := bl2nl_aux 0 l.
+Definition bs2ns s := bs2ns_aux 0 s.
 
-Compute nl2bl [::1; 1].
-Compute bl2nl [::false].
-Compute nl2bl [::2;1;3].
-Compute bl2nl [:: true;  false;  false; true;  true] .
-Compute bl2nl (rev [:: true;  false;  false; true;  true]).
+Compute ns2bs [::1; 1].
+Compute bs2ns [::false].
+Compute ns2bs [::2;1;3].
+Compute bs2ns [:: true;  false;  false; true;  true] .
+Compute bs2ns (rev [:: true;  false;  false; true;  true]).
 
-Compute nl2bl [::1; 2; 3].
-Compute rev (nl2bl (rev [::1; 2; 3])).
-Compute bl2nl (rev ([:: false;  true;  false;  true;  true] )).
+Compute ns2bs [::1; 2; 3].
+Compute rev (ns2bs (rev [::1; 2; 3])).
+Compute bs2ns (rev ([:: false;  true;  false;  true;  true] )).
 
-Lemma nl2bl_cons a l :
-  nl2bl (a :: l) = 
-    if l is _ :: _ then nseq a.-1 true ++ false :: nl2bl l 
+Lemma ns2bs_cons a s :
+  ns2bs (a :: s) = 
+    if s is _ :: _ then nseq a.-1 true ++ false :: ns2bs s 
     else nseq a.-1 true.
 Proof. by []. Qed.
 
-Lemma all_nz_bl2nz l : all_nz (bl2nl l).
-Proof. by rewrite /bl2nl; elim: l 0 => // [] [] /=. Qed.
+Lemma all_nz_bl2nz s : all_nz (bs2ns s).
+Proof. by rewrite /bs2ns; elim: s 0 => // [] [] /=. Qed.
 
 
-Lemma bl2nlK l : nl2bl (bl2nl l) = l.
+Lemma bs2nsK s : ns2bs (bs2ns s) = s.
 Proof.
-case: (l =P [::]) => [->//|/eqP l_neq0].
-suff H m : nl2bl (bl2nl_aux m l) = nseq m true ++ l .
-  by apply H.
-elim: l m l_neq0 => //= [] [] [|b l] // IH m _.
+case: (s =P [::]) => [->//|/eqP s_neq0].
+suff H m : ns2bs (bs2ns_aux m s) = nseq m true ++ s by apply H.
+elim: s m s_neq0 => //= [] [] [|b s] // IH m _.
 - by rewrite /= -(nseqD _ 1) addn1.
 - by rewrite IH // -addn1 nseqD /= -catA.
-rewrite nl2bl_cons.
-by case: bl2nl_aux (IH 0 isT) => // ? ? ->.
+rewrite ns2bs_cons.
+by case: bs2ns_aux (IH 0 isT) => // ? ? ->.
 Qed.
 
 Lemma nseqS_rcons (A : Type) k (v : A) : nseq k.+1 v = rcons (nseq k v) v.
 Proof. by elim: k => //= k ->. Qed.
 
-Compute bl2nl [::true; false; false].
-Lemma bl2nl_nseq n : bl2nl (nseq n true) = [:: n.+1].
+Compute bs2ns [::true; false; false].
+
+Lemma bs2ns_nseq n : bs2ns (nseq n true) = [:: n.+1].
 Proof.
-suff: forall m, bl2nl_aux m (nseq n true) = [:: m + n.+1] by apply.
+suff: forall m, bs2ns_aux m (nseq n true) = [:: m + n.+1] by apply.
 elim: n => [m|n IH m] /=; first by rewrite addn1.
 by rewrite IH !addnS.
 Qed.
 
-Lemma bl2nl_nseq_false n l : 
-  bl2nl (nseq n true ++ false :: l) = n.+1 :: bl2nl l.
+Lemma bs2ns_nseq_false n s : 
+  bs2ns (nseq n true ++ false :: s) = n.+1 :: bs2ns s.
 Proof.
 suff: forall m, 
-  bl2nl_aux m (nseq n true ++ (false :: l)) = m + n.+1 :: bl2nl l by apply.
+  bs2ns_aux m (nseq n true ++ (false :: s)) = m + n.+1 :: bs2ns s by apply.
 elim: n => [m|n IH m] /=; first by rewrite addn1.
 by rewrite IH !addnS.
 Qed.
 
-Lemma bl2nl_false_nseq n l : 
-  bl2nl (l ++ false :: nseq n true) = rcons (bl2nl l) n.+1.
+Lemma bs2ns_false_nseq n s : 
+  bs2ns (s ++ false :: nseq n true) = rcons (bs2ns s) n.+1.
 Proof.
-rewrite /bl2nl; elim: l 0 => [k | [] l IH k] //=.
-  by rewrite [bl2nl_aux _ _]bl2nl_nseq.
+rewrite /bs2ns; elim: s 0 => [k | [] s IH k] //=.
+  by rewrite [bs2ns_aux _ _]bs2ns_nseq.
 by rewrite IH.
 Qed.
 
-Lemma bnseqE l : 
-  {n | l = nseq n true} + {nl | l = nseq nl.1 true ++ false :: nl.2}.
+Lemma bnseqE s : 
+  {n | s = nseq n true} + {ns | s = nseq ns.1 true ++ false :: ns.2}.
 Proof.
-elim: l => /= [|[] l [[n ->]|[[n l1] ->]]] ; first by left; exists 0.
+elim: s => /= [|[] s [[n ->]|[[n s1] ->]]] ; first by left; exists 0.
 - by left; exists n.+1.
-- by right; exists (n.+1, l1).
+- by right; exists (n.+1, s1).
 - by right; exists (0, nseq n true).
-by right; exists (0, nseq n true ++ false :: l1).
+by right; exists (0, nseq n true ++ false :: s1).
 Qed.
 
-Lemma bnseq_ind P l : 
+Lemma bnseq_ind P s : 
   (forall n, P (nseq n true)) -> 
-  (forall n l, P l -> P (nseq n true ++ false :: l)) 
-   -> P l.
+  (forall n s, P s -> P (nseq n true ++ false :: s)) 
+   -> P s.
 Proof.
-elim: {l}size {-2}l (leqnn (size l)) => [[] _ H _ //=|k IH l sL IH1 IH2].
+elim: {s}size {-2}s (leqnn (size s)) => [[] _ H _ //=|k IH s sL IH1 IH2].
   by apply: (H 0).
-have [[n lE]|[[n l1] lE]] := bnseqE l; first by rewrite lE; apply: IH1.
-rewrite lE; apply/IH2/IH => //.
-rewrite -ltnS (leq_trans _ sL) // lE /= size_cat size_nseq /=.
+have [[n sE]|[[n s1] sE]] := bnseqE s; first by rewrite sE; apply: IH1.
+rewrite sE; apply/IH2/IH => //.
+rewrite -ltnS (leq_trans _ sL) // sE /= size_cat size_nseq /=.
 by rewrite addnS ltnS leq_addl.
 Qed.
 
-Lemma  bnseqrE l : 
-  {n | l = nseq n true} + {nl | l = nl.2  ++ false :: (nseq nl.1 true)}.
+Lemma  bnseqrE s : 
+  {n | s = nseq n true} + {ns | s = ns.2  ++ false :: (nseq ns.1 true)}.
 Proof.
-elim: l => /= [|[] l [[n ->]|[[n l1] ->]]]; first by left; exists 0.
+elim: s => /= [|[] s [[n ->]|[[n s1] ->]]]; first by left; exists 0.
 - by left; exists n.+1.
-- by right; exists (n, true :: l1).
+- by right; exists (n, true :: s1).
 - by right; exists (n, [::]).
-by right; exists (n, false :: l1).
+by right; exists (n, false :: s1).
 Qed.
 
-Lemma  bnseqr_ind P l : 
+Lemma  bnseqr_ind P s : 
   (forall n, P (nseq n true)) -> 
-  (forall n l, P l -> P (l ++ false :: nseq n true))
-   -> P l.
+  (forall n s, P s -> P (s ++ false :: nseq n true))
+   -> P s.
 Proof.
-elim: {l}size {-2}l (leqnn (size l)) => [[] _ H _ //=|k IH l sL IH1 IH2].
+elim: {s}size {-2}s (leqnn (size s)) => [[] _ H _ //=|k IH s sL IH1 IH2].
   by apply: (H 0).
-have [[n lE]|[[n l1] lE]] := bnseqrE l; first by rewrite lE; apply: IH1.
-rewrite lE; apply/IH2/IH => //.
-rewrite -ltnS (leq_trans _ sL) // -ltnS -(size_rcons l true) lE.
+have [[n sE]|[[n s1] sE]] := bnseqrE s; first by rewrite sE; apply: IH1.
+rewrite sE; apply/IH2/IH => //.
+rewrite -ltnS (leq_trans _ sL) // -ltnS -(size_rcons s true) sE.
 by rewrite size_rcons size_cat /= size_nseq !addnS !ltnS leq_addr.
 Qed.
 
-
-Lemma rev_bl2nl bl : rev (bl2nl bl) = bl2nl (rev bl).
+Lemma rev_bs2ns s : rev (bs2ns s) = bs2ns (rev s).
 Proof.
-elim/bnseq_ind : bl => [n| n l IH]; first by rewrite rev_nseq bl2nl_nseq.
-rewrite bl2nl_nseq_false rev_cat rev_nseq !rev_cons cat_rcons bl2nl_false_nseq.
+elim/bnseq_ind : s => [n| n s IH]; first by rewrite rev_nseq bs2ns_nseq.
+rewrite bs2ns_nseq_false rev_cat rev_nseq !rev_cons cat_rcons bs2ns_false_nseq.
 by rewrite IH.
 Qed.
 
-Lemma nl2blK l : l != [::] -> all_nz l -> bl2nl (nl2bl l) = l.
+Lemma ns2bsK s : s != [::] -> all_nz s -> bs2ns (ns2bs s) = s.
 Proof.
-elim: l => //= []  [//|a] [|b l] IH _ /andP[_ nzl]; first by rewrite bl2nl_nseq.
-by rewrite bl2nl_nseq_false IH.
+elim: s => //= []  [//|a] [|b s] IH _ /andP[_ nzl]; first by rewrite bs2ns_nseq.
+by rewrite bs2ns_nseq_false IH.
 Qed.
 
 (* Start with addition chains *)
@@ -325,10 +325,10 @@ Qed.
 Definition next (b : bool) (p : nat * nat)  :=
   let: (m, n) := p in if b then (m, m + n) else (n, m + n).
 
-Definition run (p : nat * nat) (l : seq bool) := 
-  foldl (fun l b => next b l) p l.
+Definition run (p : nat * nat) (s : seq bool) := 
+  foldl (fun p b => next b p) p s.
 
-Definition frun l := let: (m, n) := run (1, 2) l in m + n.
+Definition frun s := let: (m, n) := run (1, 2) s in m + n.
 
 Compute next true (1, 2).
 Compute next false (1, 2).
@@ -339,16 +339,16 @@ Compute run (1,2) (rev [::true; false; false]).
 Compute frun ([::true; false; false]).
 Compute frun (rev [::true; false; false]).
 
-Lemma run_cat p l1 l2 : run p (l1 ++ l2) = run (run p l1) l2.
+Lemma run_cat p s1 s2 : run p (s1 ++ s2) = run (run p s1) s2.
 Proof. by exact: foldl_cat. Qed.
 
-Lemma run_gcdn m n l : gcdn (run (m, n) l).1 (run (m, n) l).2 = gcdn m n.
+Lemma run_gcdn m n s : gcdn (run (m, n) s).1 (run (m, n) s).2 = gcdn m n.
 Proof.
-by elim: l m n => //= [] [] l IH m n /=; rewrite IH ?gcdnDr ?gcdnDl // gcdnC.
+by elim: s m n => //= [] [] s IH m n /=; rewrite IH ?gcdnDr ?gcdnDl // gcdnC.
 Qed.
 
-Lemma run_rcons p b l : run p (rcons l b) = next b (run p l).
-Proof. by elim: l p b => /=. Qed.
+Lemma run_rcons p b s : run p (rcons s b) = next b (run p s).
+Proof. by elim: s p b => /=. Qed.
 
 Lemma run_nseq k p : run p (nseq k true) = (p.1, p.2 + k * p.1).
 Proof.
@@ -356,29 +356,29 @@ elim: k p => [[m n]|k IH [m n]] /=; first by rewrite addn0.
 by rewrite IH  /= mulSn addnCA addnA.
 Qed.
 
-Lemma frunE l : frun l = (run (1, 2) (rcons l true)).2.
+Lemma frunE s : frun s = (run (1, 2) (rcons s true)).2.
 Proof.
-suff H p : (let '(x, y) := run p l in x + y) = (run p (rcons l true)).2.
+suff H p : (let '(x, y) := run p s in x + y) = (run p (rcons s true)).2.
   by apply: H.
-by elim: l p => //=; case.
+by elim: s p => //=; case.
 Qed.
 
-Lemma run_lt m n l : 
-  0 < n < m -> let: (m1, n1) := run (n, m) l in 0 < m1 < n1.
+Lemma run_lt m n s : 
+  0 < n < m -> let: (m1, n1) := run (n, m) s in 0 < m1 < n1.
 Proof.
-elim: l n m => //= [] [] l IH n m /andP[n_pos nLm] /=; apply: IH.
+elim: s n m => //= [] [] s IH n m /andP[n_pos nLm] /=; apply: IH.
   by rewrite n_pos (leq_trans _ (leq_addl _ _)).
 by rewrite (leq_trans _ nLm) // -{1}(add0n m) ltn_add2r.
 Qed.
 
-Lemma frac_run_bl2nl l : 
-  let: (m, n) := run (1, 2) l in `L(n, m) = rev (bl2nl (true :: l)).
+Lemma frac_run_bs2ns s : 
+  let: (m, n) := run (1, 2) s in `L(n, m) = rev (bs2ns (true :: s)).
 Proof.
-elim/bnseqr_ind : l => /= [k |b l].
-  by rewrite (bl2nl_nseq k.+1) run_nseq lfrac_n1 /= muln1 add2n.
+elim/bnseqr_ind : s => /= [k |b s].
+  by rewrite (bs2ns_nseq k.+1) run_nseq lfrac_n1 /= muln1 add2n.
 rewrite run_cat.
-case: run (run_lt _ _ l (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
-rewrite -cat_cons bl2nl_false_nseq rev_rcons -IH /=.
+case: run (run_lt _ _ s (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
+rewrite -cat_cons bs2ns_false_nseq rev_rcons -IH /=.
 rewrite run_nseq /= lfrac_rec; last first.
   by rewrite (leq_trans _ nLm) //= (leq_trans _ (leq_addr _ _)) // leq_addl.
 rewrite -addnA mulnC -mulnS divnDr; last by rewrite dvdn_mulr.
@@ -386,18 +386,18 @@ rewrite divn_small // mulKn; last by rewrite (leq_trans _ nLm).
 by rewrite add0n addnC mulnC modnMDl modn_small.
 Qed.
 
-Lemma frun_rev l : frun (rev l) = frun l.
+Lemma frun_rev s : frun (rev s) = frun s.
 Proof.
 rewrite !frunE.
-case Hr : run (run_gcdn 1 2 (rcons l true)) (frac_run_bl2nl (rcons l true)) => 
+case Hr : run (run_gcdn 1 2 (rcons s true)) (frac_run_bs2ns (rcons s true)) => 
    /= [m n] Hc Hf.
 rewrite (lfrac_cont_gcdl n m); last first.
-  by have := run_lt 2 1 (rcons l true) isT; rewrite Hr; case/andP => _ /ltnW.
+  by have := run_lt 2 1 (rcons s true) isT; rewrite Hr; case/andP => _ /ltnW.
 rewrite gcdnC Hc muln1 -pcont_rev Hf revK.
-case Hr1: run (run_gcdn 1 2 (rcons (rev l) true)) 
-         (frac_run_bl2nl (rcons (rev l) true)) => /= [m1 n1] Hc1 Hf1.
+case Hr1: run (run_gcdn 1 2 (rcons (rev s) true)) 
+         (frac_run_bs2ns (rcons (rev s) true)) => /= [m1 n1] Hc1 Hf1.
 rewrite (lfrac_cont_gcdl n1 m1); last first.
-  by have := run_lt 2 1 (rcons (rev l) true) isT; rewrite Hr1; 
+  by have := run_lt 2 1 (rcons (rev s) true) isT; rewrite Hr1; 
      case/andP => _ /ltnW.
-by rewrite gcdnC Hc1 muln1 Hf1 /= rev_bl2nl rev_cons rev_rcons revK.
+by rewrite gcdnC Hc1 muln1 Hf1 /= rev_bs2ns rev_cons rev_rcons revK.
 Qed.
