@@ -187,15 +187,15 @@ Qed.
 
 (* Conversions between list of booleans and list of nat *)
 
-Fixpoint nl2bl nl := 
-  if nl is n :: nl1 then 
-    if nl1 is _ :: _ then nseq n.-1 true ++ false :: nl2bl nl1 
+Fixpoint nl2bl l := 
+  if l is n :: l1 then 
+    if l1 is _ :: _ then nseq n.-1 true ++ false :: nl2bl l1 
     else nseq n.-1 true
   else [::].
 
-Fixpoint bl2nl_aux n bl :=
-  if bl is b :: bl1 then
-    if b then bl2nl_aux n.+1 bl1 else n.+1 :: bl2nl_aux 0 bl1 
+Fixpoint bl2nl_aux n l :=
+  if l is b :: l1 then
+    if b then bl2nl_aux n.+1 l1 else n.+1 :: bl2nl_aux 0 l1 
   else [::n.+1].
 
 Definition bl2nl l := bl2nl_aux 0 l.
