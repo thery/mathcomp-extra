@@ -67,6 +67,8 @@ Some extra material for mathcomp
   
   [Some facts about addition chain](./chain.v)
 
+  [Definirion of cycles from list in permutation](./lcycle.v)
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 A note about addition chain is available [here](https://hal.science/hal-04971933).
