@@ -76,20 +76,18 @@ Section Test.
 
 Variable T : finType.
 
-Goal forall i j k : T, uniq [:: i; j; k] -> 
+Goal forall i j k : T, uniq [:: k; i; j] -> 
   ([cycle [:: k; i; j]] * [cycle [:: i; j]] = [cycle [:: j; k]])%g.
 Proof.
-move=> i j k; rewrite /= !(negb_or, inE, andbT).
-rewrite /= => /andP[/andP[/negPf iDj /negPf iDk] /negPf jDk].
-apply/permP => z.
-rewrite !(lcycle_perm, lcycle_cons2) permE /= !permE /= !permE /=.
-case: (z =P k) => [->|/eqP /negPf zDk].
-  by rewrite !(iDk, iDj, eqxx); case: eqP.
-case: (z =P i) => [->|/eqP /negPf zDi].
-  by rewrite !(iDk, iDj, eqxx); case: eqP.
-rewrite zDk.
-case: (z =P j) => [<-|/eqP /negPf zDj]; last by rewrite zDi zDj.
-by rewrite [_ == z]eq_sym zDk eq_sym iDk.
+move=> i j k kijU; apply/permP => z; rewrite !lcycle_perm permE /=.
+case: (tpermP j) => [->|->|/eqP/negPf zDj /eqP/negPf zDk].
+- by rewrite (lcycle_end _ [:: i]) // tpermD //; 
+     move: kijU; rewrite /= !inE ![_ == k]eq_sym; do 2 case: (k == _).
+- by rewrite (lcycle_next _ [::] [:: j]) // tpermL.
+have [->|/eqP /negPf zDi] := z =P i.
+  by rewrite (lcycle_next _ [:: k] [::]) // tpermR.
+rewrite lcycle_not_in; last by rewrite !inE zDj zDk zDi.
+by rewrite tpermD // eq_sym ?zDi // zDj.
 Qed.
 
 End Test.
