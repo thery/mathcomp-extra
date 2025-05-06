@@ -1,4 +1,5 @@
 From mathcomp Require Import all_ssreflect.
+From Stdlib Require BinPos.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

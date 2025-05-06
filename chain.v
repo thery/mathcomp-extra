@@ -1,6 +1,6 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
 From mathcomp Require Import all_ssreflect.
-Require Import ZArith.
+From Stdlib Require Import ZArith.
 
 
 (******************************************************************************)

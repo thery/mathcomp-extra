@@ -673,7 +673,7 @@ Lemma eocat_nseq_catDS (T : Type) (v1 v2 : T) a b :
         (nseq (a + a).+1 v1 ++ nseq (b + b).+1 v2).
 Proof.
 elim: a b => // [b | a IH b].
-  by case: b => //= b; rewrite eocat_nseqD [(_ + _)%coq_nat]addnS.
+  by case: b => //= b; rewrite eocat_nseqD addnS.
 by rewrite addnS (nseqS a) (nseqS a.+1) 2!(cat_cons v1) eocat_cons IH.
 Qed.
 

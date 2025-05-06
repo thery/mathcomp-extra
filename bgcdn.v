@@ -50,14 +50,14 @@ have [Om|Em] := boolP (odd _); have [On|En] := boolP (odd _);
   have m1Ln : m.+1 < n.+2 by apply: leq_trans mLn.
   have nDmE :  n.+2 - m.+2 = (n.+2 - m.+2)./2.*2.
     by rewrite -{1}(odd_double_half (_ - _)) oddB //= Om On.
-  rewrite [(_ + _)%coq_nat]addnC addSnnS IH //; last first.
+  rewrite addnC addSnnS IH //; last first.
   - rewrite -ltn_double -nDmE -mul2n -expnS (leq_trans _ Hn) //.
     by rewrite (leq_trans _ (_ : n.+2 < _)) // ltnS leq_subr.
   - by rewrite addnC addSnnS.
   rewrite  -{2}[n.+2](subnK m1Ln) gcdnDr.
   rewrite {2}nDmE -muln2 Gauss_gcdl 1?gcdnC //.
   by rewrite /coprime -gcdn_modl modn2 /= Om gcd1n.
-- rewrite -[(_ + _)%coq_nat]addSnnS IH //; last 2 first.
+- rewrite -addSnnS IH //; last 2 first.
   - by rewrite addSnnS.
   - rewrite -nE expnS mul2n in Hn.
     by rewrite (ltn_double _.+1) in Hn.

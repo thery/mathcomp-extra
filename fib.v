@@ -312,7 +312,7 @@ Section Matrix.
 Local Open Scope ring_scope.
 Import GRing.Theory.
 
-Variable R: ringType.
+Variable R: pzRingType.
 
 (*  Equivalence                                  ^ n.+1                       *)
 (*                fib n.+2   fib n.+1      1   1                              *)

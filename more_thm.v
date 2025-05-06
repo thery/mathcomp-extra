@@ -19,18 +19,7 @@ Proof. by rewrite -Zp_nat. Qed.
 (* More on comp_compy *)
 Section Rcomp_poly.
 
-Variable R : ringType.
-
-(*
-comp_Xn_poly
-
-Lemma comp_polyXn n (p : {poly R}) : 'X^n \Po p = p ^+ n.
-Proof.
-rewrite comp_polyE size_polyXn.
-rewrite (bigD1 ord_max) //= coefXn eqxx scale1r big1 ?addr0 //.
-by move=> i /eqP/val_eqP /= iDn; rewrite coefXn (negPf iDn) scale0r.
-Qed.
-*)
+Variable R : nzRingType.
 
 Lemma comp_polyXsub1 n : 
   ('X - 1) \Po 'X^n = 'X^n - 1 :> {poly R}.
@@ -40,7 +29,7 @@ End Rcomp_poly.
 
 Section Ccomp_poly.
 
-Variable R : comRingType.
+Variable R : comNzRingType.
 
 Lemma comp_poly_exp n (p q : {poly R}) : (p \Po q) ^+ n = (p ^+ n) \Po q.
 Proof. by rewrite rmorphXn. Qed.
@@ -51,7 +40,7 @@ End Ccomp_poly.
 
 Section Poly.
 
-Variable R : ringType.
+Variable R : nzRingType.
 
 Lemma size_exp_monic (p: {poly R}) n :
   p \is monic -> size (p ^+ n) = ((size p).-1 * n).+1.
@@ -99,7 +88,7 @@ End Poly.
 
 Section rdvdp.
 
-Variable R : ringType.
+Variable R : nzRingType.
 
 Lemma rdvdp_trans (p q r : {poly R}) : 
   p \is monic -> q \is monic -> rdvdp p q -> rdvdp q r -> rdvdp p r.
@@ -112,7 +101,7 @@ End rdvdp.
 
 Section Crdvdp.
 
-Variable R : comRingType.
+Variable R : comNzRingType.
 
 Lemma rdvdp_comp_poly (r p q : {poly R}) : 
  p \is monic -> r \is monic -> r != 1 -> rdvdp p q -> rdvdp (p \Po r) (q \Po r).
@@ -232,11 +221,11 @@ have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
 pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
-have /FinSplittingFieldFor[/= L splitLq]: q (GRing.Ring.clone _ 'F_p) != 0.
+have /FinSplittingFieldFor[/= L splitLq]: q (GRing.NzRing.clone _ 'F_p) != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monicXnsubC.
 rewrite [map_poly _ _]rmorphB rmorphXn /= map_polyX -/(q L) in splitLq.
 exists L.
-have charL: p \in [char L] by  rewrite char_lalg /= char_Fp.
+have charL: p \in [pchar L] by  rewrite pchar_lalg /= pchar_Fp.
 have /finField_galois_generator[/= a Ca Da]: (1 <= {:L})%VS by apply: sub1v.
 pose Em := fixedSpace (a ^+ d)%g. rewrite //= dimv1 expn1 in Da.
 have{splitLq} [zs DqL defL] := splitLq.
@@ -244,7 +233,7 @@ have Uzs: uniq zs.
   rewrite -separable_prod_XsubC -(eqp_separable DqL) Dq separable_root andbC.
   rewrite /root !hornerE subr_eq0 eq_sym expr0n gtn_eqF ?oner_eq0 //.
   rewrite cyclotomic.separable_Xn_sub_1 // -subn1 natrB // subr_eq0.
-  by rewrite natrX charf0 // expr0n gtn_eqF // eq_sym oner_eq0.
+  by rewrite natrX pcharf0 // expr0n gtn_eqF // eq_sym oner_eq0.
 have in_zs: zs =i Em.
   move=> z; rewrite -root_prod_XsubC -(eqp_root DqL) (sameP fixedSpaceP eqP).
   rewrite /root !hornerE subr_eq0 /= /m; congr (_ == z).
@@ -257,31 +246,31 @@ have/eq_card-> : FinFieldExtType L =i zs.
   by move=> z; rewrite in_zs defEm memvf.
 apply: succn_inj.
 rewrite (card_uniqP _) //= -(size_prod_XsubC _ id).
-by rewrite -(eqp_size DqL) size_addl size_polyXn // size_opp size_polyX.
+by rewrite -(eqp_size DqL) size_polyDl size_polyXn // size_polyN size_polyX.
 Qed.
 
 Lemma PrimePowerField p k (m := (p ^ k)) :
-  prime p -> 0 < k -> {Fm : finFieldType | p \in [char Fm] & #|Fm| = m}.
+  prime p -> 0 < k -> {Fm : finFieldType | p \in [pchar Fm] & #|Fm| = m}.
 Proof.
 move=> pP k_gt0.
 have [L LC] := Fp_splittingField pP k_gt0.
-have charL: p \in [char L] by rewrite char_lalg char_Fp.
+have pcharL: p \in [pchar L] by rewrite pchar_lalg pchar_Fp.
 by exists (FinFieldExtType L).
 Qed.
 
 End FinField.
 
 Lemma fin_little_fermat (F : finFieldType) (n c : nat) :
-  n \in [char F] -> c%:R ^+ n = c%:R :> F.
+  n \in [pchar F] -> c%:R ^+ n = c%:R :> F.
 Proof.
 move=> nC.
-have Pp : prime n by apply: charf_prime nC.
-have Cn : [char F].-nat n by rewrite pnatE.
+have Pp : prime n by apply: pcharf_prime nC.
+have Cn : [pchar F].-nat n by rewrite pnatE.
 elim: c => [|c IH]; first by rewrite -natrX exp0n ?prime_gt0.
-by rewrite -addn1 natrD exprDn_char // IH -natrX exp1n.
+by rewrite -addn1 natrD exprDn_pchar // IH -natrX exp1n.
 Qed.
 
-Lemma poly_geom (R : comRingType) n (p : {poly R}) : 
+Lemma poly_geom (R : comNzRingType) n (p : {poly R}) : 
   p ^+ n.+1 - 1 = (p - 1) * \sum_(i < n.+1) p ^+ i.
 Proof.
 rewrite mulrBl mul1r {1}big_ord_recr big_ord_recl /=.
@@ -290,7 +279,7 @@ rewrite (eq_bigr (fun i : 'I_n => p * p ^+ i)) ?subrK // => i _.
 by rewrite exprS.
 Qed.
 
-Lemma dvdp_geom (R : comRingType) n (p : {poly R}) :
+Lemma dvdp_geom (R : comNzRingType) n (p : {poly R}) :
   p - 1 \is monic -> rdvdp (p - 1) (p ^+ n.+1 - 1).
 Proof. move=> pM; rewrite poly_geom mulrC rdvdp_mull //. Qed.
 
@@ -460,11 +449,11 @@ by apply/eqP; rewrite eqn_leq oL1.
 Qed.
 
 (* Definition of order for poly *)
-Definition poly_order {R : ringType} (h p :  {poly R}) (n : nat) : nat := 
+Definition poly_order {R : nzRingType} (h p :  {poly R}) (n : nat) : nat := 
   if [pick i | rmodp (p^+ (i : 'I_n.+1).-1.+1) h == 1] is Some v then
       [arg min_(i < v | (rmodp (p^+ i.-1.+1) h == 1)) i].-1.+1 else 0.
 
-Lemma poly_orderE (R : ringType) (h p : {poly R}) n m :
+Lemma poly_orderE (R : nzRingType) (h p : {poly R}) n m :
   0 < m <= n ->
   rmodp (p ^+ m) h = 1 ->
   (forall k, 0 < k -> rmodp (p^+ k) h = 1 -> m <= k) ->
@@ -481,26 +470,26 @@ apply/eqP; rewrite eqn_leq Hj // andbT.
 by case: (i: nat) iLm.
 Qed.
 
-Lemma poly_order_leq (R : ringType) (h p : {poly R}) n :
+Lemma poly_order_leq (R : nzRingType) (h p : {poly R}) n :
   0 < n -> poly_order h p n <= n.
 Proof.
 by rewrite /poly_order; case: pickP => // x Hx; case: arg_minnP => // [] [[|m]].
 Qed.
 
-Lemma poly_order_gt0_rmodp (R : ringType) (h p : {poly R}) n :
+Lemma poly_order_gt0_rmodp (R : nzRingType) (h p : {poly R}) n :
   0 < poly_order h p n ->  rmodp (p^+ poly_order h p n) h == 1.
 Proof.
 by rewrite /poly_order; case: pickP => // x Hx _; case: arg_minnP.
 Qed.
 
-Lemma poly_order_eq0_rmodp (R : ringType) (h p : {poly R}) m n :
+Lemma poly_order_eq0_rmodp (R : nzRingType) (h p : {poly R}) m n :
   poly_order h p n = 0%N -> 0 < m <= n -> rmodp (p^+ m) h != 1.
 Proof.
 rewrite -[_ <= n]ltnS /poly_order; case: pickP => // HM _ /andP[m_gt0 mLn].
 by have /= := HM (Ordinal mLn); case: (m) m_gt0 => //= k _ /idP/negP.
 Qed.
 
-Lemma poly_order_lt (R : ringType) (h p : {poly R}) m n :
+Lemma poly_order_lt (R : nzRingType) (h p : {poly R}) m n :
    0 < m < poly_order h p n -> rmodp (p^+ m) h != 1.
 Proof.
 rewrite /poly_order; case: pickP=> [x Hx|]; last by rewrite ltn0 andbF.

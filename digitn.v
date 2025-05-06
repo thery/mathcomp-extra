@@ -160,7 +160,7 @@ rewrite subnn binn mul1r mulr1n big1 ?add0r // => i _.
 have /dvdnP[k ->] : (p %| 'C(p, (0 <= i) + i))%N.
    apply: prime_dvd_bin Pp _ => //.
    by rewrite add1n andTb -[X in (_ < X)%N](prednK (prime_gt0 Pp)) ltnS.
-by rewrite mulrnA -mulr_natr -polyC1 -polyCMn char_Fp_0 // polyC0 !mulr0.
+by rewrite mulrnA -mulr_natr -polyC1 -polyCMn pchar_Fp_0 // polyC0 !mulr0.
 Qed.
 
 Lemma Fp_exprnDn n (p1 p2 : {poly 'F_p}) :
@@ -201,7 +201,7 @@ have H i :
   \sum_(j < p) 'X^(p ^ i) ^+ j *+ 'C(digitn p m i, j).
   under eq_bigr do rewrite expr1n mul1r.
   rewrite -!(big_mkord xpredT (fun j => 'X^(p ^ i) ^+ j *+ 'C(digitn p m i, j))).
-  rewrite (big_cat_nat _ _ _  _ (ltn_pdigit m i (prime_gt0 Pp))) //=.
+  rewrite (big_cat_nat _ (ltn_pdigit m i (prime_gt0 Pp))) //=.
   rewrite [X in _ = _ + X]big_nat_cond [X in _ = _ + X]big1 ?addr0 // => j.
   by case/andP=> /andP[/bin_small->]; rewrite mulr0n.
 under eq_bigr do rewrite {}H.

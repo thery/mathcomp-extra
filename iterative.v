@@ -13,7 +13,7 @@ Section iterative.
 Local Open Scope ring_scope.
 
 (* Arbitrary ring *)
-Variable R : ringType.
+Variable R : nzRingType.
 
 Implicit Type p : {poly R}.
 
@@ -51,9 +51,9 @@ Fixpoint bottom (n : nat) (p : {poly R}) :=
 Lemma size_bottom n p : (size (bottom n p) <= 2 ^ n)%N.
 Proof.
 elim: n p => /= [|n IH] p; first by apply: size_polyC_leq1.
-apply: leq_trans (size_add _ _) _.
+apply: leq_trans (size_polyD _ _) _.
 rewrite geq_max (leq_trans (IH _)) //=; last by rewrite leq_exp2l.
-apply: leq_trans (size_mul_leq _ _) _.
+apply: leq_trans (size_polyMleq _ _) _.
 by rewrite size_polyXn expnS mul2n -addnn leq_add.
 Qed.
 
@@ -192,7 +192,7 @@ Lemma size_step m n p : (size (step m n p) <= (2 ^ (m + n).+1))%N.
 Proof.
 apply: leq_trans (size_sum _ _ _) _.
 apply/bigmax_leqP_seq => i _ _.
-apply: leq_trans (size_mul_leq _ _ ) _.
+apply: leq_trans (size_polyMleq _ _ ) _.
 rewrite size_polyXn addnS /=.
 apply: leq_trans (leq_add (size_merge (size_poly _ _) (size_poly _ _)) 
                           (leqnn _)) _.

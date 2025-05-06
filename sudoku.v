@@ -16,6 +16,7 @@ Unset Printing Implicit Defensive.
 
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import zify.
+From Stdlib Require Import String.
 
 Section sudoku.
 
@@ -1855,7 +1856,6 @@ End sudoku.
 (*       Parser                                                               *)
 (******************************************************************************)
 
-Require Import String.
 Import Ascii.
 Open Scope string_scope.
 Definition sp := 32.

@@ -9,7 +9,7 @@ Local Open Scope ring_scope.
 
 Section UPoly.
 
-Variable R : ringType.
+Variable R : nzRingType.
 
 Fixpoint addzPoly (l1 l2 : seq int) := 
   if l1 is a :: l1 then 
@@ -98,7 +98,7 @@ rewrite -mulrA; congr (_ * _).
 by rewrite -commr_polyX -mulrA; congr (_ * _); rewrite commr_polyX.
 Qed.
 
-Lemma int_natmul (R1 : ringType) n : n %:R %:~R = n%:R :> R1.
+Lemma int_natmul (R1 : pzRingType) n : n %:R %:~R = n%:R :> R1.
 Proof. by elim: n => //= n IH; rewrite -!natr1 rmorphD /= IH. Qed.
 
 Definition isZPoly (p : {poly R}) := exists l : seq int, p = int2Poly l.
@@ -125,7 +125,7 @@ case: l1 => [->//=|b l1 -> /=]; first by exact: isZ0.
 by apply: isZ_int.
 Qed.
 
-Lemma polyC_intr (R1 : ringType) (z : int) : (z%:~R)%:P = z%:~R :> {poly R1}.
+Lemma polyC_intr (R1 : nzRingType) (z : int) : (z%:~R)%:P = z%:~R :> {poly R1}.
 Proof. by rewrite rmorph_int. Qed.
 
 Lemma isZPoly_Poly_cons a l : 
@@ -192,9 +192,9 @@ Qed.
 
 End UPoly.
 
-Section U2Poly.
+Section U2PzPoly.
 (* toto *)
-Variable R T : ringType.
+Variable R T : pzRingType.
 
 Hypothesis R_char : forall m n, m%:R = n%:R :> R -> m = n.
 
@@ -213,7 +213,15 @@ Lemma nth_map_f (T1 T2 : Type) x (f : T1 -> T2) n s :
    nth (f x) [seq f i  | i <- s] n = f (nth x s n).
 Proof. by elim: n s => [|? ?] []. Qed.
 
-Lemma X_lreg (R1 : ringType) : GRing.lreg ('X : {poly R1}).
+End U2PzPoly.
+
+Section U2Poly.
+(* toto *)
+Variable R T : nzRingType.
+
+Hypothesis R_char : forall m n, m%:R = n%:R :> R -> m = n.
+
+Lemma X_lreg (R1 : nzRingType) : GRing.lreg ('X : {poly R1}).
 Proof. by apply/monic_lreg/monicX. Qed.
 
 Lemma ptransferC l a : int2Poly R l = a%:R -> int2Poly T l = a%:R.
@@ -226,7 +234,7 @@ elim: l a => [|b l IH] /= a.
   by rewrite !(coefMrz, coefE) eqxx.
 rewrite !int2Poly_cons => Hb.
 have bE : b = a.
-  apply: Rt_char.
+  apply: (Rt_char R_char _).
   have /polyP/(_ 0) := Hb.
   by rewrite !(coefMrz, coefE) eqxx addr0.
 rewrite -[a%:R]addr0 bE; congr (_ + _).
@@ -235,7 +243,7 @@ apply: X_lreg; rewrite mulr0.
 by rewrite -[LHS](addKr b%:~R) Hb bE addrC subrr.
 Qed.
 
-Lemma coef_int2Poly (R1 : ringType) l i : (int2Poly R1 l)`_i = (l`_i)%:~R.
+Lemma coef_int2Poly (R1 : nzRingType) l i : (int2Poly R1 l)`_i = (l`_i)%:~R.
 Proof.
 elim: l i => [i|a l IH [|i]/=].
 - by rewrite int2Poly_nil !coefE; case: i.
@@ -250,9 +258,9 @@ move=> /polyP Hp; apply/polyP => i.
 have := Hp i; rewrite !(coef_int2Poly, coefE) /=.
 case: eqP => _ Hq.
   suff->: l`_i = 1 by [].
-  by apply: Rt_char.
+  by apply: (Rt_char R_char _).
 suff->: l`_i = 0 by [].
-by apply: Rt_char.
+by apply: (Rt_char R_char _).
 Qed.
 
 Lemma ptransferXn l n : int2Poly R l = 'X^n -> int2Poly T l = 'X^n.
@@ -261,9 +269,9 @@ move=> /polyP Hp; apply/polyP => i.
 have := Hp i; rewrite !(coef_int2Poly, coefE) /=.
 case: eqP => _ Hq.
   suff->: l`_i = 1 by [].
-  by apply: Rt_char.
+  by apply: (Rt_char R_char _).
 suff->: l`_i = 0 by [].
-by apply: Rt_char.
+by apply: (Rt_char R_char _).
 Qed.
 
 Lemma ptransferN l1 l2 : 
@@ -293,7 +301,7 @@ move/polyP => Hi; apply/polyP=> i; move: (Hi i).
 rewrite /int2Poly !coefE !coefM.
 rewrite -[(0 : R)]/(0%:~R) -[(0 : T)]/(0%:~R) !nth_map_f .
 under eq_bigr do rewrite !coefE -[(0 : R)]/(0%:~R) !nth_map_f -rmorphM /=.
-rewrite -rmorph_sum /= => /Rt_char <-; rewrite rmorph_sum /=.
+rewrite -rmorph_sum /= => /(Rt_char R_char) <-; rewrite rmorph_sum /=.
 apply: eq_bigr => j _.
 by rewrite rmorphM /= !coefE -[(0 : T)]/(0%:~R) !nth_map_f.
 Qed.
@@ -320,7 +328,7 @@ Fixpoint Lmul (l1 l2 : seq int) :=
   if l1 is a :: l1 then
     Ladd ([seq a * i | i <- l2]) (0 :: Lmul l1 l2) else [::]. 
 
-Lemma Ladd_correct (R1 : ringType) l1 l2 :
+Lemma Ladd_correct (R1 : nzRingType) l1 l2 :
   int2Poly R1 (Ladd l1 l2) = int2Poly R1 l1 + int2Poly R1 l2.
 Proof.
 elim: l1 l2 => /= [l2|a l1 IH [|b l2]]; first by rewrite int2Poly_nil add0r.
@@ -337,7 +345,7 @@ rewrite !int2Poly_cons mulrDr -rmorphM /= IH; congr (_ + _).
 by rewrite -commr_polyX -!mulrA commr_polyX.
 Qed.
 
-Lemma Lmul_correct  (R1 : ringType) l1 l2 :
+Lemma Lmul_correct  (R1 : nzRingType) l1 l2 :
   int2Poly R1 (Lmul l1 l2) = int2Poly R1 l1 * int2Poly R1 l2.
 Proof.
 elim: l1 l2 => /= [l2|a l1 IH l2]; first by rewrite int2Poly_nil mul0r.
