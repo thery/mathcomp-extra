@@ -86,7 +86,7 @@ A note about addition chain is available [here](https://hal.science/hal-04971933
   - [MathComp algebra 2.4.0 or later](https://math-comp.github.io)
   - [MathComp field 2.4.0 or later](https://math-comp.github.io)
   - [MathComp zify 1.5.0+2.0+8.16 or later](https://github.com/math-comp/mczify)
-  - [MathComp Algebra Tactics 1.2.4 or later](https://github.com/math-comp/algebra-tactics)
+  - [MathComp Algebra Tactics 1.2.5 or later](https://github.com/math-comp/algebra-tactics)
 - Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 
