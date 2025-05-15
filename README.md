@@ -68,6 +68,8 @@ Some extra material for mathcomp
   [Some facts about addition chain](./chain.v)
 
   [Definition of cycles from list in permutation](./lcycle.v)
+  
+  [The last digit of n^5 is the same than the one of n](./power5.v)
 
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 

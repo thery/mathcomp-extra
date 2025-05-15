@@ -24,6 +24,7 @@ more_thm.v
 more_tuple.v
 nsort.v
 puzzleFF.v
+power5.v
 rns.v
 rootn.v
 rsa.v
