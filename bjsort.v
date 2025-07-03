@@ -479,8 +479,10 @@ Definition iknuth_exchange (s : seq A) : seq A :=
 
 End IKnuthExchance.
 
-Compute iknuth_exchange [::8; 7; 6; 5; 4; 3; 2; 1].
-Compute iknuth_exchange [::true; true; true; true; false; false; false; false].
+Compute (iknuth_exchange [::8; 7; 6; 5; 4; 3; 2; 1] : seq nat).
+Compute 
+  (iknuth_exchange [::true; true; true; true; false; false; false; false] :
+     seq bool).
 
 Section IKnuthExchangeProof.
 

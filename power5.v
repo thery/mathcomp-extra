@@ -7,9 +7,7 @@ From mathcomp Require Import all_ssreflect.
 (******************************************************************************)
 
 Lemma modnMDXl p m n d : (p * d + m) ^ n  = m ^ n %[mod d].
-Proof.
-by elim: n p m => // n IH p m; rewrite !expnS -modnMm IH modnMDl modnMm.
-Qed.
+Proof. by elim: n => // n IH; rewrite !expnS -modnMm IH modnMDl modnMm. Qed.
 
 Lemma digitn_power5 n : n ^ 5 = n %[mod 10].
 Proof.
