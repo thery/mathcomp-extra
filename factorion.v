@@ -352,8 +352,6 @@ suff : d1 < 10 by rewrite d1E.
 by apply: ltn_pdigit.
 Qed.
 
-Compute get_factorion 8.-1.
-
 Lemma factorionE m : factorion m = (m \in [::1; 2; 145; v40585]).
 Proof.
 apply/idP/idP; last first.
@@ -362,43 +360,51 @@ apply/idP/idP; last first.
   - by exact: factorion2.
   - by exact: factorion145.
   by exact: factorion40585.
-move=> mF.
+move=> mF; apply/or4P.
+rewrite -[m]Nat2N.id.
+suff : N.of_nat m \in [:: 1; 2; 145; 40585]%num.
+  rewrite !inE => /or4P[] /eqP->.
+  - by apply: Or41.
+  - by apply: Or42.
+  - by apply: Or43.
+  apply: Or44.
+  have -> : (40585 = 5 + 10 * 4058)%num by [].
+  by rewrite N2Nat.inj_add N2Nat.inj_mul.
 have := factorion_upperbound mF.
 have := ndigits_gt0 m (isT : 1 < 10).
 have := get_factorion_spec mF.
-rewrite [X in m \in [:: _;_; _; _]]Nat
 case: ndigits => //.
 case.
   have -> : get_factorion 1.-1 = [::2; 1]%num.
-    by vm_cast_no_check (refl_equal [::2; 1]).
+    by vm_cast_no_check (refl_equal [::2; 1]%num).
   by rewrite !inE; case/orP => /eqP->; rewrite eqxx.
 case.
   have -> : get_factorion 2.-1 = [::].
-    by vm_cast_no_check (refl_equal ([::] : seq nat)).
+    by vm_cast_no_check (refl_equal ([::] : seq N)).
   by rewrite !in_nil.
 case.
-  have -> : get_factorion 3.-1 = [::145].
-    by vm_cast_no_check (refl_equal [::145]).
+  have -> : get_factorion 3.-1 = [::145]%num.
+    by vm_cast_no_check (refl_equal [::145]%num).
   by rewrite !inE=> /eqP->; rewrite eqxx.
 case.
   have -> : get_factorion 4.-1 = [::].
-    by vm_cast_no_check (refl_equal ([::] : seq nat)).
+    by vm_cast_no_check (refl_equal ([::] : seq N)).
   by rewrite !in_nil.
 case.
-  have -> : get_factorion 5.-1 = [::v40585].
-    by vm_cast_no_check (refl_equal [::v40585]).
+  have -> : get_factorion 5.-1 = [::40585]%num.
+    by vm_cast_no_check (refl_equal [::40585]%num).
   by rewrite !inE=> /eqP->; rewrite eqxx.
 case.
   have -> : get_factorion 6.-1 = [::].
-    by vm_cast_no_check (refl_equal ([::] : seq nat)).
+    by vm_cast_no_check (refl_equal ([::] : seq N)).
   by rewrite !in_nil.
 case.
   have -> : get_factorion 7.-1 = [::].
-    by vm_cast_no_check (refl_equal ([::] : seq nat)).
+    by vm_cast_no_check (refl_equal ([::] : seq N)).
   by rewrite !in_nil.
 case.
   have -> : get_factorion 8.-1 = [::].
-    by vm_cast_no_check (refl_equal ([::] : seq nat)).
+    by vm_cast_no_check (refl_equal ([::] : seq N)).
   by rewrite !in_nil.
 by [].
 Time Qed.
