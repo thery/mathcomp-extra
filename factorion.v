@@ -17,10 +17,7 @@ Unset Printing Implicit Defensive.
 
 Section Factorion.
 
-Let v40585 := Eval vm_compute in 4058 * 10 + 5.
-Let v5040 := Eval vm_compute in 504 * 10.
-Let v40320 := Eval vm_compute in 4032 * 10.
-Let v362880 := Eval vm_compute in 80 + 100 * 3628.
+Let v40585 := Eval vm_compute in 5 + 10 * 4058.
 
 Definition factorion (n : nat) := 
   n == \sum_(i < ndigits 10 n) (digitn 10 n i) `!.
@@ -234,11 +231,11 @@ case=> [d7E|].
     rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   rewrite nE ndigits_mulD //.
-  have -> : N.to_nat (5040 + p) = v5040 + p1 by rewrite N2Nat.inj_add.
-  rewrite p1E big_ord_recl; congr (_ + _).
+  have -> : N.to_nat (5040 + p) = 7 `! + p1 by rewrite N2Nat.inj_add.
+  rewrite p1E big_ord_recl; congr (_ `! + _).
     by rewrite digitn0 mulnC modnMDl modn_small.
   apply: eq_bigr => /= i _.
-  by rewrite digitn_mulD //.
+  by rewrite digitn_mulD.
 case=> [d8E|].
   move=> mE1.
   apply: mem_get_factorion1.
@@ -249,8 +246,8 @@ case=> [d8E|].
     rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   rewrite nE ndigits_mulD //.
-  have -> : N.to_nat (40320 + p) = v40320 + p1 by rewrite N2Nat.inj_add.
-  rewrite p1E big_ord_recl; congr (_ + _).
+  have -> : N.to_nat (40320 + p) = 8 `! + p1 by rewrite N2Nat.inj_add.
+  rewrite p1E big_ord_recl; congr (_ `! + _).
     by rewrite digitn0 mulnC modnMDl modn_small.
   apply: eq_bigr => /= i _.
   by rewrite digitn_mulD //.
@@ -263,8 +260,8 @@ case=> [d9E|].
     rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   rewrite nE ndigits_mulD //.
-  have -> : N.to_nat (362880 + p) = v362880 + p1 by rewrite N2Nat.inj_add.
-  rewrite p1E big_ord_recl; congr (_ + _).
+  have -> : N.to_nat (362880 + p) = 9 `! + p1 by rewrite N2Nat.inj_add.
+  rewrite p1E big_ord_recl; congr (_ `! + _).
     by rewrite digitn0 mulnC modnMDl modn_small.
   apply: eq_bigr => /= i _.
   by rewrite digitn_mulD //.
