@@ -60,7 +60,7 @@ rewrite leq_pmul2r //.
 by elim: k => // k IH; rewrite (leq_ltn_trans IH _) // ltn_exp2l.
 Qed.
 
-Fixpoint get_factorion1 (k : nat) (n p : N) (l : seq nat) : seq nat := 
+Fixpoint get_factorion1 (k : nat) (n p : N) (l : seq N) : seq N := 
   if k is k1.+1 then
     let n1 := (10 * n)%num in 
     let l1 := get_factorion1 k1 n1 (1 + p)%num l in
@@ -73,7 +73,7 @@ Fixpoint get_factorion1 (k : nat) (n p : N) (l : seq nat) : seq nat :=
     let l8 := get_factorion1 k1 (7 + n1)%num (5040 + p)%num l7 in
     let l9 := get_factorion1 k1 (8 + n1)%num (40320 + p)%num l8 in
     get_factorion1 k1 (9 + n1)%num (362880 + p)%num l9 
-  else if (n =? p)%num then (N.to_nat n) :: l else l.
+  else if (n =? p)%num then n :: l else l.
 
 Lemma get_factorion1S k n p l :
   get_factorion1 k.+1 n p l =
@@ -90,7 +90,7 @@ Lemma get_factorion1S k n p l :
     get_factorion1 k (9 + n1)%num (362880 + p)%num l9.
 Proof. by []. Qed.
 
-Lemma mem_get_factorion1 k n p (l : seq nat) :
+Lemma mem_get_factorion1 k n p (l : seq N) :
    {subset l <= (get_factorion1 k n p l)}.
 Proof.
 elim: k n p l => [n p l | k IH n p l] i iIl.
@@ -104,13 +104,13 @@ Lemma get_factorion1_spec k n p m l :
   0 < n1 ->
   m %/ 10 ^ k = n1 ->
   p1 = \sum_(i < ndigits 10 n1) (digitn 10 n1 i) `! -> 
-  factorion m -> m \in get_factorion1 k n p l.
+  factorion m -> N.of_nat m \in get_factorion1 k n p l.
 Proof.
 elim: k n p m l => [n p m l| k IH n p m l] n1 p1 n1_pos mE p1E mF.
 have mF1 := (eqP mF).
   rewrite divn1 in mE.
   rewrite -mE -mF1 mE in p1E.
-  by rewrite (N2Nat.inj _ _ p1E) /= mE N.eqb_refl in_cons eqxx.
+  by rewrite (N2Nat.inj _ _ p1E) /= N.eqb_refl mE in_cons N2Nat.id eqxx.
 pose d1 := digitn 10 m k.
 rewrite get_factorion1S.
 have : m = (m %/ 10 ^ k.+1 * 10 + d1) * 10 ^ k + m %% 10 ^ k.
@@ -277,7 +277,7 @@ suff : d1 < 10 by rewrite d1E.
 by apply: ltn_pdigit.
 Qed.
 
-Definition get_factorion k : seq nat := 
+Definition get_factorion k : seq N := 
   let l1 := get_factorion1 k 1%num 1%num [::] in  
   let l2 := get_factorion1 k 2%num 2%num l1 in  
   let l3 := get_factorion1 k 3%num 6%num l2 in  
@@ -289,7 +289,7 @@ Definition get_factorion k : seq nat :=
   get_factorion1 k 9%num 362880%num l8.
 
 Lemma get_factorion_spec m :
-  factorion m -> m \in get_factorion (ndigits 10 m).-1.
+  factorion m -> N.of_nat m \in get_factorion (ndigits 10 m).-1.
 Proof.
 move=> mF.
 pose d1 := digitn 10 m (ndigits 10 m).-1.
@@ -352,6 +352,8 @@ suff : d1 < 10 by rewrite d1E.
 by apply: ltn_pdigit.
 Qed.
 
+Compute get_factorion 8.-1.
+
 Lemma factorionE m : factorion m = (m \in [::1; 2; 145; v40585]).
 Proof.
 apply/idP/idP; last first.
@@ -364,9 +366,10 @@ move=> mF.
 have := factorion_upperbound mF.
 have := ndigits_gt0 m (isT : 1 < 10).
 have := get_factorion_spec mF.
+rewrite [X in m \in [:: _;_; _; _]]Nat
 case: ndigits => //.
 case.
-  have -> : get_factorion 1.-1 = [::2; 1].
+  have -> : get_factorion 1.-1 = [::2; 1]%num.
     by vm_cast_no_check (refl_equal [::2; 1]).
   by rewrite !inE; case/orP => /eqP->; rewrite eqxx.
 case.
