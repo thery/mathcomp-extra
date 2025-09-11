@@ -260,7 +260,14 @@ case=> [d9E|].
     rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   rewrite nE ndigits_mulD //.
-  have -> : N.to_nat (362880 + p) = 9 `! + p1 by rewrite N2Nat.inj_add.
+  have -> : N.to_nat (362880 + p) = 9 `! + p1.
+     rewrite N2Nat.inj_add.
+     rewrite !factS.
+     have -> : N.to_nat (362880) = N.to_nat (9 * (8 * (7 * (720)))).
+          by congr N.to_nat.
+    rewrite [N.to_nat (9 * _)]N2Nat.inj_mul.
+    rewrite [N.to_nat (8 * _)]N2Nat.inj_mul.
+    by congr ((_ * (_ * _)%coq_nat)%coq_nat + _)%coq_nat.
   rewrite p1E big_ord_recl; congr (_ `! + _).
     by rewrite digitn0 mulnC modnMDl modn_small.
   apply: eq_bigr => /= i _.
