@@ -340,7 +340,13 @@ case => [d8E mE|].
   by rewrite -[ndigits _ _]/1 big_ord_recr big_ord0.
 case => [d9E mE|].
   apply: get_factorion1_spec => //.
-  by rewrite -[ndigits _ _]/1 big_ord_recr big_ord0.
+    have -> : N.to_nat (362880) = N.to_nat (9 * (8 * (7 * (720)))).
+        by congr N.to_nat.
+  rewrite [N.to_nat (9 * _)]N2Nat.inj_mul.
+  rewrite [N.to_nat (8 * _)]N2Nat.inj_mul.
+  rewrite -[ndigits _ _]/1 big_ord_recr big_ord0.
+  rewrite [digitn _ _ _]/= [RHS]add0n 2!factS.
+  by congr (_ * (_ * _)%coq_nat)%coq_nat.
 move=> d d1E.
 suff : d1 < 10 by rewrite d1E.
 by apply: ltn_pdigit.
