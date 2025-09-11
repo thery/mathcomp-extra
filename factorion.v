@@ -20,7 +20,7 @@ Section Factorion.
 Let v40585 := Eval vm_compute in 4058 * 10 + 5.
 Let v5040 := Eval vm_compute in 504 * 10.
 Let v40320 := Eval vm_compute in 4032 * 10.
-Let v362880 := Eval vm_compute in 3628 *100 + 80.
+Let v362880 := Eval vm_compute in 80 + 100 * 3628.
 
 Definition factorion (n : nat) := 
   n == \sum_(i < ndigits 10 n) (digitn 10 n i) `!.
