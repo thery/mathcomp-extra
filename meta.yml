@@ -68,6 +68,10 @@ description: |-
     
     [The last digit of n^5 is the same than the one of n](./power5.v)
 
+    [Definition of factorions and how mamy they are](./factorion.v)
+
+
+
   A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
   A note about addition chain is available [here](https://hal.science/hal-04971933).

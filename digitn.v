@@ -1,9 +1,10 @@
 From mathcomp Require Import all_ssreflect.
-
 From mathcomp Require Import all_algebra.
 
 (******************************************************************************)
 (*                                                                            *)
+(* ndigits b n   ==  returns the number of digits of n in base b (only makes  *)
+(*                      sense if 1 < b )                                      *)
 (* digitn b n m  ==  returns the m^th digit of n in base b                    *)
 (* rdigitn b n m ==  the bit-reversal for base b of m with bit length n       *)
 (*     bin_lucas ==  Lucas theorem for binomial                               *)
@@ -41,6 +42,25 @@ apply: eq_bigr => /= i _.
 by rewrite digitnS expnS mulnAC mulnA.
 Qed.
 
+Lemma digitn_exp b m n : 1 < b -> digitn b (b ^ m) n = (m == n).
+Proof.
+move=> b_gt1.
+case: ltngtP=> [mLn|nLm|->]; rewrite /digitn.
+- by rewrite divn_small ?mod0n // ltn_exp2l.
+- rewrite -expnB 1?ltnW //.
+  suff /dvdnP[k ->] : b %| b ^ (m - n) by rewrite modnMl.
+  by rewrite dvdn_exp // subn_gt0.
+by rewrite divnn expn_gt0 ltnW // modn_small.
+Qed.
+
+Lemma digitn_mulD b m d n : d < b -> digitn b (b * m + d) n.+1 = digitn b m n.
+Proof.
+move=> dLb.
+have b_pos : 0 < b by apply: leq_ltn_trans dLb.
+rewrite /digitn expnS divnMA mulnC divnMDl //.
+by rewrite [d %/ _]divn_small ?addn0.
+Qed.
+
 Lemma digitn_uniq b n k (f : {ffun 'I_k -> 'I_b}) i :
   n < b ^ k -> n = (\sum_(i < k) f i * b ^ i)%N -> 
   f i = digitn b n i :> nat.
@@ -66,6 +86,104 @@ have <- := H (Ordinal (Hj : j < k)).
   by rewrite ffunE /=; congr (f _); apply/val_eqP.
 by rewrite ltn_divLR // mulnC -expnS.
 Qed.
+
+Definition ndigits b n := up_log b n + (n == b ^ up_log b n) + (n == 0).
+
+Lemma ndigits0 b : ndigits b 0 = 1.
+Proof. by rewrite /ndigits up_log0. Qed.
+
+Lemma ndigits1 b : ndigits b 1 = 1.
+Proof. by rewrite /ndigits up_log1 expn0. Qed.
+
+Lemma ndigits_gt0 b n : 1 < b -> 0 < ndigits b n.
+Proof.
+move=> b_gt1.
+case: n => [|[|n]]; first by rewrite ndigits0.
+  by rewrite ndigits1.
+have := up_log_gt0 b n.+2.
+by rewrite /ndigits b_gt1; case: up_log.
+Qed.
+
+Lemma ndigitsnn b n : 1 < b -> ndigits b (b ^ n) = n.+1.
+Proof.
+move=> b_gt1.
+by rewrite /ndigits up_expnK // eqxx addn1 -leqn0 leqNgt expn_gt0 ltnW // addn0.
+Qed.
+
+Lemma ndigits_bounds b n :
+   1 < b -> 0 < n -> let k := ndigits b n in b ^ k.-1 <= n < b ^ k.
+Proof.
+move=> b_gt1; case: n => [//|[_|n _]]; first by rewrite ndigits1.
+have := up_log_bounds b_gt1 (isT : 1 < n.+2).
+rewrite /ndigits addn0; case: eqP => [nE _| /eqP nD].
+  by rewrite {2 3}nE addn1 leqnn ltn_exp2l // leqnn.
+by rewrite addn0 => /andP[L1 L2]; rewrite ltnW // ltn_neqAle nD.
+Qed.
+
+Lemma ndigitsP b n : 1 < b -> n < b ^ ndigits b n.
+Proof.
+move=> b_gt1; case: n => [|n]; first by rewrite ndigits0 expn1 ltnW.
+by case/andP: (ndigits_bounds b_gt1 (isT : 0 < n.+1)).
+Qed.
+
+Lemma ndigits_leq b n : 1 < b -> 0 < n -> b ^ (ndigits b n).-1 <= n.
+Proof.
+move=> b_gt1 n_pos.
+by case/andP: (ndigits_bounds b_gt1 n_pos).
+Qed.
+
+Lemma ndigits_eq b n k :
+   1 < b -> 0 < n -> b ^ k.-1 <= n < b ^ k -> ndigits b n = k.
+Proof.
+move=> b_gt1 n_pos /andP[bLn nLb].
+have F1 := ndigitsP n b_gt1.
+have F2 := ndigits_leq b_gt1 n_pos.
+apply/eqP; case: ltngtP => H //; last first.
+  move: nLb; rewrite ltnNge => /negP[].
+  apply: leq_trans F2.
+  apply: leq_pexp2l; first by apply/ltnW.
+  by rewrite -ltnS prednK // ndigits_gt0.
+move: bLn; rewrite leqNgt => /negP[].
+apply: leq_trans F1 _.
+apply: leq_pexp2l; first by apply/ltnW.
+by rewrite -ltnS prednK // (leq_ltn_trans _ H).
+Qed.
+
+Lemma ndigits_mulD b n d : 
+  1 < b -> 0 < n -> d < b -> ndigits b (b * n + d) = (ndigits b n).+1.
+Proof.
+move=> b_gt1 n_pos d_digit.
+apply: ndigits_eq => //.
+  apply: leq_trans (leq_addr _ _).
+  by rewrite muln_gt0 ltnW.
+apply/andP; split.
+  apply: leq_trans (leq_addr _ _).
+  rewrite /= -(prednK (ndigits_gt0 _ b_gt1)) expnS leq_mul2l.
+  by rewrite -leqn0 leqNgt ltnW //= ndigits_leq.
+apply: leq_trans (_ : b * n.+1 <= _); first by rewrite mulnS addnC ltn_add2r.
+by rewrite !expnS leq_mul2l -leqn0 leqNgt ltnW // ndigitsP.
+Qed.
+
+Lemma ndigits_mul b n : 1 < b -> 0 < n -> ndigits b (b * n) = (ndigits b n).+1.
+Proof.
+move=> b_gt1 n_pos.
+by rewrite -(ndigits_mulD b_gt1 n_pos (_ : 0 < b)) ?addn0 // ltnW.
+Qed.
+
+Lemma ndigits_expM b n k : 
+  1 < b -> 0 < n -> ndigits b (b ^ k * n) = k + ndigits b n.
+Proof.
+move=> b_g1 n_pos.
+elim: k => [|k IH]; first by rewrite mul1n.
+rewrite expnS -mulnA ndigits_mul ?IH //.
+by rewrite muln_gt0 expn_gt0 ltnW.
+Qed.
+
+Search digitn.
+Lemma digitnE_ndigits b n : 
+  1 < b -> n = \sum_(i < ndigits b n) digitn b n i * b ^ i.
+Proof. by move=> b_gt1; exact: (digitnE (ndigitsP n b_gt1)). Qed.
+
 
 Definition rdigitn b n m :=
   reducebig 0 (index_iota 0 n) 

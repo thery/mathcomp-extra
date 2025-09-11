@@ -71,6 +71,10 @@ Some extra material for mathcomp
   
   [The last digit of n^5 is the same than the one of n](./power5.v)
 
+  [Definition of factorions and how mamy they are](./factorion.v)
+
+
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 A note about addition chain is available [here](https://hal.science/hal-04971933).
@@ -80,7 +84,7 @@ A note about addition chain is available [here](https://hal.science/hal-04971933
 - Author(s):
   - Laurent Théry
 - License: [MIT License](LICENSE)
-- Compatible Coq versions: 9.0 or later
+- Compatible Rocq/Coq versions: 9.0 or later
 - Additional dependencies:
   - [ Hierarchy Builder 1.9.1 or later](https://github.com/math-comp/hierarchy-builder)
   - [MathComp ssreflect 2.4.0 or later](https://math-comp.github.io)
@@ -89,7 +93,7 @@ A note about addition chain is available [here](https://hal.science/hal-04971933
   - [MathComp field 2.4.0 or later](https://math-comp.github.io)
   - [MathComp zify 1.5.0+2.0+8.16 or later](https://github.com/math-comp/mczify)
   - [MathComp Algebra Tactics 1.2.5 or later](https://github.com/math-comp/algebra-tactics)
-- Coq namespace: `mathcomp-extra`
+- Rocq/Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 
 ## Building and installation instructions
