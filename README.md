@@ -71,7 +71,7 @@ Some extra material for mathcomp
   
   [The last digit of n^5 is the same than the one of n](./power5.v)
 
-  [Definition of factorions and how mamy they are](./factorion.v)
+  [Definition of factorions and how many they are](./factorion.v)
 
 
 
