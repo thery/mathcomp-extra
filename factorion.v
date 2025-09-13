@@ -2,12 +2,25 @@ From Stdlib Require Import String NArith.
 From mathcomp Require Import all_ssreflect.
 Require Import digitn.
 
-
 (******************************************************************************)
 (*                                                                            *)
+(* sum_fact b n  == the sum of the factorial of its digits in base b          *)
+(*                                                                            *)
 (* factorion n   ==  n is equal to the sum of the factorial of its digits in  *)
-(*                   base 10                                                  *)
-(* This file shows that there is only 4 of these 1, 2, 145, 40585             *)
+(*                   base 10 (i.e n = sum_fact 10 n)                          *)
+(*                                                                            *)
+(* Factorions are fixed-points of the function sum_fact 10 (1-cycle).         *)
+(* This file shows that there are only 4 of these 1, 2, 145, 40585.           *)
+(*                                                                            *)
+(* Amical factorions correspond to 2-cycles, we show that 781 and 782 are     *)
+(* amical factorions.                                                         *)
+(*                                                                            *)
+(* Magical factorions correspond to 3-cycles, we show that 169 is a magical   *)
+(* factorions.                                                                *)
+(*                                                                            *)
+(* Finally we show that these are the only cycles since when iterating the    *)
+(* application of sum_fact 10 from any n, we show that we always encounter    *)
+(* one of these numbers [:: 1, 2, 145, 40585, 781, 782, 169]                  *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -20,6 +33,17 @@ Section Factorion.
 Let v40585 := Eval vm_compute in 5 + 10 * 4058.
 
 Definition sum_fact b (n : nat) := \sum_(i < ndigits b n) (digitn b n i) `!.
+
+Lemma sum_fact0 b : sum_fact b 0 = 1.
+Proof.
+by rewrite /sum_fact ndigits0 big_ord_recl big_ord0 // digitn0 mod0n.
+Qed.
+
+Lemma sum_fact_small b d : 1 < b -> d < b -> sum_fact b d = d `!.
+Proof.
+move=> b_gt1 dLb; rewrite /sum_fact ndigits_small // big_ord_recl big_ord0.
+by rewrite digitn0 modn_small // addn0.
+Qed.
 
 Lemma sum_factMD b n d :
   0 < n -> 1 < b -> d < b -> sum_fact b (b * n + d) = d `! + sum_fact b n.
@@ -383,6 +407,234 @@ case.
 by [].
 Time Qed.
 
+Definition Nfact_small d :=
+  match d with 
+  | 9%num => 362880%num
+  | 8%num => 40320%num
+  | 7%num => 5040%num
+  | 6%num => 720%num
+  | 5%num => 120%num
+  | 4%num => 24%num
+  | 3%num => 6%num
+  | 2%num => 2%num
+  | _ => 1%num
+  end.
+
+Lemma Nfact_small_spec d : 
+  d < 10 -> Nfact_small (N.of_nat d) = N.of_nat (d `!).
+Proof.
+case: d => [//|] [//|] [//|] [//|] [//|] [//|] [//|] [//|] [//|] [_|//].
+by rewrite 3!factS 3!Nat2N.inj_mul.
+Qed.
+
+Fixpoint Nsum_fact10_aux (n : positive) p := 
+  let p1 := (p / 10)%num in 
+  let r := (p mod 10)%num in 
+  (Nfact_small r + if (p1 =? 0)%num then 0 else
+   match n with xH => 0%num | xI n1 | xO n1 => Nsum_fact10_aux n1 p1 end)%num.
+
+Lemma NatDiv_div a b : PeanoNat.Nat.div a b = a %/ b.
+Proof.
+case: b => [|b]; first by rewrite divn0 PeanoNat.Nat.div_0_r.
+have [k aLk]:= ubnP a; elim: k a aLk => [[]//|k IH a aLk].
+have [bLa|aLb] := leqP b.+1 a; last first.
+  rewrite PeanoNat.Nat.div_small; last by apply/ltP.
+  by rewrite divn_small.
+rewrite -(subnK bLa) -{2 5}[b.+1]mul1n addnC PeanoNat.Nat.div_add_l // IH //.
+  by rewrite divnMDl.
+rewrite ltnS in aLk. 
+by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+Qed.
+
+Lemma Natmod_mod a b : PeanoNat.Nat.modulo a b = a %% b.
+Proof.
+case: b => [|b]; first by rewrite modn0 PeanoNat.Nat.mod_0_r.
+have [k aLk]:= ubnP a; elim: k a aLk => [[]//|k IH a aLk].
+have [bLa|aLb] := leqP b.+1 a; last first.
+  rewrite PeanoNat.Nat.mod_small; last by apply/ltP.
+  by rewrite modn_small.
+rewrite -(subnK bLa) -{2 5}[b.+1]mul1n PeanoNat.Nat.Div0.mod_add IH //.
+  by rewrite addnC modnMDl.
+rewrite ltnS in aLk. 
+by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+Qed.
+
+Lemma Nsum_fact10_aux_spec n p : 
+  0 < N.to_nat p <= N.to_nat (Npos n) -> 
+  Nsum_fact10_aux n p = N.of_nat (sum_fact 10 (N.to_nat p)).
+Proof.
+elim: n p => [n IH p| n IH p| p] pB /=.
+- have -> : N.to_nat p = 10 * (N.to_nat (p / 10)) + N.to_nat (p mod 10).
+    rewrite [LHS](divn_eq _ 10) // mulnC N2Nat.inj_div NatDiv_div.
+    by rewrite N2Nat.inj_mod Natmod_mod.
+  have pm10L10 : N.to_nat (p mod 10) < 10.
+    by rewrite  N2Nat.inj_mod Natmod_mod ltn_mod.
+  case: N.eqb_spec => [->|HNE].
+    rewrite muln0 add0n N.add_0_r -[(_ mod 10)%num in LHS]N2Nat.id.
+    by rewrite Nfact_small_spec // sum_fact_small.
+  have pD10_pos : 0 < N.to_nat (p / 10).
+    by rewrite -[X in X <> _]N2Nat.id in HNE; case: N.to_nat HNE.
+  rewrite sum_factMD // Nat2N.inj_add -IH //.
+    by rewrite -Nfact_small_spec // N2Nat.id.
+  rewrite pD10_pos N2Nat.inj_div NatDiv_div.
+  rewrite -[X in _ <= X](mulnK _ (isT : 0 < 10)).
+  apply: leq_div2r.
+  apply: leq_trans (_ : N.to_nat (N.pos n~1) <= _); first by case/andP: pB.
+  suff -> : N.to_nat (N.pos n~1) = (N.to_nat (N.pos n)).*2.+1.
+    rewrite -muln2 ltn_mul2l // andbT.
+    by apply/leP/(Pnat.Pos2Nat.inj_le 1)/Pos.le_1_l.
+  by rewrite /= Pnat.Pos2Nat.inj_xI -mul2n.
+- have -> : N.to_nat p = 10 * (N.to_nat (p / 10)) + N.to_nat (p mod 10).
+    rewrite [LHS](divn_eq _ 10) // mulnC N2Nat.inj_div NatDiv_div.
+    by rewrite N2Nat.inj_mod Natmod_mod.
+  have pm10L10 : N.to_nat (p mod 10) < 10.
+    by rewrite  N2Nat.inj_mod Natmod_mod ltn_mod.
+  case: N.eqb_spec => [->|HNE].
+    rewrite muln0 add0n N.add_0_r -[(_ mod 10)%num in LHS]N2Nat.id.
+    by rewrite Nfact_small_spec // sum_fact_small.
+  have pD10_pos : 0 < N.to_nat (p / 10).
+    by rewrite -[X in X <> _]N2Nat.id in HNE; case: N.to_nat HNE.
+  rewrite sum_factMD // Nat2N.inj_add -IH //.
+    by rewrite -Nfact_small_spec // N2Nat.id.
+  rewrite pD10_pos N2Nat.inj_div NatDiv_div.
+  rewrite -[X in _ <= X](mulnK _ (isT : 0 < 10)).
+  apply: leq_div2r.
+  apply: leq_trans (_ : N.to_nat (N.pos n~0) <= _); first by case/andP: pB.
+  suff -> : N.to_nat (N.pos n~0) = (N.to_nat (N.pos n)).*2.
+    by rewrite -muln2 leq_mul2l // orbT.
+  by rewrite /= Pnat.Pos2Nat.inj_xO -mul2n.
+suff -> : p = 1%num by rewrite /= sum_fact_small.
+by apply: N2Nat.inj; case: (N.to_nat p) pB => // [] [].
+Qed.
+
+Definition Nsum_fact10 p := if p is Npos n then Nsum_fact10_aux n p else 1%num.
+
+Lemma Nsum_fact10_spec n  : 
+  Nsum_fact10 n = N.of_nat (sum_fact 10 (N.to_nat n)).
+Proof.
+case: n => /= [|p]; first by rewrite sum_fact0.
+apply: Nsum_fact10_aux_spec.
+rewrite leqnn andbT.
+by apply/leP/(Pnat.Pos2Nat.inj_le 1)/Pos.le_1_l.
+Qed.
+
+(* The amical factoriom *)
+
+Lemma afactorion871 : sum_fact 10 (sum_fact 10 871) = 871.
+Proof.
+apply: Nat2N.inj.
+rewrite -[ (sum_fact 10 871)]Nat2N.id -Nsum_fact10_spec.
+by rewrite -[871 in LHS]Nat2N.id -Nsum_fact10_spec.
+Qed.
+
+Lemma afactorion872 : sum_fact 10 (sum_fact 10 872) = 872.
+Proof.
+apply: Nat2N.inj.
+rewrite -[ (sum_fact 10 872)]Nat2N.id -Nsum_fact10_spec.
+by rewrite -[872 in LHS]Nat2N.id -Nsum_fact10_spec.
+Qed.
+
+(* The magic factorion *)
+
+Lemma mfactorion169 : sum_fact 10 (sum_fact 10 (sum_fact 10 169)) = 169.
+Proof.
+apply: Nat2N.inj.
+rewrite -[sum_fact _ (sum_fact 10 169)]Nat2N.id -Nsum_fact10_spec.
+rewrite -[sum_fact 10 169]Nat2N.id -Nsum_fact10_spec.
+by rewrite -[169 in LHS]Nat2N.id -Nsum_fact10_spec.
+Qed.
+
+(*  *)
+Lemma sum_fact10_iter_increase n : 
+  exists k, let v := iter k (sum_fact 10) n in v <= (sum_fact 10 v).
+Proof.
+have [k nLk]:= ubnP n; elim: k n nLk => [[]//|k IH n nLk].
+have [nLs|sLn] := leqP n (sum_fact 10 n); first by exists 0.
+have /IH[k1 Hk1] // : sum_fact 10 n < k by rewrite -ltnS (leq_trans _ nLk).
+by exists k1.+1; rewrite iterSr.
+Qed.
+
+Definition in_loop n := 
+  match n with 
+    1%num | 2%num | 145%num | 40585%num | 169%num | (* 363601%num | 1454%num | *)
+    871%num | (* 45361%num |*) 872%num (* | 45362%num *) => true | _ => false end.
+
+Lemma in_loop_spec n : 
+  in_loop n = (n \in [:: 1; 2; 145; 40585; 871; 872; 169]%num).
+Proof. by case: n => //; do 16 (case => //=). Qed.
+
+Fixpoint check_loop p n := 
+  if in_loop p then true else 
+  if n is n1.+1 then check_loop (Nsum_fact10 p) n1 else false.
+
+Lemma check_loop_spec p n :
+  check_loop p n -> exists k,
+   iter k (sum_fact 10) (N.to_nat p) \in [:: 1; 2; 145; v40585; 871; 872; 169].
+Proof.
+elim: n p => /= [p| n IH p].
+  rewrite in_loop_spec.
+  by case: (boolP (_ \in _)) => // /or4P[|||/or4P[|||/orP[]]] // /eqP-> _; 
+     exists 0; rewrite !inE.
+rewrite in_loop_spec.
+have [|_ /IH [k Hk]] := boolP (_ \in _).
+  move=> Hp; exists 0; rewrite !inE /=.
+  by have /or4P[|||/or4P[|||/orP[]]] // := Hp => /eqP->.
+rewrite Nsum_fact10_spec Nat2N.id in Hk.
+by exists k.+1; rewrite iterSr.
+Qed.
+
+Definition cend_in_cycle n m := 
+   if (n <? m)%num then ~~ check_loop n 60 else false.
+
+
+Lemma cend_in_cycleN_spec n m :
+  ~~ cend_in_cycle n m  -> (n <? m)%num ->
+   exists k,
+   iter k (sum_fact 10) (N.to_nat n)\in [:: 1; 2; 145; v40585; 871; 872; 169].
+Proof.
+by rewrite /cend_in_cycle; case: (_ <? _)%num; 
+   rewrite ?negbK // => /check_loop_spec.
+Qed.
+
+Lemma leq_of_nat n m : (N.of_nat n <= N.of_nat m)%num -> (n <= m).
+Proof.
+rewrite -{2}(Nat2N.id n)  -{2}(Nat2N.id m).
+case: N.of_nat => //= p; case: N.of_nat => //= q pLq.
+by apply/leP/(Pnat.Pos2Nat.inj_le).
+Qed.
+
+(* There is nothing more, we always reach either factorion, amical, or magic *)
+Lemma factorion_no_large_cycle n : 
+  exists k, iter k (sum_fact 10) n \in [:: 1; 2; 145; v40585; 871; 872; 169]. 
+Proof.
+case: (sum_fact10_iter_increase n) => k.
+set v := iter k (sum_fact 10) n => /=.
+rewrite leq_eqVlt => /orP[/eqP vE| vLs].
+  exists k; rewrite -/v.
+  suff : v  \in [:: 1;  2;  145;  v40585].
+    by rewrite !inE => /or4P[] /eqP->; rewrite eqxx.
+  by rewrite -factorionE; apply/eqP.
+suff [k1 Hk1] : exists k, 
+        iter k (sum_fact 10) v \in [:: 1;  2;  145;  v40585;  871;  872;  169].
+  by exists (k1 + k); rewrite iterD.
+have [|v_pos] := leqP v 0.
+  by rewrite leqn0 => /eqP->; exists 1; rewrite /= sum_fact0 !inE.
+have nL7 : ndigits 10 v <= 7.
+  by case: leqP => // /sum_fact10_increasing; rewrite ltnNge leq_eqVlt vLs orbT.
+pose get_list := fact_look_up cend_in_cycle.
+suff g_nil : get_list (ndigits 10 v).-1 = [::].
+  have Hv := @fact_look_up_spec cend_in_cycle _ v_pos.
+  rewrite -/get_list g_nil in_nil in Hv.
+  have := @cend_in_cycleN_spec (N.of_nat v) (N.of_nat (sum_fact 10 v)).
+  rewrite Nat2N.id; apply => //; first by case: cend_in_cycle Hv => //; apply.
+  case: N.ltb_spec => // Hf.
+  move: vLs; rewrite ltnNge => /negP[].
+  by apply: leq_of_nat.
+case: ndigits nL7 => [_|].
+  by vm_cast_no_check (refl_equal ([::] : seq N)).
+do 7 (case => [_|]; first by vm_cast_no_check (refl_equal ([::] : seq N))).
+by [].
+Time Qed.
+
 End Factorion.
 
-Check factorionE.

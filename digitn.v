@@ -149,6 +149,12 @@ apply: leq_pexp2l; first by apply/ltnW.
 by rewrite -ltnS prednK // (leq_ltn_trans _ H).
 Qed.
 
+Lemma ndigits_small b d : 1 < b -> d < b -> ndigits b d = 1.
+Proof.
+move=> b_gt1; case: d => [_|d dLb]; first by rewrite ndigits0.
+by apply: ndigits_eq.
+Qed.
+
 Lemma ndigitsMD b n d : 
   1 < b -> 0 < n -> d < b -> ndigits b (b * n + d) = (ndigits b n).+1.
 Proof.
