@@ -149,7 +149,7 @@ apply: leq_pexp2l; first by apply/ltnW.
 by rewrite -ltnS prednK // (leq_ltn_trans _ H).
 Qed.
 
-Lemma ndigits_mulD b n d : 
+Lemma ndigitsMD b n d : 
   1 < b -> 0 < n -> d < b -> ndigits b (b * n + d) = (ndigits b n).+1.
 Proof.
 move=> b_gt1 n_pos d_digit.
@@ -164,22 +164,21 @@ apply: leq_trans (_ : b * n.+1 <= _); first by rewrite mulnS addnC ltn_add2r.
 by rewrite !expnS leq_mul2l -leqn0 leqNgt ltnW // ndigitsP.
 Qed.
 
-Lemma ndigits_mul b n : 1 < b -> 0 < n -> ndigits b (b * n) = (ndigits b n).+1.
+Lemma ndigitsM b n : 1 < b -> 0 < n -> ndigits b (b * n) = (ndigits b n).+1.
 Proof.
 move=> b_gt1 n_pos.
-by rewrite -(ndigits_mulD b_gt1 n_pos (_ : 0 < b)) ?addn0 // ltnW.
+by rewrite -(ndigitsMD b_gt1 n_pos (_ : 0 < b)) ?addn0 // ltnW.
 Qed.
 
-Lemma ndigits_expM b n k : 
+Lemma ndigitsXM b n k : 
   1 < b -> 0 < n -> ndigits b (b ^ k * n) = k + ndigits b n.
 Proof.
 move=> b_g1 n_pos.
 elim: k => [|k IH]; first by rewrite mul1n.
-rewrite expnS -mulnA ndigits_mul ?IH //.
+rewrite expnS -mulnA ndigitsM ?IH //.
 by rewrite muln_gt0 expn_gt0 ltnW.
 Qed.
 
-Search digitn.
 Lemma digitnE_ndigits b n : 
   1 < b -> n = \sum_(i < ndigits b n) digitn b n i * b ^ i.
 Proof. by move=> b_gt1; exact: (digitnE (ndigitsP n b_gt1)). Qed.
