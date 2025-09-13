@@ -16,7 +16,7 @@ Require Import digitn.
 (* amical factorions.                                                         *)
 (*                                                                            *)
 (* Magical factorions correspond to 3-cycles, we show that 169 is a magical   *)
-(* factorions.                                                                *)
+(* factorion.                                                                 *)
 (*                                                                            *)
 (* Finally we show that these are the only cycles since when iterating the    *)
 (* application of sum_fact 10 from any n, we show that we always encounter    *)
