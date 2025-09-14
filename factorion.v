@@ -588,15 +588,18 @@ by exists k.+1; rewrite iterSr.
 Qed.
 
 Definition cend_in_cycle n m := 
-   if (n <? m)%num then ~~ check_loop n 60 else false.
+   if (n <? m)%num then ~~ check_loop m 60 else false.
 
+Check fact_look_up_spec .
 Lemma cend_in_cycleN_spec n m :
-  ~~ cend_in_cycle n m  -> (n <? m)%num ->
+  ~~ cend_in_cycle n m  -> (n <? m)%num ->  m =  Nsum_fact10 n ->
    exists k,
    iter k (sum_fact 10) (N.to_nat n)\in [:: 1; 2; 145; v40585; 871; 872; 169].
 Proof.
-by rewrite /cend_in_cycle; case: (_ <? _)%num; 
-   rewrite ?negbK // => /check_loop_spec.
+rewrite /cend_in_cycle; case: (_ <? _)%num; 
+rewrite ?negbK // => /check_loop_spec[k Hk] _ mE.
+exists k.+1; rewrite iterSr.
+by rewrite mE Nsum_fact10_spec Nat2N.id in Hk.
 Qed.
 
 Lemma leq_of_nat n m : (N.of_nat n <= N.of_nat m)%num -> (n <= m).
@@ -630,9 +633,10 @@ suff g_nil : get_list (ndigits 10 v).-1 = [::].
   rewrite -/get_list g_nil in_nil in Hv.
   have := @cend_in_cycleN_spec (N.of_nat v) (N.of_nat (sum_fact 10 v)).
   rewrite Nat2N.id; apply => //; first by case: cend_in_cycle Hv => //; apply.
-  case: N.ltb_spec => // Hf.
-  move: vLs; rewrite ltnNge => /negP[].
-  by apply: leq_of_nat.
+    case: N.ltb_spec => // Hf.
+    move: vLs; rewrite ltnNge => /negP[].
+    by apply: leq_of_nat.
+  by rewrite Nsum_fact10_spec Nat2N.id.
 case: ndigits nL7 => [_|].
   by vm_cast_no_check (refl_equal ([::] : seq N)).
 do 7 (case => [_|]; first by vm_cast_no_check (refl_equal ([::] : seq N))).
