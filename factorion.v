@@ -144,6 +144,13 @@ Lemma fact_look_up1S r k n p l :
     fact_look_up1 r k (9 + n1)%num (362880 + p)%num l9.
 Proof. by []. Qed.
 
+Lemma N362880 : N.to_nat (362880) = 9 `!.
+Proof.
+rewrite -[362880%num]/(9 * (8 * (7 * (720))))%num.
+rewrite 3!N2Nat.inj_mul 3!factS.
+congr ((_ * (_ * (_ * _)%coq_nat)%coq_nat)%coq_nat)%coq_nat.
+Qed.
+
 Lemma mem_fact_look_up1 r k n p (l : seq N) :
    {subset l <= (fact_look_up1 r k n p l)}.
 Proof.
@@ -268,13 +275,7 @@ case=> [d9E|].
     rewrite nE mE1 divnMDl ?expn_gt0 //.
     rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
-  rewrite nE sum_factMD // -p1E N2Nat.inj_add.
-  have -> : N.to_nat (362880) = N.to_nat (9 * (8 * (7 * (720)))).
-    by congr N.to_nat.
-  rewrite [N.to_nat (9 * _)]N2Nat.inj_mul.
-  rewrite [N.to_nat (8 * _)]N2Nat.inj_mul.
-  rewrite [N.to_nat (7 * _)]N2Nat.inj_mul.
-  rewrite 3!factS.
+  rewrite nE sum_factMD // -p1E N2Nat.inj_add N362880.
   by congr ((_ * (_ * (_ * _)%coq_nat)%coq_nat)%coq_nat + _)%coq_nat.
 move=> d d1E.
 suff : d1 < 10 by rewrite d1E.
@@ -344,11 +345,7 @@ case => [d8E mE|].
   by rewrite /sum_fact -[ndigits _ _]/1 big_ord_recr big_ord0.
 case => [d9E mE|].
   apply: fact_look_up1_spec => //.
-  rewrite /sum_fact.
-  have -> : N.to_nat (362880) = N.to_nat (9 * (8 * (7 * (720)))).
-    by congr N.to_nat.
-  rewrite [N.to_nat (9 * _)]N2Nat.inj_mul.
-  rewrite [N.to_nat (8 * _)]N2Nat.inj_mul.
+  rewrite /sum_fact N362880.
   rewrite -[ndigits _ _]/1 big_ord_recr big_ord0.
   rewrite [digitn _ _ _]/= [RHS]add0n 2!factS.
   by congr (_ * (_ * _)%coq_nat)%coq_nat.
@@ -431,7 +428,7 @@ Lemma Nfact_small_spec d :
   d < 10 -> Nfact_small (N.of_nat d) = N.of_nat (d `!).
 Proof.
 case: d => [//|] [//|] [//|] [//|] [//|] [//|] [//|] [//|] [//|] [_|//].
-by rewrite 3!factS 3!Nat2N.inj_mul.
+by rewrite -N362880 N2Nat.id.
 Qed.
 
 Fixpoint Nsum_fact10_aux (n : positive) p := 
@@ -592,7 +589,6 @@ Qed.
 
 Definition cend_in_cycle n m := 
    if (n <? m)%num then ~~ check_loop n 60 else false.
-
 
 Lemma cend_in_cycleN_spec n m :
   ~~ cend_in_cycle n m  -> (n <? m)%num ->
