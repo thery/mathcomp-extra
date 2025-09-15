@@ -87,37 +87,29 @@ have <- := H (Ordinal (Hj : j < k)).
 by rewrite ltn_divLR // mulnC -expnS.
 Qed.
 
-Definition ndigits b n := up_log b n + (n == b ^ up_log b n) + (n == 0).
+Definition ndigits b n := (trunc_log b n).+1.
 
 Lemma ndigits0 b : ndigits b 0 = 1.
-Proof. by rewrite /ndigits up_log0. Qed.
+Proof. by rewrite /ndigits trunc_log0. Qed.
 
 Lemma ndigits1 b : ndigits b 1 = 1.
-Proof. by rewrite /ndigits up_log1 expn0. Qed.
+Proof. by rewrite /ndigits trunc_log1. Qed.
 
-Lemma ndigits_gt0 b n : 1 < b -> 0 < ndigits b n.
-Proof.
-move=> b_gt1.
-case: n => [|[|n]]; first by rewrite ndigits0.
-  by rewrite ndigits1.
-have := up_log_gt0 b n.+2.
-by rewrite /ndigits b_gt1; case: up_log.
-Qed.
+Lemma ndigits_gt0 b n : 0 < ndigits b n.
+Proof. by []. Qed.
 
 Lemma ndigitsnn b n : 1 < b -> ndigits b (b ^ n) = n.+1.
 Proof.
 move=> b_gt1.
-by rewrite /ndigits up_expnK // eqxx addn1 -leqn0 leqNgt expn_gt0 ltnW // addn0.
+by rewrite /ndigits trunc_expnK // eqxx addn1 -leqn0 leqNgt expn_gt0 ltnW // 
+           addn0.
 Qed.
 
 Lemma ndigits_bounds b n :
    1 < b -> 0 < n -> let k := ndigits b n in b ^ k.-1 <= n < b ^ k.
 Proof.
 move=> b_gt1; case: n => [//|[_|n _]]; first by rewrite ndigits1.
-have := up_log_bounds b_gt1 (isT : 1 < n.+2).
-rewrite /ndigits addn0; case: eqP => [nE _| /eqP nD].
-  by rewrite {2 3}nE addn1 leqnn ltn_exp2l // leqnn.
-by rewrite addn0 => /andP[L1 L2]; rewrite ltnW // ltn_neqAle nD.
+by have := trunc_log_bounds b_gt1 (isT : 0 < n.+2).
 Qed.
 
 Lemma ndigitsP b n : 1 < b -> n < b ^ ndigits b n.
@@ -164,10 +156,10 @@ apply: ndigits_eq => //.
   by rewrite muln_gt0 ltnW.
 apply/andP; split.
   apply: leq_trans (leq_addr _ _).
-  rewrite /= -(prednK (ndigits_gt0 _ b_gt1)) expnS leq_mul2l.
+  rewrite /= -(prednK (ndigits_gt0 b n)) expnS leq_mul2l.
   by rewrite -leqn0 leqNgt ltnW //= ndigits_leq.
 apply: leq_trans (_ : b * n.+1 <= _); first by rewrite mulnS addnC ltn_add2r.
-by rewrite !expnS leq_mul2l -leqn0 leqNgt ltnW // ndigitsP.
+by rewrite expnS leq_mul2l -leqn0 leqNgt ltnW // ndigitsP.
 Qed.
 
 Lemma ndigitsM b n : 1 < b -> 0 < n -> ndigits b (b * n) = (ndigits b n).+1.
@@ -188,7 +180,6 @@ Qed.
 Lemma digitnE_ndigits b n : 
   1 < b -> n = \sum_(i < ndigits b n) digitn b n i * b ^ i.
 Proof. by move=> b_gt1; exact: (digitnE (ndigitsP n b_gt1)). Qed.
-
 
 Definition rdigitn b n m :=
   reducebig 0 (index_iota 0 n) 

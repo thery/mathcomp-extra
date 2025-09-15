@@ -373,7 +373,7 @@ suff : N.of_nat m \in [:: 1; 2; 145; 40585]%num.
   have -> : (40585 = 5 + 10 * 4058)%num by [].
   by rewrite N2Nat.inj_add N2Nat.inj_mul.
 have := factorion_upperbound mF.
-have := ndigits_gt0 m (isT : 1 < 10).
+have := ndigits_gt0 10 m.
 pose get_factorion d := fact_look_up [rel m n | (m =? n)%num] d.
 have : N.of_nat m \in get_factorion (ndigits 10 m).-1.
   apply: fact_look_up_spec => /=.
@@ -645,3 +645,4 @@ Time Qed.
 
 End Factorion.
 
+Check factorion_no_large_cycle.
