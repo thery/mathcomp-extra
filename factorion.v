@@ -52,32 +52,32 @@ move=> n_pos b_gt1 d_digit.
 rewrite /sum_fact ndigitsMD // big_ord_recl; congr (_ + _).
   by rewrite digitn0 mulnC modnMDl modn_small.
 apply: eq_bigr => /= i _.
-by rewrite digitn_mulD // ltnW.
+by rewrite digitnMD // ltnW.
 Qed.
 
 Lemma sum_factM b n :
   0 < n -> 1 < b -> sum_fact b (b * n) = (sum_fact b n).+1.
 Proof. by move=> ? ?; rewrite -[b * n]addn0 sum_factMD // ltnW. Qed.
 
-Definition factorion (n : nat) := sum_fact 10 n == n.
+Definition factorion := [qualify a n | sum_fact 10 n == n].
 
-Lemma factorion0 : ~ factorion 0.
-Proof. by rewrite /factorion /sum_fact !big_ord_recr /= big_ord0. Qed.
+Lemma factorion0 : 0 \isn't a factorion.
+Proof. by rewrite qualifE /sum_fact !big_ord_recr /= big_ord0. Qed.
 
-Lemma factorion1 : factorion 1.
-Proof. by rewrite /factorion /sum_fact !big_ord_recr /= big_ord0. Qed.
+Lemma factorion1 : 1 \is a factorion.
+Proof. by rewrite qualifE /sum_fact !big_ord_recr /= big_ord0. Qed.
 
-Lemma factorion2 : factorion 2.
-Proof. by rewrite /factorion /sum_fact !big_ord_recr /= big_ord0. Qed.
+Lemma factorion2 : 2 \is a factorion.
+Proof. by rewrite qualifE /sum_fact !big_ord_recr /= big_ord0. Qed.
 
-Lemma factorion145 : factorion 145.
+Lemma factorion145 : 145 \is a factorion.
 Proof. 
-by rewrite /factorion /sum_fact -[ndigits 10 145]/3 !big_ord_recr big_ord0. 
+by rewrite qualifE /sum_fact -[ndigits 10 145]/3 !big_ord_recr big_ord0. 
 Qed.
 
-Lemma factorion40585 : factorion v40585.
+Lemma factorion40585 : v40585 \is a factorion.
 Proof. 
-by rewrite /factorion /sum_fact -[ndigits 10 v40585]/5 !big_ord_recr big_ord0.
+by rewrite qualifE /sum_fact -[ndigits 10 v40585]/5 !big_ord_recr big_ord0.
 Qed.
 
 Lemma sum_fact_bound b n : 1 < b -> sum_fact b n <= ndigits b n * b.-1 `!.
@@ -87,12 +87,12 @@ rewrite -[X in _ <= X * _]subn0 -[X in _ <= X]sum_nat_const_nat big_mkord.
 elim: ndigits => [|k IH]; first by rewrite !big_ord0.
 rewrite !big_ord_recr /= leq_add //.
 case: (b) b_pos => // [] [|b1] // _.
-case: digitn (ltn_pdigit n k (isT : 0 < b1.+2))=> [_ |d dLb] //.
+case: digitn (ltn_digitn n k (isT : 0 < b1.+2))=> [_ |d dLb] //.
   by rewrite -[0 `!]/(1 `!) leq_pfact.
 by rewrite leq_pfact.
 Qed.
 
-Lemma sum_fact10_increasing n : 7 < ndigits 10 n -> sum_fact 10 n < n.
+Lemma ltn_sum_fact10 n : 7 < ndigits 10 n -> sum_fact 10 n < n.
 Proof.
 move=> nL7.
 have n_pos : 0 < n by case: n nL7.
@@ -109,9 +109,9 @@ rewrite leq_pmul2r // -subSS subSn // -[X in X <= _](subnK nL7).
 by elim: (_ - _) => // k IH; rewrite (leq_ltn_trans IH _) // ltn_exp2l.
 Qed.
 
-Lemma factorion_upperbound n : factorion n -> ndigits 10 n <= 7.
+Lemma factorion_upperbound n : n \is a factorion -> ndigits 10 n <= 7.
 Proof.
-by move=> Hf; case: leqP => // /sum_fact10_increasing; rewrite (eqP Hf) ltnn.
+by move=> Hf; case: leqP => // /ltn_sum_fact10; rewrite (eqP Hf) ltnn.
 Qed.
 
 Fixpoint fact_look_up1 (r : rel N) (k : nat) (n p : N) (l : seq N) : seq N := 
@@ -279,7 +279,7 @@ case=> [d9E|].
   by congr ((_ * (_ * (_ * _)%coq_nat)%coq_nat)%coq_nat + _)%coq_nat.
 move=> d d1E.
 suff : d1 < 10 by rewrite d1E.
-by apply: ltn_pdigit.
+by apply: ltn_digitn.
 Qed.
 
 Definition fact_look_up r k : seq N := 
@@ -351,10 +351,10 @@ case => [d9E mE|].
   by congr (_ * (_ * _)%coq_nat)%coq_nat.
 move=> d d1E.
 suff : d1 < 10 by rewrite d1E.
-by apply: ltn_pdigit.
+by apply: ltn_digitn.
 Qed.
 
-Lemma factorionE m : factorion m = (m \in [::1; 2; 145; v40585]).
+Lemma factorionE m : m \is a factorion = (m \in [::1; 2; 145; v40585]).
 Proof.
 apply/idP/idP; last first.
   rewrite !inE; case/or4P => /eqP->.
@@ -377,7 +377,7 @@ have := ndigits_gt0 10 m.
 pose get_factorion d := fact_look_up [rel m n | (m =? n)%num] d.
 have : N.of_nat m \in get_factorion (ndigits 10 m).-1.
   apply: fact_look_up_spec => /=.
-    by case: (m) mF factorion0 => // [].
+    by case: (m) mF factorion0 => // ? /negP[].
   by rewrite (eqP mF); case: N.eqb_spec.
 case: ndigits => //.
 case.
@@ -549,7 +549,7 @@ by rewrite -[169 in LHS]Nat2N.id -Nsum_fact10_spec.
 Qed.
 
 (*  *)
-Lemma sum_fact10_iter_increase n : 
+Lemma leq_sum_fact10_iter n : 
   exists k, let v := iter k (sum_fact 10) n in v <= (sum_fact 10 v).
 Proof.
 have [k nLk]:= ubnP n; elim: k n nLk => [[]//|k IH n nLk].
@@ -590,7 +590,6 @@ Qed.
 Definition cend_in_cycle n m := 
    if (n <? m)%num then ~~ check_loop m 60 else false.
 
-Check fact_look_up_spec .
 Lemma cend_in_cycleN_spec n m :
   ~~ cend_in_cycle n m  -> (n <? m)%num ->  m =  Nsum_fact10 n ->
    exists k,
@@ -613,7 +612,7 @@ Qed.
 Lemma factorion_no_large_cycle n : 
   exists k, iter k (sum_fact 10) n \in [:: 1; 2; 145; v40585; 871; 872; 169]. 
 Proof.
-case: (sum_fact10_iter_increase n) => k.
+case: (leq_sum_fact10_iter n) => k.
 set v := iter k (sum_fact 10) n => /=.
 rewrite leq_eqVlt => /orP[/eqP vE| vLs].
   exists k; rewrite -/v.
@@ -626,7 +625,7 @@ suff [k1 Hk1] : exists k,
 have [|v_pos] := leqP v 0.
   by rewrite leqn0 => /eqP->; exists 1; rewrite /= sum_fact0 !inE.
 have nL7 : ndigits 10 v <= 7.
-  by case: leqP => // /sum_fact10_increasing; rewrite ltnNge leq_eqVlt vLs orbT.
+  by case: leqP => // /ltn_sum_fact10; rewrite ltnNge leq_eqVlt vLs orbT.
 pose get_list := fact_look_up cend_in_cycle.
 suff g_nil : get_list (ndigits 10 v).-1 = [::].
   have Hv := @fact_look_up_spec cend_in_cycle _ v_pos.
