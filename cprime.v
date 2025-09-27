@@ -262,17 +262,11 @@ Qed.
 
 (* Some facts about circular numbers in base 10 *)
 
-(* Uglu trick to get large number *)
-Fixpoint myadd m n := if m is m1.+1 then myadd m1 n.+1 else n.
-Fixpoint mymul3 m n p := 
-  if m is m1.+1 then mymul3 m1 n (myadd n p) else p.
-Definition mymul m n := mymul3 m n 0.
-Definition get_num l := foldr (fun i r => myadd i (mymul 10 r)) 0 (rev l).
 
-Let v11939 := Eval compute in get_num [::1; 1; 9; 3; 9].
-Let v19937 := Eval compute in get_num [::1; 9; 9; 3; 7].
-Let v193939 := Eval compute in get_num [:: 1; 9; 3; 9; 3; 9].
-Let v199933 := Eval compute in get_num [:: 1; 9; 9; 9; 3; 3].
+Let v11939 := Eval compute in N.to_nat 11939.
+Let v19937 := Eval compute in N.to_nat 19937.
+Let v193939 := N.to_nat 193939.
+Let v199933 := N.to_nat 199933.
 
 (* the first circular primes in base 10 *)
 Lemma first_ten_cprimes : 
