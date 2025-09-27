@@ -61,33 +61,55 @@ rewrite /digitn expnS divnMA mulnC divnMDl //.
 by rewrite [d %/ _]divn_small ?addn0.
 Qed.
 
-Lemma digitn_uniq b n k (f : {ffun 'I_k -> 'I_b}) i :
-  n < b ^ k -> n = (\sum_(i < k) f i * b ^ i)%N -> 
-  f i = digitn b n i :> nat.
+Lemma digitn_sum b k f i :
+  i < k -> (forall j, j < k -> f j < b) ->
+  digitn b (\sum_(i < k) f i * b ^ i) i = f i.
 Proof.
-elim: k n f i => [n f [] //|k IH n f i nLb].
-have b_pos : 0 < b by case: (b) nLb => //; rewrite exp0n.
-rewrite big_ord_recl /= muln1 => nE.
-have f0E : f ord0 = n %% b :> nat.
-  rewrite nE -modnDm -modn_summ big1 => [| j _].
-    by rewrite mod0n addn0 modn_mod modn_small.
-  by rewrite /bump add1n expnS mulnCA modnMr.
-have /IH H : n %/ b = \sum_(i < k) [ffun i => f (lift ord0 i)] i * b ^ i.
-  move/eqP: nE.
-  rewrite f0E {1}(divn_eq n b) addnC eqn_add2l.
-  under eq_bigr do rewrite /bump add1n expnS mulnCA.
-  rewrite -big_distrr /= mulnC eqn_mul2l.
-  rewrite eqn_leq leqNgt b_pos /= => /eqP->.
-  by apply: eq_bigr => j _; rewrite !ffunE.
-case i => [] [Hi|j Hj] /=.
-  by rewrite digitn0 -f0E; congr (f _); apply/val_eqP.
-rewrite digitnS.
-have <- := H (Ordinal (Hj : j < k)).
-  by rewrite ffunE /=; congr (f _); apply/val_eqP.
-by rewrite ltn_divLR // mulnC -expnS.
+elim: k f i => // k IH f i iLk Hf.
+have b_pos : 0 < b by case: (b) (Hf _ (leqnn k)).
+rewrite big_ord_recl muln1.
+set s := \sum_(_ < _) _.
+have  -> : s = b * \sum_(i < k)  (f i.+1) * b ^ i.
+  rewrite big_distrr; apply: eq_bigr => //= [] [j Hj] /= _.
+  by rewrite -[bump 0 j]/j.+1 expnS mulnCA.
+case: i iLk => [_|i iLk].
+  by rewrite digitn0 addnC mulnC modnMDl modn_small // Hf.
+rewrite addnC digitnMD; last by apply: Hf.
+apply: (IH (fun i => f i.+1)) => // j jLk.
+by apply: Hf.
+Qed.
+
+Lemma digitn_sumI b k f (i : 'I_k) :
+ (forall j, f j < b) -> digitn b (\sum_(i < k) f i * b ^ i) i = f i.
+Proof.
+case: k i f => [[]//|k i f Hf].
+pose f1 i := f (inord i).
+have <- : f1 i = f i by rewrite /f1 inord_val.
+have <-// := @digitn_sum b k.+1 f1.
+  by congr digitn; apply: eq_bigr => j _; rewrite /f1 inord_val.
+by move=> j Hj; rewrite /f1 Hf.
+Qed.
+
+Lemma digitn_sumII b k (f : 'I_k -> 'I_b) (i : 'I_k) :
+  digitn b (\sum_(i < k) f i * b ^ i) i = f i.
+Proof.
+case: k i f => [[]//|k i f].
+pose f1 i : nat := f i.
+have <- : f1 i = f i by [].
+have <-// := @digitn_sumI b k.+1 f1.
+by move=> j; rewrite /f1.
+Qed.
+
+Lemma digitn0_div b p : 0 < b -> digitn b p 0 %| b -> digitn b p 0 %| p.
+Proof.
+move=> b_gt0 dDb.
+by rewrite [X in _ %| X](divn_eq _ b) dvdn_add ?dvdn_mull // -digitn0.
 Qed.
 
 Definition ndigits b n := (trunc_log b n).+1.
+
+Lemma leq_ndigits b m n : m <= n -> ndigits b m <= ndigits b n.
+Proof. by move=> mLn; rewrite ltnS leq_trunc_log. Qed.
 
 Lemma ndigits0 b : ndigits b 0 = 1.
 Proof. by rewrite /ndigits trunc_log0. Qed.
@@ -98,7 +120,7 @@ Proof. by rewrite /ndigits trunc_log1. Qed.
 Lemma ndigits_gt0 b n : 0 < ndigits b n.
 Proof. by []. Qed.
 
-Lemma ndigitsnn b n : 1 < b -> ndigits b (b ^ n) = n.+1.
+Lemma ndigitsX b n : 1 < b -> ndigits b (b ^ n) = n.+1.
 Proof.
 move=> b_gt1.
 by rewrite /ndigits trunc_expnK // eqxx addn1 -leqn0 leqNgt expn_gt0 ltnW // 
@@ -147,6 +169,32 @@ move=> b_gt1; case: d => [_|d dLb]; first by rewrite ndigits0.
 by apply: ndigits_eq.
 Qed.
 
+Lemma ndigits_predX b n : 1 < b -> ndigits b ((b ^ n.+1).-1) = n.+1.
+Proof.
+move=> b_gt1.
+case: n => [|n]; first by rewrite ndigits_small // prednK // ltnW.
+apply: ndigits_eq => //.
+apply: leq_trans (_ : (b ^ 1).-1 <= _); first by case: b b_gt1.
+  have : b ^ 1 <= b ^ n.+2 by rewrite leq_pexp2l // 1?ltnW.
+  by rewrite expn1; case: b b_gt1 => // [] [//|b] _; case (_ ^ _).
+rewrite /= prednK ?leqnn ?andbT ?expn_gt0 1?ltnW //.
+have F : 2 * b ^ n.+1 <= b ^ n.+2.
+  by rewrite [_ ^ _.+2]expnS leq_mul2r b_gt1 orbT.
+rewrite -ltnS prednK (leq_trans (_ : _ < 2 * b ^ n.+1)) //.
+  rewrite mul2n -addnn -addn1 addSnnS leq_add2l //.
+  by rewrite -(exp1n n.+1) ltn_exp2r.
+by rewrite muln_gt0 expn_gt0 /= ltnW.
+Qed.
+
+Lemma predX_sum b n : (b ^ n).-1 = \sum_(i < n) b.-1 * b ^ i.
+Proof.
+elim: n => [|n IH] /=; first by rewrite big_ord0.
+rewrite big_ord_recr /= -{}IH.
+case: b => // [|b]; first by case: n => // n; rewrite !exp0n.
+apply: eq_add_S.
+by rewrite -addSn !prednK ?expn_gt0 // expnS mulSn.
+Qed.
+
 Lemma ndigitsMD b n d : 
   1 < b -> 0 < n -> d < b -> ndigits b (b * n + d) = (ndigits b n).+1.
 Proof.
@@ -180,6 +228,52 @@ Qed.
 Lemma digitnE_ndigits b n : 
   1 < b -> n = \sum_(i < ndigits b n) digitn b n i * b ^ i.
 Proof. by move=> b_gt1; exact: (digitnE (ndigitsP n b_gt1)). Qed.
+
+Lemma digitn_eq0 b n i : ndigits b n <= i -> digitn b n i = 0.
+Proof.
+case: b => [|[|b Hb]].
+- rewrite /ndigits trunc_log0n /digitn modn0; case: i => // i _ .
+  by rewrite exp0n //.
+- by rewrite /digitn modn1.
+pose f j := if (j < ndigits b.+2 n) then digitn b.+2 n j else 0.
+have -> : 0 = f i by rewrite /f ltnNge Hb.
+suff -> : n = \sum_(j < i.+1) f j * b.+2 ^ j.
+  apply: digitn_sum => // j jLi.
+  by rewrite /f; case: (ltnP j) => // _; rewrite ltn_digitn.
+have Hb1 : ndigits b.+2 n <= i.+1 by rewrite (leq_trans Hb).
+rewrite (@digitnE_ndigits b.+2 n) //.
+have -> := @big_ord_widen _ _ _ _ _ (fun i => digitn b.+2 n i * b.+2 ^ i) Hb1.
+rewrite big_mkcond; apply: eq_bigr => /= k _.
+by rewrite /f; case: ltnP.
+Qed.
+
+Lemma digitn_pred b n i :
+  digitn b (b ^ n).-1 i = if (i < n) then b.-1 else 0.
+Proof.
+case: b => [|[|b]].
+- rewrite if_same /digitn modn0.
+  by case: n => [|n]; rewrite ?div0n // exp0n // div0n.
+- by rewrite if_same /digitn modn1.
+case: n => [|n]; first by rewrite expn0 digit0n.
+case: leqP => [nLi|iLn]; last by rewrite predX_sum; apply: digitn_sum.
+by apply: digitn_eq0; rewrite ndigits_predX.
+Qed.
+
+Lemma digitn_ndigits_pred b n :
+  1 < b -> digitn b n (ndigits b n).-1 = 0 -> n = 0.
+Proof.
+move=> b_gt1 dE0; case: (n =P 0) => // /eqP nD0.
+have b_gt0 : 0 < b by apply: ltnW.
+have n_pos : 0 < n by case: (n) nD0.
+have : b ^ (ndigits b n).-1 <= n by apply: ndigits_leq.
+rewrite leqNgt => /negP[].
+rewrite -[X in _ < X]prednK; last by rewrite expn_gt0 ltnW.
+rewrite ltnS predX_sum  [X in X <= _](digitnE_ndigits _ b_gt1).
+rewrite -[in X in X <= _](prednK (ndigits_gt0 _ _)) big_ord_recr /=.
+rewrite -[trunc_log _ _]/(ndigits b n).-1 dE0 mul0n addn0.
+apply: leq_sum => i _.
+by rewrite leq_mul2r -ltnS prednK // ltn_digitn ?orbT.
+Qed.
 
 Definition rdigitn b n m :=
   reducebig 0 (index_iota 0 n) 
@@ -224,26 +318,12 @@ have [|b_gt0] := leqP b 0.
   by case: b; case: n; case: m => //= [n|n m]; rewrite exp0n.
 move=> mLbn.
 rewrite {1}rdigitnE [RHS](digitnE mLbn).
-apply: eq_bigr => i _; congr (_ * _).
-rewrite rdigitnE.
-pose f1 := [ffun i : 'I_n => (Ordinal (@ltn_digitn b m (n.-1 - i) b_gt0)) ].
-have G : \sum_(i < n) digitn b m (n.-1 - i) * b ^ i = 
-         \sum_(i < n) (f1 i * b ^ i).
-  by apply: eq_bigr => j _; rewrite ffunE.
-have n_gt0 : 0 < n by case: i; case: (n).
-have FF : n.-1 - i < n.
-  apply: leq_ltn_trans (leq_subr _ _) _.
-  by rewrite prednK.
-have <- := digitn_uniq (Ordinal FF) _ G.
-  rewrite ffunE /= subnA //; first by rewrite subnn.
-  by rewrite -ltnS prednK.
-move: n.-1 => u; elim: {i f1 G mLbn n_gt0 FF}n => [|n IH].
-  by rewrite big_ord0 expn0.
-rewrite big_ord_recr /= -addSn.
-have -> : (b ^ n.+1 = b ^ n + b.-1 * b ^ n)%nat.
-  by rewrite expnS -[X in X * _ = _](prednK b_gt0) mulSn.
-rewrite leq_add // leq_mul2r expn_eq0 eqn0Ngt b_gt0 /= -ltnS prednK //.
-by rewrite ltn_digitn.
+apply: eq_bigr => /= i _; congr (_ * _).
+have n_pos : 0 < n by case: (n) i => // [] [].
+rewrite rdigitnE (@digitn_sum _ _ (fun i => digitn b m (n.-1 - i))).
+- by rewrite subKn // -ltnS prednK.
+- by rewrite -subSn ?prednK ?leq_subr // -ltnS prednK.
+by move=> j jLn; apply: ltn_digitn.
 Qed.
 
 Lemma ltn_rdigitn b n m : 0 < b -> rdigitn b n m < b ^ n.
@@ -324,7 +404,7 @@ under eq_bigr do under eq_bigr do rewrite -exprM mulnC.
 under eq_bigr do rewrite prodrMn -expr_sum coefMn coefXn.
 pose f : {ffun 'I_k -> 'I_p} := 
   [ffun i : 'I_k =>  Ordinal (ltn_digitn n i (prime_gt0 Pp))].
-rewrite (bigD1 f) //= [X in (_ %% X)%N]Fp_cast //= .
+rewrite (bigD1 f) //= [X in (_ %% X)%N]Fp_cast //=.
 rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [| i iDf].
   rewrite (_ : _ == _) ?mulr1n.
     under eq_bigr do rewrite ffunE /=.
@@ -333,7 +413,7 @@ rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [| i iDf].
   by rewrite ffunE.
 case: (n =P _) => nEs //; last by rewrite mul0rn.
 case/eqP: iDf; apply/ffunP => j; apply/val_eqP =>/=.
-by rewrite (digitn_uniq _ _ nEs) // ffunE.
+by rewrite !ffunE /= nEs; apply/eqP/sym_equal/digitn_sumII.
 Qed.
 
 End Lucas.

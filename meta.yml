@@ -70,11 +70,13 @@ description: |-
 
     [Definition of factorions and how many they are](./factorion.v)
 
-
+    [Definition of circular primes and some properties](./cprime.v)
 
   A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
   A note about addition chain is available [here](https://hal.science/hal-04971933).
+
+  A note about factorions is available [here](https://inria.hal.science/hal-05265618).
 
 authors:
 - name: Laurent Théry
