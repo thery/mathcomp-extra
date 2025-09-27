@@ -267,7 +267,7 @@ Fixpoint myadd m n := if m is m1.+1 then myadd m1 n.+1 else n.
 Fixpoint mymul3 m n p := 
   if m is m1.+1 then mymul3 m1 n (myadd n p) else p.
 Definition mymul m n := mymul3 m n 0.
-Definition get_num l := foldr (fun i r => 10 * r + i) 0 (rev l).
+Definition get_num l := foldr (fun i r => myadd i (mymul 10 r)) 0 (rev l).
 
 Let v11939 := Eval compute in get_num [::1; 1; 9; 3; 9].
 Let v19937 := Eval compute in get_num [::1; 9; 9; 3; 7].
