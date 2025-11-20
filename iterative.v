@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra ssrnum.
+From mathcomp Require Import all_boot order all_algebra ssrnum.
 
 (** ITERATIVE : Turning a recursive algo in an iterative one                  *)
 

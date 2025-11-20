@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra.
+From mathcomp Require Import all_boot order all_algebra.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

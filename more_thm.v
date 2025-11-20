@@ -1,5 +1,5 @@
 (* Theorems to be added to the mathcomp library  *)
-From mathcomp Require Import all_ssreflect all_fingroup all_field.
+From mathcomp Require Import all_boot all_fingroup all_field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 
 Set Implicit Arguments.
@@ -198,7 +198,7 @@ Proof.
 move=> nC.
 have n_gt0 : 0 < n by case: n nC => //; rewrite eqxx.
 rewrite unlock !derivE subr0.
-suff ->: 'X^n - 1 = (n%:R^-1 *: 'X) * ('X^n.-1 *+ n) + (-1) :> {poly R}.
+suff ->: 'X^n - 1 = (n%:R^-1 *: 'X) * ('X^(n.-1) *+ n) + (-1) :> {poly R}.
   rewrite coprimep_sym coprimep_addl_mul.
   by rewrite -scaleN1r coprimepZr ?coprimep1 // oppr_eq0 oner_eq0.
 rewrite -scaler_nat scalerCA scalerA mulVf //.
@@ -219,7 +219,7 @@ have p_gt1 := prime_gt1 pP.
 pose m := p ^ d.
 have m_gt1: m > 1 by rewrite (ltn_exp2l 0) ?prime_gt1.
 have m_gt0 := ltnW m_gt1; have m1_gt0: m.-1 > 0 by rewrite -ltnS prednK.
-pose q := 'X^m - 'X; have Dq R: q R = ('X^m.-1 - 1) * ('X - 0).
+pose q := 'X^m - 'X; have Dq R: q R = ('X^(m.-1) - 1) * ('X - 0).
   by rewrite subr0 mulrBl mul1r -exprSr prednK.
 have /FinSplittingFieldFor[/= L splitLq]: q (GRing.NzRing.clone _ 'F_p) != 0.
   by rewrite Dq monic_neq0 ?rpredM ?monicXsubC ?monicXnsubC.

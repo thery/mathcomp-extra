@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_fingroup all_field.
+From mathcomp Require Import all_boot all_fingroup all_field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 From mathcomp Require cyclic.
 From Stdlib Require BinPos Pnat.
@@ -55,20 +55,20 @@ Lemma introspecMl (R : comNzRingType) (k m n : nat) (p : {poly R}) :
   m ⋈[k] p -> n ⋈[k] p -> m * n ⋈[k] p.
 Proof.
 case: m => // m.
-have XmD1 : 'X^m.+1 != 1 :> {poly R}.
+have XmD1 : 'X^(m.+1) != 1 :> {poly R}.
   apply/eqP => /(congr1 (size : {poly R} -> _)).
   by rewrite size_polyXn size_polyC oner_eq0.
 case: k => [|k mIp nIp].
   rewrite /introspective !subrr !rmodp0 exprM => /eqP->.
   rewrite comp_poly_exp => /eqP->.
   by rewrite -comp_polyA comp_Xn_poly -exprM.
-have XM : ('X^k.+1 - 1 : {poly R}) \is monic.
+have XM : ('X^(k.+1) - 1 : {poly R}) \is monic.
   rewrite qualifE /= lead_coefDl ?lead_coefXn ?unitr1 //.
   by rewrite size_polyXn size_polyN size_polyC oner_neq0.
 rewrite /introspective exprM -rmodpX // (eqP mIp) rmodpX //.
-rewrite exprM -['X^m.+1 ^+_]comp_Xn_poly comp_poly_exp comp_polyA.
+rewrite exprM -['X^(m.+1) ^+_]comp_Xn_poly comp_poly_exp comp_polyA.
 rewrite -subr_eq0 -rmodpB // -comp_polyB.
-apply: rdvdp_trans (_ : rdvdp (('X^k.+1 -1) \Po 'X^m.+1) _) => //.
+apply: rdvdp_trans (_ : rdvdp (('X^(k.+1) -1) \Po 'X^(m.+1)) _) => //.
 - by apply: monic_comp_poly => //; rewrite qualifE /= lead_coefXn.
 - rewrite comp_polyB comp_Xn_poly comp_polyC -exprM mulnC exprM.
   by apply: dvdp_geom.
@@ -1576,7 +1576,7 @@ Hypothesis n_gt1 : 1 < n.
 Hypothesis pP : prime p.
 Hypothesis pDn : (p %| n)%nat.
 
-Fact inZpm_is_semi_additive : semi_additive (inZp : 'Z_n -> 'F_p).
+Fact inZpm_is_nmod_morphism : nmod_morphism (inZp : 'Z_n -> 'F_p).
 Proof.
 have p_gt1 : 1 < p by apply: prime_gt1.
 split=> [//|x y]; first by apply/val_eqP=> /=; rewrite mod0n.
@@ -1586,7 +1586,7 @@ rewrite !Zp_cast /= ?pdiv_id //.
 by rewrite modnDm modn_dvdm.
 Qed.
 
-Fact inZpm_is_additive : additive (inZp : 'Z_n -> 'F_p).
+Fact inZpm_is_zmod_morphism : zmod_morphism (inZp : 'Z_n -> 'F_p).
 Proof.
 have p_gt1 : 1 < p by apply: prime_gt1.
 move=> /= x y; apply/val_eqP/eqP => /=.
@@ -1604,19 +1604,19 @@ case: (modn y' p)%N => //= [|xx]; last by rewrite mul1n.
 by rewrite mul0n !subn0 addn0 modnDr.
 Qed.
 
-Fact inZpm_is_multiplicative : multiplicative (inZp : 'Z_n -> 'F_p).
+Fact inZpm_is_monoid_morphism : monoid_morphism (inZp : 'Z_n -> 'F_p).
 Proof.
 have p_gt1 : 1 < p by apply: prime_gt1.
-split=> [x y| //]; apply/val_eqP/eqP => /=.
+split=> [//|x y]; apply/val_eqP/eqP => /=.
 set x' := nat_of_ord _; set y' := nat_of_ord _.
 by rewrite !Zp_cast /= ?pdiv_id // modnMm modn_dvdm.
 Qed.
-      
+
 Definition inZpm : {rmorphism 'Z_n -> 'F_p} :=
   GRing.RMorphism.Pack
     (GRing.RMorphism.Class
-       (GRing.isSemiAdditive.Build _ _ _ inZpm_is_semi_additive)
-       (GRing.isMultiplicative.Build _ _ _ inZpm_is_multiplicative)).
+       (GRing.isNmodMorphism.Build _ _ _ inZpm_is_nmod_morphism)
+       (GRing.isMonoidMorphism.Build _ _ _ inZpm_is_monoid_morphism)).
 
 Lemma eqp_rmodp_dvd (R : nzRingType) (p1 q r  :  {poly R}) :
   p1 \is monic ->  (rmodp q p1 == rmodp r p1) = (rdvdp p1 (q - r)).

@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect perm algebra.zmodp.
+From mathcomp Require Import all_boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 Require Import more_tuple nsort.
 

@@ -87,13 +87,12 @@ build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
   "coq" {(>= "9.0")}
-  "coq-hierarchy-builder" {(>= "1.9.1")}
-  "coq-mathcomp-ssreflect" {(>= "2.4.0")}
-  "coq-mathcomp-fingroup" {(>= "2.4.0")}
-  "coq-mathcomp-algebra" {(>= "2.4.0")}
-  "coq-mathcomp-field" {(>= "2.4.0")}
-  "coq-mathcomp-zify" {(>= "1.5.0+2.0+8.16")}
-  "coq-mathcomp-algebra-tactics" {(>= "1.2.5")}
+  "coq-mathcomp-ssreflect" {(>= "2.5.0")}
+  "coq-mathcomp-fingroup" {(>= "2.5.0")}
+  "coq-mathcomp-algebra" {(>= "2.5.0")}
+  "coq-mathcomp-field" {(>= "2.5.0")}
+  "coq-mathcomp-zify" {(>= "1.6.0+2.3+8.18")}
+  "coq-mathcomp-algebra-tactics" {(>= "1.2.7")}
 ]
 
 tags: [

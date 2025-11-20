@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot.
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
 (*       'L(n,m) <=>                                                          *)

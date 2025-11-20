@@ -1,5 +1,5 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import all_ssreflect all_algebra.
+From mathcomp Require Import all_boot all_algebra.
 
 (******************************************************************************)
 (* This files contains a proof of Euler Criterion                             *)
@@ -7,8 +7,6 @@ From mathcomp Require Import all_ssreflect all_algebra.
 (*                                                                            *)
 (* Thanks to Bruno Rafael                                                     *)
 (******************************************************************************)
-
-From mathcomp Require Import all_ssreflect all_algebra.
 
 Lemma modn_prodm I r (P : pred I) F d :
   \prod_(i <- r | P i) (F i %% d) = \prod_(i <- r | P i) F i %[mod d].

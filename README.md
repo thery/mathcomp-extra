@@ -90,13 +90,12 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 - License: [MIT License](LICENSE)
 - Compatible Rocq/Coq versions: 9.0 or later
 - Additional dependencies:
-  - [ Hierarchy Builder 1.9.1 or later](https://github.com/math-comp/hierarchy-builder)
-  - [MathComp ssreflect 2.4.0 or later](https://math-comp.github.io)
-  - [MathComp fingroup 2.4.0 or later](https://math-comp.github.io)
-  - [MathComp algebra 2.4.0 or later](https://math-comp.github.io)
-  - [MathComp field 2.4.0 or later](https://math-comp.github.io)
-  - [MathComp zify 1.5.0+2.0+8.16 or later](https://github.com/math-comp/mczify)
-  - [MathComp Algebra Tactics 1.2.5 or later](https://github.com/math-comp/algebra-tactics)
+  - [MathComp ssreflect 2.5.0 or later](https://math-comp.github.io)
+  - [MathComp fingroup 2.5.0 or later](https://math-comp.github.io)
+  - [MathComp algebra 2.5.0 or later](https://math-comp.github.io)
+  - [MathComp field 2.5.0 or later](https://math-comp.github.io)
+  - [MathComp zify 1.6.0+2.3+8.18 or later](https://github.com/math-comp/mczify)
+  - [MathComp Algebra Tactics 1.2.7 or later](https://github.com/math-comp/algebra-tactics)
 - Rocq/Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 

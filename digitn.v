@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot.
 From mathcomp Require Import all_algebra.
 
 (******************************************************************************)
@@ -400,7 +400,7 @@ have H i :
   by case/andP=> /andP[/bin_small->]; rewrite mulr0n.
 under eq_bigr do rewrite {}H.
 rewrite bigA_distr_bigA /= coef_sum.
-under eq_bigr do under eq_bigr do rewrite -exprM mulnC.
+under [in LHS] eq_bigr do under eq_bigr do rewrite -exprM mulnC.
 under eq_bigr do rewrite prodrMn -expr_sum coefMn coefXn.
 pose f : {ffun 'I_k -> 'I_p} := 
   [ffun i : 'I_k =>  Ordinal (ltn_digitn n i (prime_gt0 Pp))].

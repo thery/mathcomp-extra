@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect perm algebra.zmodp.
+From mathcomp Require Import all_boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 
 Import Order POrderTheory TotalTheory.

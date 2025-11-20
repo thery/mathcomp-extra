@@ -1,5 +1,5 @@
 (* Computation of nth root (code from Yves.Bertot@inria.fr)                   *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot.
 
 (******************************************************************************)
 (*                                                                            *)

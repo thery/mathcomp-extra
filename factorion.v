@@ -1,5 +1,5 @@
 From Stdlib Require Import String NArith.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot.
 Require Import digitn.
 
 (******************************************************************************)

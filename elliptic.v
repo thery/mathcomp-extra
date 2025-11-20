@@ -1,6 +1,7 @@
 (* A version of Coqprime Elliptic for mathcomp *)
+From Stdlib Require Import Eqdep_dec.
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra ring.
+From mathcomp Require Import all_boot all_algebra ring.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -49,7 +50,7 @@ Theorem curve_elt_irr x1 x2 y1 y2 e1 e2 :
 Proof.
 move=> x1E y1E; move: e1 e2; rewrite x1E y1E => e1 e2.
 congr curve_elt.
-apply: Eqdep_dec.eq_proofs_unicity => x y.
+apply: eq_proofs_unicity => x y.
 by case: (x =P y); [left | right].
 Qed.
 

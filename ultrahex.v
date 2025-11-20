@@ -1,5 +1,5 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot.
 
 (******************************************************************************)
 (* This file contains a proof that the last digit of the ultrahex is 6        *)

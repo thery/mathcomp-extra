@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect perm algebra.zmodp.
+From mathcomp Require Import all_boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 
 Import Order POrderTheory TotalTheory.
@@ -35,7 +35,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* Missing theorems they should be moved to mathcomo *)
+(* Missing theorems they should be moved to mathcomp *)
 Lemma uphalfE n : uphalf n = n.+1./2.
 Proof. by []. Qed.
 
@@ -939,7 +939,8 @@ Proof.
 move=> sS; apply/leqtP => a b.
 rewrite leq_eqVlt => /orP[/val_eqP->//|aLb].
 pose v := tnth t1 a; rewrite leNgt !(tnth_nth v).
-by rewrite -DualOrder.ltEdual lt_sorted_ltn_nth ?(aLb, inE, size_tuple).
+by rewrite -ltEdual lt_sorted_ltn_nth ?(aLb, inE, size_tuple).
+
 Qed.
 
 End LeqT.
