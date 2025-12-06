@@ -74,6 +74,10 @@ description: |-
 
     [All prime numbers (except 2 and 3) are next to a multiple of 6](./prime6.v)
 
+    [Nicomachus Theorem about summation of cube](./nicomachus.v)
+
+    [Liouville Theorem about number's divisors](./liouville.v)
+
   A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
   A note about addition chain is available [here](https://hal.science/hal-04971933).
