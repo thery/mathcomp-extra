@@ -94,9 +94,9 @@ install: [make "install"]
 depends: [
   "coq" {(>= "9.1")}
   "rocq-mathcomp-boot" {(>= "2.5.0")}
-  "coq-mathcomp-fingroup" {(>= "2.5.0")}
-  "coq-mathcomp-algebra" {(>= "2.5.0")}
-  "coq-mathcomp-field" {(>= "2.5.0")}
+  "rocq-mathcomp-fingroup" {(>= "2.5.0")}
+  "rocq-mathcomp-algebra" {(>= "2.5.0")}
+  "rocq-mathcomp-field" {(>= "2.5.0")}
   "coq-mathcomp-zify" {(>= "1.6.0+2.3+8.18")}
   "coq-mathcomp-algebra-tactics" {(>= "1.2.7")}
 ]

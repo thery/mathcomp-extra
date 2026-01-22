@@ -110,17 +110,17 @@ dependencies:
   description: |-
     [MathComp boot 2.5.0 or later](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-fingroup
+    name: rocq-mathcomp-fingroup
     version: '{(>= "2.5.0")}'
   description: |-
     [MathComp fingroup 2.5.0 or later](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-algebra
+    name: rocq-mathcomp-algebra
     version: '{(>= "2.5.0")}'
   description: |-
     [MathComp algebra 2.5.0 or later](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-field
+    name: rocq-mathcomp-field
     version: '{(>= "2.5.0")}'
   description: |-
     [MathComp field 2.5.0 or later](https://math-comp.github.io)
