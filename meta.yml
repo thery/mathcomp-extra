@@ -78,6 +78,8 @@ description: |-
 
     [Liouville Theorem about number's divisors](./liouville.v)
 
+    [Square numbers ending with xyxyxyxyxy](./repeatxy.v)
+
   A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
   A note about addition chain is available [here](https://hal.science/hal-04971933).
@@ -98,15 +100,15 @@ license:
   identifier: MIT
 
 supported_coq_versions:
-  text: '9.0 or later'
-  opam: '{(>= "9.0")}'
+  text: '9.1 or later'
+  opam: '{(>= "9.1")}'
 
 dependencies:
 - opam:
-    name: coq-mathcomp-ssreflect
+    name: rocq-mathcomp-boot
     version: '{(>= "2.5.0")}'
   description: |-
-    [MathComp ssreflect 2.5.0 or later](https://math-comp.github.io)
+    [MathComp boot 2.5.0 or later](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-fingroup
     version: '{(>= "2.5.0")}'
@@ -134,7 +136,7 @@ dependencies:
     [MathComp Algebra Tactics 1.2.7 or later](https://github.com/math-comp/algebra-tactics)
 
 tested_coq_opam_versions:
-- version: '2.5.0-rocq-prover-9.0'
+- version: '2.5.0-rocq-prover-9.1'
   repo: 'mathcomp/mathcomp'
 
 namespace: mathcomp-extra

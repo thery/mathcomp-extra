@@ -81,6 +81,8 @@ Some extra material for mathcomp
 
   [Liouville Theorem about number's divisors](./liouville.v)
 
+  [Square numbers ending with xyxyxyxyxy](./repeatxy.v)
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 A note about addition chain is available [here](https://hal.science/hal-04971933).
@@ -90,8 +92,8 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  "coq" {(>= "9.0")}
-  "coq-mathcomp-ssreflect" {(>= "2.5.0")}
+  "coq" {(>= "9.1")}
+  "rocq-mathcomp-boot" {(>= "2.5.0")}
   "coq-mathcomp-fingroup" {(>= "2.5.0")}
   "coq-mathcomp-algebra" {(>= "2.5.0")}
   "coq-mathcomp-field" {(>= "2.5.0")}
