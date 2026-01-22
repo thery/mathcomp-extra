@@ -3,6 +3,15 @@ From mathcomp Require Import all_ssreflect.
 From Stdlib Require Import NArith.
 Require Import digitn.
 
+(******************************************************************************)
+(*                                                                            *)
+(* A formalisation of the wrong fact                                          *)
+(*    If a² ends in the pattern xyxyxyxyxy, then xy is either 21,61 or 84     *)
+(*    https://x.com/fermatslibrary/status/2010760010448490722                 *)
+(*                                                                            *)
+(*    It is 00, 21, 29, 61, 69 or 84                                          *)
+(******************************************************************************)
+
 (* 10 digit arithmetic *)
 
 Inductive d10 := dd0 | dd1 | dd2 | dd3 | dd4 | dd5 | dd6 | dd7 | dd8 | dd9.
