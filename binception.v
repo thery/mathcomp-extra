@@ -13,7 +13,7 @@ case: n => //= [] [|n]//.
 have pbin2 m : 'C(m, 2).*2 = m.-1 * m.
   by case: m => //=  m; rewrite -mul2n mul_bin_left bin1 subn1.
 have pbin4 m : 24 * 'C(m.+3, 4) = m * m.+1 * m.+2 * m.+3.
-  rewrite -[24]/(2 * 3 *4) -!mulnA mul_bin_left [3 * _]mulnCA mul_bin_left.
+  rewrite -[24]/(2 * 3 * 4) -!mulnA mul_bin_left [3 * _]mulnCA mul_bin_left.
   rewrite !subSS !subn0 mulnCA; congr muln.
   by rewrite mulnCA mul_bin_left bin1 subn1.
 apply: double_inj; rewrite pbin2.

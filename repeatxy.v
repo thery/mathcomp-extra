@@ -3,6 +3,7 @@ From mathcomp Require Import all_boot.
 From Stdlib Require Import NArith.
 Require Import digitn.
 
+
 (******************************************************************************)
 (*                                                                            *)
 (* A formalisation of the wrong fact                                          *)
@@ -329,7 +330,7 @@ Proof. by []. Qed.
 
 Lemma is_repeat_digit n p :
   size p = n.*2 -> is_repeat p = 
-  [forall i : 'I_n.*2,  digitn 10 (n10nat p) i == digitn 10 (n10nat p) (i %%2)].
+  [forall i : 'I_n.*2, digitn 10 (n10nat p) i == digitn 10 (n10nat p) (i %% 2)].
 Proof.
 have dL d : dval d < 10 by case: d.
 elim: n p => [|n IH] [|d1 [|d2 [|d3 [|d4 p]]]] H //.
@@ -520,7 +521,7 @@ Qed.
 Definition get_list n := let: Res l _ _ := run_res n in [seq n10nat i | i <- l].
 
 Lemma get_list_correct n i : i <= (10%N ^ n.+1.*2)./2 ->
-  (forall j, j < n.+1.*2 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < n.+1.*2 -> digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in get_list n.
 Proof.
 move=> iLp Hf.
@@ -541,7 +542,7 @@ Qed.
 
 Lemma get_list_all_correct n i :
   0 < n ->
-  (forall j, j < n.+1.*2 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < n.+1.*2 -> digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in get_list n.
 Proof.
 move=> n_pos Hf.
@@ -582,23 +583,23 @@ by apply: Hf1.
 Qed.
 
 Lemma get_list_all_correct4 i :
-  (forall j, j < 4 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < 4 -> digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in [:: 00; 04; 16; 21; 29; 36; 61; 64; 69; 84; 96].
 Proof.
 move=> Hf.
-pose l := [:: 00;  04; 16; 96; 36; 61; 64; 84; 69; 29; 21].
-have -> : [:: 00;  04; 16; 21; 29; 36; 61; 64; 69; 84; 96] =i l.
+pose l := [:: 00; 04; 16; 96; 36; 61; 64; 84; 69; 29; 21].
+have -> : [:: 00; 04; 16; 21; 29; 36; 61; 64; 69; 84; 96] =i l.
   by move=> j; rewrite !inE; do 11 (case:eqP => //).
 have -> : l = get_list 1 by vm_cast_no_check (refl_equal l).
 by apply: get_list_all_correct.
 Qed.
     
 Lemma get_list_all_correct6 i :
-  (forall j, j < 6 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < 6 -> digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in [:: 00; 16; 21; 29; 61; 64; 69; 84].
 Proof.
 move=> Hf.
-pose l := [:: 00;  16;  64;  61;  29;  84;  21;  69].
+pose l := [:: 00; 16; 64; 61; 29; 84; 21; 69].
 have -> : [:: 00; 16; 21; 29; 61; 64; 69; 84] =i l.
   by move=> j; rewrite !inE; do 8 (case:eqP => //).
 have -> : l = get_list 2 by vm_cast_no_check (refl_equal l).
@@ -606,7 +607,7 @@ by apply: get_list_all_correct.
 Qed.
 
 Lemma get_list_all_correct8 i :
-  (forall j, j < 8 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < 8 -> digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in [:: 00; 21; 29; 61; 64; 69; 84].
 Proof.
 move=> Hf.
@@ -633,11 +634,11 @@ Compute (509895478 ^ 2)%N.
 (* This takes 3 hours *)
 
 Lemma get_list_all_correct10 i :
-  (forall j, j < 10 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %%2)) ->
+  (forall j, j < 10 ->  digitn 10 (i ^ 2) j = digitn 10 (i ^ 2) (j %% 2)) ->
   (i ^ 2) %% 100 \in [:: 00; 21; 29; 61; 69; 84].
 Proof.
 move=> Hf.
-pose l := [:: 0; 29; 21; 84; 69; 61].
+pose l := [:: 00; 29; 21; 84; 69; 61].
 have -> : [:: 00; 21; 29; 61; 69; 84] =i l.
    move=> j; rewrite !inE; do 6 (case:eqP => //).
 have -> : l = get_list 4 by vm_cast_no_check (refl_equal l).
