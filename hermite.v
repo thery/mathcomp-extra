@@ -21,7 +21,7 @@ Section Hermite.
 
 Variable R : archiRealFieldType.
 
-Local Notation " `⌊ x ⌋ " := ((Num.floor x)%:~R) (format "`⌊ x ⌋" ).
+Local Notation " `⌊ x ⌋ " := ((Num.floor x)%:~R : R) (format "`⌊ x ⌋" ).
 
 Definition frac_part (x : R) := x - `⌊ x ⌋.
 
@@ -110,13 +110,13 @@ rewrite [X in _ <= _ + X]splitr -[X in X <= _]add0r mul1r addrA lerD2r.
 by rewrite addrAC subr_ge0.
 Qed.
 
-Lemma hermite_id (n : nat) x : 
- `⌊n%:R * x⌋ = \sum_(k < n) (`⌊x + k%:R / (n%:R:R)⌋ : R).
+Lemma hermite_id (n : nat) (x : R) : 
+  `⌊n%:R * x⌋ = \sum_(k < n) `⌊x + k%:R / (n%:R)⌋.
 Proof.
 have [//|n_gt0|->] := ltngtP n 0; last by rewrite big_ord0 mul0r floor0.
 have n_neq0 : n%:R != 0 :> R by rewrite (eqr_nat _ _ 0); case: (n) n_gt0.
 have nr_nt0 : (0 : R) < n%:R by rewrite (ltr_nat _ 0).
-pose g (k : nat) : R := `⌊x + k%:R / (n%:R : R)⌋.
+pose g (k : nat) : R := `⌊x + k%:R / n%:R⌋.
 rewrite -(@big_mkord _ _ _ _ xpredT g) {}/g.
 rewrite (fracE x) mulrDr addrC -(intrM _ (Posz n)) floorDrz // intrD.
 rewrite [X in _ + X = _]floorK // intrM.
@@ -124,8 +124,7 @@ under eq_bigr do rewrite -addrA addrC floorDrz // intrD.
 rewrite big_split /=.
 rewrite sumr_const_nat subn0.
 rewrite [in X in _ = _ + X]floorK // [X in _ + X = _]mulr_natl.
-suff <- : `⌊n%:R * `{ x}⌋ = (\sum_(0 <= i < n)  `⌊`{ x} + i%:R / n%:R⌋ : R).
-   by [].
+suff <- : `⌊n%:R * `{ x}⌋ = \sum_(0 <= i < n)  `⌊`{ x} + i%:R / n%:R⌋ by [].
 have /andP[x_ge0 x_lt1] := frac_le x.
 pose fnx := Num.floor (n%:R * `{x}).
 have fnx_pos : 0 <= fnx by rewrite floor_ge0 mulr_ge0.
@@ -142,11 +141,11 @@ have nLcnx : (`|cnx| <= n)%N.
   have /le_ceil : n%:R * (1 - `{x}) <= n%:R.
     by rewrite mulrBr mulr1 gerBl mulr_ge0.
   rewrite -/cnx -(ler_int R) //.
-  suff /eqP->// : (Num.Def.ceil (n%:R : R))%:~R == (n%:R : R) by [].
+  suff /eqP->// : (Num.Def.ceil (n%:R : R))%:~R == n%:R :> R by [].
   by rewrite -intrEceil.
 have tE : t = (`|cnx| : nat).
   rewrite /cnx mulrBr mulr1 addrC ceilDrz // ceilNfloor opprK addrC.
-  have -> : Num.Def.ceil (n%:R : R) = (n : int).
+  have -> : Num.Def.ceil (n%:R : R) = n :> int.
     by apply/eqP; rewrite -(eqr_int R) -intrEceil.
   by rewrite -[LHS]distnEl ?intOrdered.gez0_norm.
 rewrite (big_cat_nat_idem _ (_ : 0 <= t)%N) //=; last 2 first.
