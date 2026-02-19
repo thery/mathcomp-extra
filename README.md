@@ -85,6 +85,8 @@ Some extra material for mathcomp
   
   [Binomial equation about taking 2 segments from n points](./binception.v)
 
+  [Hermite's identity](./hermite.v)
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 A note about addition chain is available [here](https://hal.science/hal-04971933).
@@ -108,15 +110,3 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 - Related publication(s): none
 
 ## Building and installation instructions
-
-To build and install manually, do:
-
-``` shell
-git clone https://github.com/thery/mathcomp-extra.git
-cd mathcomp-extra
-make   # or make -j <number-of-cores-on-your-machine> 
-make install
-```
-
-
-
