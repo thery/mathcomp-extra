@@ -28,10 +28,13 @@ Definition frac_part (x : R) := x - `⌊ x ⌋.
 Local Notation " `{ x } " := (frac_part x) (format "`{ x }" ).
 
 Lemma fracE (x : R) : x = `⌊x⌋ + `{x}.
-Proof. by rewrite /frac addrC subrK. Qed.
+Proof. by rewrite /frac_part addrC subrK. Qed.
 
-Lemma frac_le (x : R) : 0 <= `{x} < 1.
-Proof. by rewrite subr_ge0 ltrBlDl floor_le -(intrD _ _ 1) floorD1_gt. Qed.
+Lemma frac_ge0 (x : R) : 0 <= `{x}.
+Proof. by rewrite subr_ge0 floor_le. Qed.
+
+Lemma frac_lt1 (x : R) : `{x} < 1.
+Proof. by rewrite ltrBlDl -(intrD _ _ 1) floorD1_gt. Qed.
 
 Definition half_up (x : R) : R := `⌊x + 2^-1⌋.
 
@@ -48,6 +51,16 @@ Proof.
 rewrite -(intrD _ _ 1) -(floor1 R) -floorDrz // ler_int; apply: le_floor.
 by rewrite lerD2l invf_le1 // (ler_nat _ 1 2).
 Qed.
+
+Lemma half_up_int (z : int) : `⌈z%:~R⌋ = (z%:~R : R).
+Proof.
+rewrite /half_up addrC floorDrz // intrKfloor intrD.
+rewrite (@floor_def _ _ (0:int)) ?add0r // invr_ge0 // invf_lt1 //.
+by rewrite (ler_nat _ 0 2)  (@ltr_nat _ 1 2).
+Qed.
+
+Lemma half_upDrz (x : R) z : `⌈x + z%:~R⌋ = `⌈x⌋ + z%:~R.
+Proof. by rewrite /half_up addrAC floorDrz // intrD intrKfloor. Qed.
 
 Inductive half_up_build (x : R) : R -> Prop := 
   half_up_build_floor : x < `⌊x⌋ + 2^-1 -> half_up_build x `⌊x⌋
@@ -110,7 +123,7 @@ rewrite [X in _ <= _ + X]splitr -[X in X <= _]add0r mul1r addrA lerD2r.
 by rewrite addrAC subr_ge0.
 Qed.
 
-Lemma hermite_id (n : nat) (x : R) : 
+Lemma hermite_id (n : nat) (x : R) :
   `⌊n%:R * x⌋ = \sum_(k < n) `⌊x + k%:R / (n%:R)⌋.
 Proof.
 have [//|n_gt0|->] := ltngtP n 0; last by rewrite big_ord0 mul0r floor0.
@@ -125,7 +138,7 @@ rewrite big_split /=.
 rewrite sumr_const_nat subn0.
 rewrite [in X in _ = _ + X]floorK // [X in _ + X = _]mulr_natl.
 suff <- : `⌊n%:R * `{ x}⌋ = \sum_(0 <= i < n)  `⌊`{ x} + i%:R / n%:R⌋ by [].
-have /andP[x_ge0 x_lt1] := frac_le x.
+have  x_ge0 := frac_ge0 x; have x_lt1 := frac_lt1 x.
 pose fnx := Num.floor (n%:R * `{x}).
 have fnx_pos : 0 <= fnx by rewrite floor_ge0 mulr_ge0.
 have fnxLn : (`|fnx| <= n)%N.
