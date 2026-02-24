@@ -6,7 +6,7 @@
 (*    `⌊x⌋  : floor function                                                  *)
 (*    `⌈x⌋  : nearest-int function with `⌈ n + 1/2 ⌋ = n + 1                  *)
 (*                                                                            *)
-(*    hermite's identity : `⌊nx⌋ = \sum_(k < n) `⌊x + k / n⌋                  *)
+(*    Hermite's identity : `⌊nx⌋ = \sum_(k < n) `⌊x + k / n⌋                  *)
 (*                                                                            *)
 (*    special case when n = 2 : `⌊2x⌋ - `⌊x⌋ = `⌈x⌋                           *)
 (******************************************************************************)
