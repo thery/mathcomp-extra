@@ -98,7 +98,6 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 - Author(s):
   - Laurent Théry
 - License: [MIT License](LICENSE)
-- Compatible Rocq/Coq versions: 9.2 or later
 - Additional dependencies:
   - [MathComp boot 2.6.0 or later](https://math-comp.github.io)
   - [MathComp fingroup 2.6.0 or later](https://math-comp.github.io)
@@ -115,6 +114,8 @@ To build and install manually:
 ``` shell
 git clone https://github.com/thery/mathcomp-extra.git
 cd mathcomp-extra
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install --deps-only .
 make   # or make -j <number-of-cores-on-your-machine> 
 make install
 ```

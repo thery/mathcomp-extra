@@ -96,7 +96,7 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  "coq" {(>= "9.2")}
+  "coq" 
   "rocq-mathcomp-boot" {(>= "2.6.0")}
   "rocq-mathcomp-fingroup" {(>= "2.6.0")}
   "rocq-mathcomp-algebra" {(>= "2.6.0")}

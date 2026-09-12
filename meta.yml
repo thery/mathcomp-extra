@@ -103,7 +103,7 @@ license:
   fullname: MIT License
   identifier: MIT
 
-supported_coq_versions:
+supported_rocq_versions:
   text: '9.2 or later'
   opam: '{(>= "9.2")}'
 
@@ -134,7 +134,7 @@ dependencies:
   description: |-
     [MathComp zify 1.7.0+2.4+9.0 or later](https://github.com/math-comp/mczify)
 
-tested_coq_opam_versions:
+tested_rocq_opam_versions:
 - version: '2.6.0-rocq-prover-9.2'
   repo: 'mathcomp/mathcomp'
 
