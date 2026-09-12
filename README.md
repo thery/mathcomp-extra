@@ -110,7 +110,7 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 
 ## Building and installation instructions
 
-To instead build and install manually:
+To build and install manually:
 
 ``` shell
 git clone https://github.com/thery/mathcomp-extra.git
