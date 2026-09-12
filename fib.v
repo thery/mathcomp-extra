@@ -1,5 +1,5 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import all_boot all_algebra.
+From mathcomp Require Import boot algebra.
 
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
@@ -177,7 +177,7 @@ case: m Hdm=> [|m Hdm]; first by rewrite gcdnE eqxx.
 have F: 0 < m.+1 by [].
 case: (egcdnP n F)=> km kn Hg Hl.
 have->: gcdn m.+1 n = km * m.+1 - kn * n by rewrite Hg addKn.
-rewrite fib_sub; last by rewrite Hg leq_addr.
+rewrite fib_sub; first by rewrite Hg leq_addr.
 by case: odd; apply: dvdn_sub;
    try (by apply: (dvdn_trans Hdn); apply: dvdn_mull;
         apply: dvdn_fib; apply: dvdn_mull);

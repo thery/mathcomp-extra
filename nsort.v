@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot order perm algebra.zmodp.
+From mathcomp Require Import boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 
 Import Order POrderTheory TotalTheory.
@@ -79,7 +79,6 @@ rewrite !ffunE; case: (splitP i) => [j iE|k iE]; apply/eqP/val_eqP/eqP=> /=.
   by rewrite split_lshift (eqP (forallP (cfinv c1) j)) iE.
 by rewrite split_rshift (eqP (forallP (cfinv c2) k)).
 Qed.
-
 
 Definition cflip_merge m1 m2 (c1 : connector m1) (c2 : connector m2) :=
   [ffun i => match split i with 
@@ -302,18 +301,18 @@ Lemma cfun_merge m1 m2 (c1 : connector m1) (c2 : connector m2)
 Proof.
 apply: eq_from_tnth => i.
 pose a := tnth t i.
-rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=; last 2 first.
-- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=.
 - by rewrite -enum_ord size_enum_ord.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
 set u := nth i _ _; have -> : u = i.
   by apply/val_eqP; rewrite /= /u -fintype.enumT -enum_ord /= nth_enum_ord.
 rewrite {u}size_map -enum_ord size_enum_ord.
 rewrite /= !(tnth_nth a) !ffunE /=; case: splitP => /= [j iE|k iE]; rewrite iE.
-  rewrite (nth_map j) /=; last by rewrite size_enum_ord.
+  rewrite (nth_map j) /=; first by rewrite size_enum_ord.
   set u := nth j _ _; have -> : u = j.
     by apply/val_eqP; rewrite /= /u nth_enum_ord.
   by rewrite !(tnth_nth a) /= ttakeE !nth_take.
-rewrite leq_add2l addKn (nth_map k) /=; last first.
+rewrite leq_add2l addKn (nth_map k) /=.
   by rewrite  -enum_ord  size_enum_ord.
 set u := nth k _ _; have -> : u = k.
   by apply/val_eqP; rewrite /= /u -enum_ord nth_enum_ord.
@@ -470,7 +469,7 @@ have [->|/eqP cD] := clink c a =P a; last case: (cTl _ cD) => cE.
   - rewrite cE leqnSn.
     have aLc : a <= clink c b by rewrite cE -ltnS (leq_trans aLb) // ltnW.
     case: (ltP (tnth t1 b)) => C1.
-      rewrite min_l; first by apply/t1Lt2/ltnW.
+      rewrite min_l; last by apply/t1Lt2/ltnW.
       apply/t1Lt2; last by apply: ltW.
       by rewrite cE leqnSn.
     move=> t1aLt1c.
@@ -489,16 +488,16 @@ have [->|/eqP cD] := clink c a =P a; last case: (cTl _ cD) => cE.
   - rewrite leqnn !minxx.
     case: (ltP (tnth t1 a)); rewrite ge_min.
       by move=> _ /t1Lt2-> //; apply: ltnW.
-    move=> _ /t1Lt2-> //; first by rewrite orbT.
-    by rewrite cE.
+    move=> _ /t1Lt2-> //; first by rewrite cE.
+    by rewrite orbT.
   - rewrite c1E leqnSn.
     case: (ltP (tnth t1 a)); rewrite !le_min.
       move=> t1aLt1c; rewrite min_l.
-        move/andP => [] /t1Lt2-> // /t1Lt2 -> //.
-        by rewrite c1E (leq_trans aLLb).
-      apply: t1Lt2; first by rewrite cE.
-      by apply: ltW.
-    rewrite !ge_min => H /andP[] /t1Lt2 -> //; last by rewrite cE.
+        apply: t1Lt2; first by rewrite cE.
+        by apply: ltW.
+      move/andP => [] /t1Lt2-> // /t1Lt2 -> //.
+      by rewrite c1E (leq_trans aLLb).
+    rewrite !ge_min => H /andP[] /t1Lt2 -> //; first by rewrite cE.
     move=> /t1Lt2 ->; rewrite ?orbT //.
     by rewrite cE c1E ltnS.
   have /negPf-> : ~~ (b <= clink c b).
@@ -515,8 +514,8 @@ have [->|/eqP /cTl[] c1E] := clink c b =P b.
 - rewrite leqnn !minxx.
   case: (ltP (tnth t1 a)); rewrite ge_max.
     move=> t1aLt1c t1cLtb; rewrite !t1Lt2 //.
-      by rewrite cE (leq_trans (leq_pred _)).
-    by apply: le_trans (ltW t1aLt1c) _.
+      by apply: le_trans (ltW t1aLt1c) _.
+    by rewrite cE (leq_trans (leq_pred _)).
   move=> t1aLt1c t1cLtb.
   have t2aLt2b : (tnth t2 a <= tnth t2 b)%O by apply: t1Lt2.
   rewrite t2aLt2b (le_trans _ t2aLt2b) // t1Lt2 //.
@@ -526,16 +525,16 @@ have [->|/eqP /cTl[] c1E] := clink c b =P b.
   by rewrite !t1Lt2 ?(cE, c1E, (leq_trans (leq_pred _))) // ltnW.
 have /negPf-> : ~~ (b <= clink c b).
   by rewrite c1E; case: (nat_of_ord b) aLb => //= n; rewrite ltnn.
-rewrite !(ge_max, le_max) => /andP[] /orP[] /t1Lt2-> //=; last first.
-- by rewrite c1E -ltnS prednK.
-- rewrite !orbT /=; case/orP => /t1Lt2-> //; rewrite ?orbT //.
+rewrite !(ge_max, le_max) => /andP[] /orP[] /t1Lt2-> //=.
+- case/orP => /t1Lt2-> //; rewrite ?orbT //.
     by rewrite cE (leq_trans (leq_pred _)).
-  by rewrite cE c1E (leq_trans (leq_pred _)) // -ltnS prednK.
-case/orP => /t1Lt2-> //; rewrite ?orbT //.
+  rewrite cE c1E -ltnS !prednK //.
+  move/eqP/val_eqP: cD => /=.
+  by rewrite /= cE; case: nat_of_ord.
+- by rewrite c1E -ltnS prednK.
+rewrite !orbT /=; case/orP => /t1Lt2-> //; rewrite ?orbT //.
   by rewrite cE (leq_trans (leq_pred _)).
-rewrite cE c1E -ltnS !prednK //.
-move/eqP/val_eqP: cD => /=.
-by rewrite /= cE; case: nat_of_ord.
+by rewrite cE c1E (leq_trans (leq_pred _)) // -ltnS prednK.
 Qed.
 
 Lemma leqt_nfun m (n : network m) : 
@@ -587,25 +586,25 @@ apply: eq_from_tnth => i.
 have iLm : i < m + m by apply: ltn_ord.
 have i2Lm : i./2 < m by have := ltn_ord (idiv2 i); rewrite val_idiv2.
 pose a := tnth t i.
-rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=; last 2 first.
-- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+rewrite /= !(tnth_nth a) /= ?nth_cat !(nth_map i) /=.
 - by rewrite -enum_ord size_enum_ord.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
 set u := nth i _ _; have -> : u = i.
   by apply/val_eqP; rewrite /= /u -fintype.enumT -enum_ord /= nth_enum_ord.
-rewrite !ffunE {u}nth_eocat; last by rewrite !size_map.
+rewrite !ffunE {u}nth_eocat; first by rewrite !size_map.
 have [iO|iE] := boolP (odd i).
-  rewrite !(nth_map (idiv2 i)); last 2 first.
-  - by rewrite -fintype.enumT -enum_ord size_enum_ord.
+  rewrite !(nth_map (idiv2 i)).
   - by rewrite -enum_ord size_enum_ord.
+  - by rewrite -fintype.enumT -enum_ord size_enum_ord.
   set u := nth _ _ _; have -> : u = idiv2 i.
     apply/val_eqP; rewrite /= /u.
     by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?val_idiv2.
   rewrite !(tnth_nth a) /= !nth_otake /= val_olift /= val_idiv2.
   have F : i = i./2.*2.+1 :> nat by rewrite -[LHS]odd_double_half iO.
   by rewrite -F {1}F ltnS leq_double.
-rewrite !(nth_map (idiv2 i)); last 2 first.
-- by rewrite -fintype.enumT -enum_ord size_enum_ord.
+rewrite !(nth_map (idiv2 i)).
 - by rewrite -enum_ord size_enum_ord.
+- by rewrite -fintype.enumT -enum_ord size_enum_ord.
 set u := nth _ _ _; have -> : u = idiv2 i.
   apply/val_eqP; rewrite /= /u.
   by rewrite -fintype.enumT -enum_ord /= !nth_enum_ord ?val_idiv2.
@@ -713,20 +712,19 @@ have ajbijE : a + j + (b + i - j) = m.
 suff t1E : t1 = eocat (nseq (a + i - j) false ++ nseq (b + j) true)
                       (nseq (a + j) false ++ nseq (b + i - j) true) :> seq _.
   rewrite tetakeE totakeE t1E otakeK ?etakeK.
-    rewrite !isorted_noFT !noE !eqxx /= -addnn subnDA addnAC.
-    rewrite -addnA subnK; first by rewrite -addnBA //.
-    have [|k2Li] := leqP i (uphalf k); first by rewrite /j -subn_eq0 => /eqP->.
-    by rewrite subKn ?leq_subLR ?addnn // ltnW.
-  by rewrite !(size_cat, size_nseq) ajbijE.
+    by rewrite !(size_cat, size_nseq) ajbijE.
+  rewrite !isorted_noFT !noE !eqxx /= -addnn subnDA addnAC.
+  rewrite -addnA subnK; last by rewrite -addnBA //.
+  have [|k2Li] := leqP i (uphalf k); first by rewrite /j -subn_eq0 => /eqP->.
+  by rewrite subKn ?leq_subLR ?addnn // ltnW.
 apply: (@eq_from_nth _ true) => [|v].
   by rewrite /= [LHS]size_tuple card_ord size_eocat size_cat !size_nseq aijbjE.
 rewrite [X in _ < X -> _]size_tuple => iLab.
 pose x := Ordinal iLab.
-rewrite /t1 cfun_odd_jump //= (nth_map x) /= -[v]/(x : nat); last first.
+rewrite /t1 cfun_odd_jump //= (nth_map x) /= -[v]/(x : nat).
   by rewrite -enum_ord size_enum_ord.
 rewrite -enum_ord !nth_ord_enum.
-rewrite nth_eocat; last first.
-  by rewrite !size_cat !size_nseq aijbjE.
+rewrite nth_eocat; first by rewrite !size_cat !size_nseq aijbjE.
 rewrite !(tnth_nth true) [t]eocat_tetake_totake /=.
 rewrite !nth_eocat /=; try by rewrite !size_tuple.
 have v2Lab : v./2 < a + i + b.
@@ -762,12 +760,12 @@ have [vO|vE] := boolP (odd _).
   have j_gt0 : 0 < j by rewrite subn_gt0.
   case: leqP => H1.
     rewrite geq_half_double in H1.
-      rewrite geq_half_double doubleD doubleB addnBA.
-      rewrite leq_subLR -doubleD (leq_trans H1) // leq_add2r.
-      by rewrite -ltnS -[X in X <= _]odd_double_half oddS kO.
-    by rewrite leq_double ltnW // -subn_gt0.
+    rewrite geq_half_double doubleD doubleB addnBA.
+      by rewrite leq_double ltnW // -subn_gt0.
+    rewrite leq_subLR -doubleD (leq_trans H1) // leq_add2r.
+    by rewrite -ltnS -[X in X <= _]odd_double_half oddS kO.
   rewrite halfD kO vO addnA /= in H1.
-  rewrite addnBA //; last by apply : ltnW.
+  rewrite addnBA //; first by apply : ltnW.
   by rewrite leq_subLR uphalf_half kO leqNgt H1.
 rewrite val_isub /=.
 case: leqP => [kLv|vLk].
@@ -786,7 +784,7 @@ case: leqP => [kLv|vLk].
     rewrite leqNgt -(ltn_add2r (uphalf k)) {1}uphalf_half kO addnCA /=.
     rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in v2Laij.
     by rewrite (leq_trans v2Laij) // -addnBA // leq_add2l subKn // ltnW.
-  rewrite -addnBA //subKn in aijLv2; last by apply: ltnW.
+  rewrite -addnBA //subKn in aijLv2; first by apply: ltnW.
   rewrite -(subnK kLv) // halfD oddB // kO (negPf vE) /= in aijLv2.
   rewrite addnCA -[1]/(true : nat) -kO -uphalf_half leq_add2r in aijLv2.
   by rewrite aijLv2 maxbT.
@@ -795,7 +793,7 @@ case: (leqP i (uphalf k)) => [iLk2|k2Li].
   have /eqP-> : j == 0 by rewrite subn_eq0.
   by rewrite subn0.
 have j_gt0 : 0 < j by rewrite subn_gt0.
-  rewrite -addnBA // subKn; last by apply: ltnW.
+  rewrite -addnBA // subKn; first by apply: ltnW.
 case: leqP => [aiLv2|v2Lai].
   by rewrite (leq_trans _ aiLv2) // leq_add2l ltnW.
 rewrite leqNgt ltn_half_double (leq_trans vLk) // doubleD.

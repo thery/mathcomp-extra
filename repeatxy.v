@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From Stdlib Require Import NArith.
 Require Import digitn.
 
@@ -342,17 +342,17 @@ case: deqP => [->|d1Dd3]; last first.
   have Hp: 2 < n.+1.*2 by rewrite -H.
   apply/sym_equal/forallP => /(_ (Ordinal Hp)) /=.
   rewrite ![dval _ + _]addnC !digitnMD //.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
   by move => H1; case: d1Dd3; apply/deqP; rewrite deqE eq_sym.
 case: deqP => [->|d2Dd4]; last first.
   have Hp: 3 < n.+1.*2 by rewrite -H.
   apply/sym_equal/forallP => /(_ (Ordinal Hp)) /=.
   rewrite ![dval _ + _]addnC !digitnMD //.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
   by move => H1; case: d2Dd4; apply/deqP; rewrite deqE eq_sym.
-rewrite IH; last by case:H.
+rewrite IH; first by case:H.
 apply/forallP/forallP => /= H1.
   case=> [] [|[|]] //= i Hi.
   have Hp: i < n.*2 by [].
@@ -361,12 +361,12 @@ apply/forallP/forallP => /= H1.
   rewrite -[_.+2 %% 2]/(i %% 2).
   case: (_ %% 2) (ltn_mod i 2) => //= [_| [_|//]].
     rewrite ![dval _ + _]addnC.
-    rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-    rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+    rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+    rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
     by apply/eqP.
   rewrite ![dval _ + _]addnC !digitnMD //.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
   by apply/eqP.
 move => i.
 have Hp: i.+2 < n.+1.*2 by rewrite doubleS !ltnS.
@@ -375,12 +375,12 @@ rewrite ![dval _ + _]addnC !digitnMD // -![_ + dval _]addnC => /eqP->.
 rewrite -[_.+2 %% 2]/(i %% 2).
 case: (_ %% 2) (ltn_mod i 2) => //= [_| [_|//]].
   rewrite ![dval _ + _]addnC.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-  rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+  rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
   by apply/eqP.
 rewrite ![dval _ + _]addnC !digitnMD //.
-rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
-rewrite digitn0 -modnDml modnMr modn_small; last by apply: dL.
+rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
+rewrite digitn0 -modnDml modnMr modn_small; first by apply: dL.
 by apply/eqP.
 Qed.
 
@@ -465,10 +465,10 @@ rewrite ltnS leq_eqVlt => /orP[/eqP -> |iLb] Hj; last first.
     have -> := eq_mem_map _ (mem_ninsert  (ntake 2 ns) il).
     by rewrite /= inE Hi orbT.
   by apply: H4; rewrite ?aLi.
-rewrite ifT; last first.
+rewrite ifT.
   rewrite (is_repeat_digit l.+1) //.
   apply/forallP => //= [] [j jLl] /=.
-  rewrite H2 !digitn_modn //; first by apply/eqP/Hj.
+  rewrite H2 !digitn_modn //; last by apply/eqP/Hj.
   by apply: leq_trans (_ : 2  <= _); rewrite // ltn_mod.
 have -> := eq_mem_map _ (mem_ninsert  (ntake 2 ns) il).
 rewrite map_cons inE n10nat_ntake H2 modn_dvdm ?eqxx //.
@@ -565,18 +565,17 @@ have -> : i1 ^ 2 %% 100 = i2 ^ 2 %% 100.
   by rewrite ltnW // ltn_pmod ?expn_gt0.
 apply: get_list_correct.
   rewrite /i2; case: (leqP i1) => // nLi1.
-  rewrite leq_subLR -[X in X <= _]even_halfK.
-    by rewrite -addnn leq_add2r ltnW.
-  by rewrite oddX orbF.
+  rewrite leq_subLR -[X in X <= _]even_halfK; first by rewrite oddX orbF.
+  by rewrite -addnn leq_add2r ltnW.
 move=> j jLn.
 rewrite /i2; case: (leqP i1) => // i1Ln; first by apply: Hf1.
-rewrite -(digitn_modn _ _ _ _ _ jLn) // modn_sqrB //; last first.
+rewrite -(digitn_modn _ _ _ _ _ jLn) // modn_sqrB //.
   by rewrite ltnW // ltn_pmod // expn_gt0.
 rewrite digitn_modn //.
 have j2Ln : j %% 2 < n.+1.*2.
   apply: leq_trans (_ : 1 < _); first by rewrite ltn_mod.
   by case: (n) n_pos.
-rewrite -(digitn_modn _ _ _ _ _ j2Ln) // modn_sqrB //; last first.
+rewrite -(digitn_modn _ _ _ _ _ j2Ln) // modn_sqrB //.
   by rewrite ltnW // ltn_pmod // expn_gt0.
 rewrite digitn_modn //.
 by apply: Hf1.

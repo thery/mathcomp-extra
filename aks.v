@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot all_fingroup all_field.
+From mathcomp Require Import boot fingroup field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 From mathcomp Require cyclic.
 From Stdlib Require BinPos Pnat.
@@ -37,7 +37,6 @@ Proof. by rewrite /introspective expr1n comp_polyC polyC1. Qed.
 Lemma introspectiveX (R : nzRingType) k n : n ⋈[k] ('X : {poly R}).
 Proof. by rewrite /introspective comp_polyX. Qed.
 
-
 (* 98 *)
 Lemma introspec_pchar (F : finFieldType) (k p c : nat) :
   p \in [pchar F] -> p ⋈[k] ('X + c%:R%:P : {poly F}).
@@ -46,7 +45,7 @@ move=> pC; apply/eqP; congr (rmodp _  _).
 have Pp : prime p by apply: pcharf_prime pC.
 have Cn : [pchar F].-nat p by rewrite pnatE.
 rewrite comp_polyD comp_polyC comp_polyX.
-rewrite exprDn_pchar; first by rewrite -polyC_exp fin_little_fermat.
+rewrite exprDn_pchar; last by rewrite -polyC_exp fin_little_fermat.
 by rewrite pnatE // (rmorph_pchar (GRing.RMorphism.clone _ _ _ polyC)).
 Qed.
   
@@ -226,7 +225,7 @@ apply/classicP => [] []; exists (M :\ a) => x.
 rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
   rewrite eqxx; apply: is_iexpm_spec_false=> m Hm.
   by apply/eqP=> eE; case: (Ha m).
-rewrite (_ : x != a); first by by apply: HM.
+rewrite (_ : x != a); last by apply: HM.
 by apply: contra aNIl => /eqP<-.
 Qed.
 
@@ -306,21 +305,21 @@ wlog : m n / m <= n => [Hw |mLn] mLp nLp xmExn.
 move: mLn; rewrite leq_eqVlt => /orP[/eqP//|mLn].
 have xkE1 :  rmodp 'X^k h = 1.
   move: hDxk; rewrite /rdvdp rmodpB // [rmodp 1 _]rmodp_small.
-    by rewrite subr_eq0 => /eqP.
-  by rewrite size_polyC oner_neq0.
+    by rewrite size_polyC oner_neq0.
+  by rewrite subr_eq0 => /eqP.
 have [|o_gt0] := leqP (poly_order h 'X k) 0.
   have kB : 0 < k <= k by rewrite k_gt0 leqnn.
   by rewrite leqn0 => /eqP/poly_order_eq0_rmodp /(_ kB) /eqP[].
 pose v := (poly_order h 'X k - n + m)%N.
 have /poly_order_lt/eqP[] :
      (0 < poly_order h 'X k - n + m < poly_order h 'X k )%nat.
-  rewrite (leq_trans _ (_ : 0 + m < _)) //; last first.
+  rewrite (leq_trans _ (_ : 0 + m < _)) //.
     by rewrite ltn_add2r subn_gt0.
-  rewrite -{2}[poly_order _ _ _](@subnK m); last by apply: ltnW.
+  rewrite -{2}[poly_order _ _ _](@subnK m); first by apply: ltnW.
   by rewrite ltn_add2r ltn_sub2l //.
 rewrite exprD -rmodp_mulmr // xmExn rmodp_mulmr // -exprD subnK //.
-  by apply/eqP/poly_order_gt0_rmodp.
-by apply/ltnW.
+  by apply/ltnW.
+by apply/eqP/poly_order_gt0_rmodp.
 Qed.
 
 (* 107 *)
@@ -444,7 +443,7 @@ apply/classicP => [] []; exists (M :\ a) => x.
 rewrite !inE => /orP[/eqP-> /= /andP[aNIi Ul]|xIl /= /andP[aNIl Ul]].
   rewrite eqxx; apply: is_iexph_spec_false=> m Hm.
   by apply/eqP=> eE; case: (Ha m).
-rewrite (_ : x != a); first by by apply: HM.
+rewrite (_ : x != a); last by apply: HM.
 by apply: contra aNIl => /eqP<-.
 Qed.
 
@@ -474,8 +473,8 @@ have F2 (b : bool) c :
    c <= s -> size (('X + (c%:R)%:P : {poly F})%R ^+ b) <= 2.
   case: b => cD; last by rewrite expr0 size_polyC oner_eq0.
   rewrite (_ : 2%N = maxn(size ('X : {poly F})) (size ((c%:R)%:P : {poly F}))).
-    by rewrite expr1 size_polyD.
-  by rewrite size_polyX size_polyC; case: eqP.
+    by rewrite size_polyX size_polyC; case: eqP.
+  by rewrite expr1 size_polyD.
 pose m := ([ffun i : 'I_t.+1 => i == ord0] |:
            [set i | (i : {ffun 'I_t.+1 -> bool}) ord0 == false]) :\
            [ffun i : 'I_t.+1 => i != ord0].
@@ -498,7 +497,7 @@ have mTrue2 x : 1 < t -> x \in m -> exists (i : 'I_t.+1),
   case E : (x i) => //.
   by case/negP: (Hf i); rewrite H // E.
 have <- : #|m| = 2 ^ t.
-  rewrite cardsDS; last first.
+  rewrite cardsDS.
     by apply/subsetP=> j; rewrite !inE => /eqP->; rewrite ffunE eqxx orbT.
   rewrite cardsU !cards1.
   set u := #|_ :&: _|.
@@ -514,7 +513,7 @@ have <- : #|m| = 2 ^ t.
     exists [ffun i => f (fintype.lift ord0 i)]; first by rewrite inE.
     apply/ffunP=> j; rewrite ffunE; case: unliftP => [v ->|->] //.
     by rewrite ffunE.
-  rewrite card_imset; first by rewrite card_ffun card_bool card_ord.
+  rewrite card_imset; last by rewrite card_ffun card_bool card_ord.
   move=> f g H; apply/ffunP=> i.
   have := (congr1 (fun f : {ffun _ -> _} => f (fintype.lift ord0 i)) H).
   by rewrite !ffunE liftK.
@@ -568,7 +567,7 @@ suff /card_in_imset<- : {in m &, injective g}.
   by case: HQh => // /(_ (\prod_(i < t.+1) f b i) (F4 _ bIm)) /eqP[].
 move=> m1 m2 m1I m2I /val_eqP/eqP/= H.
 have F5 b (x : 'I_ _) : b \in m -> 
-      (\prod_(i < t.+1) f b i).[-(x%:R)] == 0 = (b x).
+      ((\prod_(i < t.+1) f b i).[-(x%:R)] == 0) = (b x).
   move=> bIm; rewrite horner_prod. 
   apply/GRing.prodf_eq0/idP=> /= [[j _]|bxE]; last first.
     by exists x=> //; rewrite /f bxE expr1 !hornerE addrC subrr.
@@ -612,7 +611,7 @@ have F1 : j <= #|M| by apply: is_iexpm_order.
 have F2 : #|M| <= totient k by apply: is_iexpm_totient.
 have F3 : m ^ 2 <= j by  move: aLo; rewrite aE.
 apply: leq_trans (_ : (2 ^ m) ^ sqrtn (#|M|) <= _).
-  rewrite ltn_exp2r; last first.
+  rewrite ltn_exp2r.
     by rewrite sqrtn_gt0 (leq_trans _ (_ : 2 <= _)).
   by have := up_logP n (isT : 1 < 2); rewrite leq_eqVlt (negPf nNP).
 case: (leqP s #|M|) => [sLM|MLs].
@@ -700,12 +699,12 @@ apply/eqP/(@roots_geq_poly_eq0
   apply: is_iexp_root p1I => //.
     case/imsetP: jIN => [[i1 j1] _ -> /=].
     rewrite modn_small.
-      by apply: is_iexp_mul; apply: is_iexp_X.
-    by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+      by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+    by apply: is_iexp_mul; apply: is_iexp_X.
   case/imsetP: iIN => [[i1 j1] _ -> /=].
   rewrite modn_small.
-    by apply: is_iexp_mul; apply: is_iexp_X.
-  by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+    by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
+  by apply: is_iexp_mul; apply: is_iexp_X.
 - by apply: enum_uniq.
 rewrite -cardE.
 apply: leq_trans pqLqh.
@@ -731,9 +730,9 @@ Lemma card_Nbar p q m : prime p -> 1 < q -> ~ is_power q p ->
 Proof.
 move=> pP q_gt1 pCq.
 have p_gt1 := prime_gt1 pP.
-rewrite card_imset=> [|/= [i1 j1] [i2 j2] /(congr1 val)].
+rewrite card_imset=> [/= [i1 j1] [i2 j2] /(congr1 val)|]; last first.
   by rewrite card_prod card_ord expnS expn1.
-rewrite /= !modn_small //; last 2 first.
+rewrite /= !modn_small //.
 - by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
 - by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
 wlog i1Li2 : i1 i2 j1 j2 / i1 <= i2 => H.
@@ -742,12 +741,12 @@ wlog i1Li2 : i1 i2 j1 j2 / i1 <= i2 => H.
 suff [H1 H2] : (i1 : nat, j1 : nat) = (i2 : nat, j2 : nat).
   by congr (_, _); apply: val_inj.
 move: (i1Li2) H; rewrite leq_eqVlt => /orP[/eqP<-|i1LEi2 /eqP].
-  move/eqP; rewrite eqn_pmul2l; last by rewrite expn_gt0 ltnW.
+  move/eqP; rewrite eqn_pmul2l; first by rewrite expn_gt0 ltnW.
   by rewrite eqn_exp2l => // /eqP<-.
-rewrite -{1}(subnK i1Li2) addnC expnD -mulnA eqn_pmul2l; last first.
+rewrite -{1}(subnK i1Li2) addnC expnD -mulnA eqn_pmul2l.
   by rewrite expn_gt0 prime_gt0.
 case: (leqP j2 j1) => [j1Lj2|j2Lj1].
-  rewrite -{1}(subnK j1Lj2) expnD eqn_pmul2r; last by rewrite expn_gt0 ltnW.
+  rewrite -{1}(subnK j1Lj2) expnD eqn_pmul2r; first by rewrite expn_gt0 ltnW.
   move: j1Lj2; rewrite leq_eqVlt => /orP[/eqP<-|].
     rewrite subnn expn0 eq_sym.
     move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N=> // k _.
@@ -757,7 +756,7 @@ case: (leqP j2 j1) => [j1Lj2|j2Lj1].
   by rewrite qE is_power_exp.
 have j1LEj2 : j1 <= j2 by rewrite ltnW.
 rewrite -[_ ^ _]mul1n -{1}(subnK j1LEj2) expnD mulnA.
-rewrite eqn_pmul2r; last by rewrite expn_gt0 ltnW.
+rewrite eqn_pmul2r; first by rewrite expn_gt0 ltnW.
 move: i1LEi2; rewrite -subn_gt0; case: (_ - _)%N => // k _.
 by rewrite expnS -mulnA eq_sym muln_eq1; case: (p) p_gt1 => // [] [].
 Qed.
@@ -787,10 +786,10 @@ have /hasP[x _ xE] :
   - apply/allP => i /mapP[/= x _ -> /=].
     apply/unity_rootP => /=.
     rewrite -FinRing.val_unitX -(_ : #|[set : {unit Fm}]%g| = m.-1).
-      by rewrite cyclic.expg_cardG ?inE.
-    by rewrite card_finField_unit LC.
-  - rewrite map_inj_uniq; first by apply: enum_uniq.
-    by apply: val_inj. 
+      by rewrite card_finField_unit LC.
+    by rewrite cyclic.expg_cardG ?inE.
+  - rewrite map_inj_uniq; first by apply: val_inj. 
+    by apply: enum_uniq.
   by rewrite size_map -cardE -cardsT card_finField_unit LC.
 have kDm1 : (k %| m.-1)%N by rewrite -subn1 -eqn_mod_dvd // order_modn_exp.
 have mkDm1 : (m.-1 %/ k %| m.-1)%N.
@@ -798,8 +797,8 @@ have mkDm1 : (m.-1 %/ k %| m.-1)%N.
 pose z :=  x ^+ (m.-1 %/ k).
 have kPr : k.-primitive_root z.
   rewrite {1}(_ : k = m.-1 %/ gcdn (m.-1 %/ k) m.-1)%N //.
-    by apply: exp_prim_root.
-  by rewrite (gcdn_idPl mkDm1) divnA // mulnC mulnK.
+    by rewrite (gcdn_idPl mkDm1) divnA // mulnC mulnK.
+  by apply: exp_prim_root.
 have /polyOver1P[h hE] := minPolyOver 1 z.
 have g1L : galois 1%AS {: L}%AS.
   by apply: finField_galois (sub1v _).
@@ -812,7 +811,7 @@ have dE : d = \dim {: L}.
 have eDd : (e %| d)%N.
   by rewrite dE; apply/field_dimS/subvf.
 have kDpe : (k %| (p ^ e).-1)%N.
-  rewrite (prim_order_dvd kPr) -subn1 expfB ?expr1; last first.
+  rewrite (prim_order_dvd kPr) -subn1 expfB ?expr1.
     by rewrite -(exp1n e) ltn_exp2r ?prime_gt1 // adim_gt0.
   have: z \in E by apply: memv_adjoin.
   rewrite Fermat's_little_theorem -/E card_Fp -/e // => /eqP->.
@@ -858,8 +857,8 @@ exists h; split => //.
       fp1 %| minPoly 1%AS z by rewrite hE dvdp_map.
     by rewrite hE eqp_map.
   rewrite  -(_ : map_poly (in_alg L) 1 = 1).
-    by rewrite eqp_map -size_poly_eq1 (negPf Sp1).
-  by rewrite map_polyC /= scale1r.
+    by rewrite map_polyC /= scale1r.
+  by rewrite eqp_map -size_poly_eq1 (negPf Sp1).
 apply: poly_orderE=> [||k1 k1_gt0 /eqP]; first by rewrite k_gt0 leqnn.
   apply/eqP; rewrite -[1](@rmodp_small _ _ h) ?size_poly1 ?hS //.
   rewrite -subr_eq0 -rmodpB //.
@@ -894,8 +893,8 @@ rewrite leq_eqVlt => /orP[/eqP<-|pLn]; first by rewrite is_power_id.
 have [/eqP nE|/negP nis2p] := boolP (is_2power n).
   move: pDn; rewrite nE.
   rewrite Euclid_dvdX // => /andP[/prime_nt_dvdP->] //.
-    by move=> _; apply: is_power_exp.
-  by case: (p) pP => // [] // [].
+    by case: (p) pP => // [] // [].
+  by move=> _; apply: is_power_exp.
 have n_gt1 : 1 < n.
   apply: leq_trans (prime_gt1 pP) _.
   by apply: dvdn_leq.
@@ -957,11 +956,11 @@ have : #|f @: N1| <= t.
   rewrite /= Zp_cast // [(m %% _)%N]modn_small //.
   by rewrite ltnS expnMn leq_mul // leq_exp2l // -ltnS.
 rewrite leqNgt=> /negP[].
-rewrite card_in_imset; last first.
+rewrite card_in_imset.
   apply: (is_iexp_inj hMk hQh) => //; first by rewrite -dvdpE.
   rewrite mulnC -nE.
   by apply: leq_trans stLQ.
-rewrite card_Nbar //; last first.
+rewrite card_Nbar //.
   move=> H; case: nP.
   by rewrite nE (eqP H) -expnSr is_power_exp.
 by have /andP[] := sqrtn_bound t.
@@ -1169,13 +1168,13 @@ case E : aks_param_search => [k||k] //.
       rewrite g_gt1.
       have /leq_ltn_trans->// : gcdn i.+1 n <= i.+1.
       by rewrite dvdn_leq // dvdn_gcdl.
-    rewrite (bigD1_seq (order_modn i.+1 n)) ?iota_uniq //=; last first.
+    rewrite (bigD1_seq (order_modn i.+1 n)) ?iota_uniq //=.
       rewrite mem_index_iota oLl.
       by have [] := (order_modnP i1_gt1 i1Cn); case: order_modn.
     by apply/dvdn_mulr/order_modn_dvd.
   have prodLprod : \prod_(1 <= i < a) (n ^ i).-1 < 2 ^ (up_log 2 n * 'C(a,2)).
     rewrite expnM; apply: leq_trans (_ : n ^ 'C(a, 2) <= _); last first.
-      rewrite leq_exp2r; first by apply: up_logP.
+      rewrite leq_exp2r; last by apply: up_logP.
       by rewrite bin_gt0.
     rewrite -bin2_sum.
     elim: (a) a_gt1 => // a1 IH.
@@ -1225,15 +1224,14 @@ Lemma PolyZE n k l :
 Proof.
 apply/polyP=> i; rewrite coef_sum.
 case (leqP k i) => [kLi|iLk].
-  rewrite nth_default; last first.
+  rewrite nth_default.
     apply: leq_trans (size_Poly _) _.
     rewrite size_map size_take.
     by case: leqP => // /leq_trans->.
   rewrite big1 // => j _.
   rewrite coefZ coefXn.
   by case: ltngtP (leq_trans (ltn_ord j) kLi); rewrite ?mulr0.
-rewrite coef_Poly (bigD1 (Ordinal iLk)) //= big1 => 
-    [|j /eqP /val_eqP /= jDi]; last first.
+rewrite coef_Poly (bigD1 (Ordinal iLk)) //= big1 => [j /eqP /val_eqP /= jDi|].
   by rewrite coefZ coefXn eq_sym (negPf jDi) mulr0.
 rewrite addr0 coefZ coefXn eqxx mulr1.
 case: (leqP (size (take k l)) i) => [stLk|kLst]; last first.
@@ -1253,8 +1251,7 @@ Proof.
 move=> k_gt0 n_gt1 svE; rewrite !PolyZE.
 rewrite -(prednK k_gt0) big_ord_recl /=; congr (_ + _).
   by rewrite expr0 /= -Zp_nat scaler_nat.
-rewrite [in RHS]big_ord_recr /= nth_default ?svE; last first.
-  by rewrite -ltnS prednK.
+rewrite [in RHS]big_ord_recr /= nth_default ?svE; first by rewrite -ltnS prednK.
 rewrite inZp0 scale0r addr0.
 rewrite mulr_sumr; apply: eq_bigr => i _.
 by rewrite -scalerAr exprS.
@@ -1314,20 +1311,20 @@ have XnM:= monicXnsubC (1 : 'Z_n) k_gt0.
 rewrite [in 'X^ _](divn_eq v k) exprD mulnC.
 rewrite -{1}['X^(_ * _)](subrK 1) mulrDl.
 rewrite rmodpD // mul1r -rmodp_mulml // rmodp_Xn_sub1 //.
-rewrite mul0r rmod0p add0r rmodp_small; last first.
+rewrite mul0r rmod0p add0r rmodp_small.
   by rewrite size_polyXn size_XnsubC // ltnS ltn_mod.
 apply/polyP => i.
 rewrite /PolyZ coef_Poly coefXn.
 case: (leqP k i) => iLk.
   have k1Li1 : k.-1 <= i.-1 by rewrite -ltnS !prednK // (leq_trans k_gt0).
-  rewrite nth_default; last by rewrite size_map size_take size_modnp_Xn // ltnn.
+  rewrite nth_default; first by rewrite size_map size_take size_modnp_Xn // ltnn.
   by case: eqP => // iE; move: iLk; rewrite iE leqNgt ltn_mod k_gt0.
-rewrite (nth_map 0%N); last by rewrite size_take size_modnp_Xn // ltnn.
+rewrite (nth_map 0%N); first by rewrite size_take size_modnp_Xn // ltnn.
 rewrite nth_take // nth_cat size_nseq nth_nseq if_same.
 case: ltngtP => iLv; first by rewrite inZp0.
   rewrite -cat1s nth_cat /= ifF.
-    by rewrite nth_nseq if_same inZp0.
-  by rewrite ltnNge -(subnn (v %% k)%N) ltn_sub2r.
+    by rewrite ltnNge -(subnn (v %% k)%N) ltn_sub2r.
+  by rewrite nth_nseq if_same inZp0.
 by rewrite iLv subnn.
 Qed.
 
@@ -1363,7 +1360,7 @@ congr (_ + _); last first.
   rewrite expr0 alg_polyC -scalerAr -exprS rmodpZ ?prednK //.
   rewrite [in 'X^_]prednK // [in modnp_mulX _ _]prednK //.
   rewrite -{1}['X^k](subrK 1) // rmodpD // rmodpp // add0r.
-  rewrite rmodp_small; last by rewrite size_poly1 size_XnsubC.
+  rewrite rmodp_small; first by rewrite size_poly1 size_XnsubC.
   rewrite alg_polyC; congr (_%:P).
   apply/val_eqP; rewrite /= Zp_cast // /modnp_mulX.
   case: v vsE => [|a v1 <- /=]; first by rewrite nth_nil.
@@ -1464,7 +1461,7 @@ have xnM := monicXnsubC (1 : 'Z_n) k_gt0.
 elim: {sv2E}v2 => /= [|a v4 IH sv4E].
   by rewrite poly_modnp_const // PolyZ_nil mulr0 rmod0p Zp_nat inZp0.
 rewrite poly_modnp_add // poly_modnp_scale //.
-rewrite poly_modnp_mulX ?size_modnp_mul // IH; last by apply: ltnW.
+rewrite poly_modnp_mulX ?size_modnp_mul // IH; first by apply: ltnW.
 rewrite PolyZ_cons // mulrDr rmodpD // rmodp_mulmr // mulrCA.
 congr (_ + _).
 rewrite -mulr_algr -Zp_nat scaler_nat.
@@ -1593,7 +1590,7 @@ move=> /= x y; apply/val_eqP/eqP => /=.
 set x' := nat_of_ord _; set y' := nat_of_ord _.
 rewrite !Zp_cast /= ?pdiv_id //.
 rewrite modnDm modnDmr modn_dvdm //.
-rewrite -modnDmr modnB //; last 2 first.
+rewrite -modnDmr modnB //.
 - by apply: leq_trans p_gt1.
 - apply: ltnW.
   by have := ltn_ord y; rewrite [X in _ < X -> _]Zp_cast.
@@ -1634,7 +1631,7 @@ move=> Hr c cB; apply/eqP; rewrite eqp_rmodp_dvd //.
 have /eqP := Hr c cB; rewrite eqp_rmodp_dvd //.
 case /(rdvdpP xnZM) => /= p1 pE; apply/(rdvdpP xnFM).
 exists (map_poly inZpm p1).
-rewrite (_ : 'X^k - 1 = map_poly inZpm ('X^k - 1)); last first.
+rewrite (_ : 'X^k - 1 = map_poly inZpm ('X^k - 1)).
   by rewrite rmorphB rmorph1 /= (map_polyXn inZpm).
 have cE : inZp (c%:R : 'Z_n) = c%:R :> 'F_p.
   by apply/val_eqP; 
@@ -1658,18 +1655,18 @@ have k_gt0 : 0 < k by apply: leq_trans k_gt1.
 elim: r c => /= [c c1|r IH c]; first by rewrite addn0; case: ltngtP.
 rewrite poly_modnp_eq // poly_modnp_pow ?size_modnp_add //.
 rewrite !poly_modnp_add // !poly_modnp_Xn // poly_modnp_const // pnE.
-rewrite Pnat.Nat2Pos.id_max max_r; last by apply/leP/ltnW.
-rewrite expr1 [rmodp 'X _]rmodp_small; last first.
+rewrite Pnat.Nat2Pos.id_max max_r; first by apply/leP/ltnW.
+rewrite expr1 [rmodp 'X _]rmodp_small.
   by rewrite size_polyX size_XnsubC.
 case: eqP  => mE; last first.
   move=> nP; case: mE.
   have xnM := monicXnsubC (1 : 'Z_n) k_gt0.
-  rewrite exprDn_pchar /=; last first.
+  rewrite exprDn_pchar /=.
     rewrite pnatE // pchar_poly /= inE nP /=.
     apply/eqP/val_eqP=> /=.
     by rewrite val_Zp_nat // modnn.
   rewrite rmodpD //; congr (_ + _).
-  rewrite rmodp_small //; last first.
+  rewrite rmodp_small //.
     apply: leq_ltn_trans (size_poly_exp_leq _ _) _.
     rewrite size_polyC size_XnsubC //.
     by case: (_ != _).

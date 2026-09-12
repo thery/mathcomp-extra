@@ -96,13 +96,12 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 depends: [
-  "coq" {(>= "9.1")}
-  "rocq-mathcomp-boot" {(>= "2.5.0")}
-  "rocq-mathcomp-fingroup" {(>= "2.5.0")}
-  "rocq-mathcomp-algebra" {(>= "2.5.0")}
-  "rocq-mathcomp-field" {(>= "2.5.0")}
-  "coq-mathcomp-zify" {(>= "1.6.0+2.3+8.18")}
-  "coq-mathcomp-algebra-tactics" {(>= "1.2.7")}
+  "coq" {(>= "9.2")}
+  "rocq-mathcomp-boot" {(>= "2.6.0")}
+  "rocq-mathcomp-fingroup" {(>= "2.6.0")}
+  "rocq-mathcomp-algebra" {(>= "2.6.0")}
+  "rocq-mathcomp-field" {(>= "2.6.0")}
+  "rocq-mathcomp-zify" {(>= "1.7.0+2.4+9.0")}
 ]
 
 tags: [

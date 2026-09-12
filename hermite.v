@@ -11,7 +11,7 @@
 (*    special case when n = 2 : `⌊2x⌋ - `⌊x⌋ = `⌈x⌋                           *)
 (******************************************************************************)
 
-From mathcomp Require Import all_boot all_order all_algebra.
+From mathcomp Require Import boot order algebra.
 
 Local Open Scope ring_scope.
 
@@ -73,7 +73,7 @@ have [xLx2|x2Lx] := leP (`⌊x⌋ + 2^-1) x; last first.
   suff x2E : Num.floor (x + 2^-1)  = Num.floor x.
     by congr (_%:~R); apply/sym_equal/eqP; rewrite floor_eq x2E floor_itv.
   apply/floor_def.
-  rewrite intrD (le_trans (floor_le _) _) //=; last first.
+  rewrite intrD (le_trans (floor_le _) _) //=.
     by rewrite lerDl invr_ge0 (ler_nat _ 0 2).
   by rewrite [1%:~R]splitr mul1r addrA ltrD2r.
 suff -> : `⌈x⌋ = `⌊x⌋ + 1 by apply/half_up_build_ceil.
@@ -94,29 +94,29 @@ Proof.
 have [yLx|xLy] := leP y (Num.floor x).
   suff F : `|x - `⌈x⌋| <= `|x - `⌊x⌋|.
     apply: le_trans F _.
-    rewrite !ger0_norm ?subr_ge0 ?floor_le //; first by rewrite lerB ?ler_int.
+    rewrite !ger0_norm ?subr_ge0 ?floor_le //; last by rewrite lerB ?ler_int.
     by rewrite (le_trans _ (floor_le _)) // ler_int.
   have [//|xLx2] := half_upP.
-  rewrite [X in _ <= X]ger0_norm; last by rewrite subr_ge0 floor_le.
-  rewrite ler0_norm; last first.
+  rewrite [X in _ <= X]ger0_norm; first by rewrite subr_ge0 floor_le.
+  rewrite ler0_norm.
     by rewrite subr_le0; have /ltW := floorD1_gt x; rewrite intrD.
   rewrite opprB.
   apply: le_trans (_ : 2^-1 <= _); last by rewrite lerBrDl.
   rewrite addrAC [X in _ + X <= _]splitr -[X in _ <= X]add0r mul1r addrA.
   by rewrite lerD2r addrAC lerBlDl addr0.
 rewrite -lezD1 in xLy.
-rewrite [X in _ <= X]ler0_norm ?opprB; last first.
+rewrite [X in _ <= X]ler0_norm ?opprB.
   by rewrite subr_le0 (le_trans (ltW (floorD1_gt _))) // ler_int.
 suff F : `|x - `⌈x⌋| <= `|x - `⌊x + 1⌋|.
   apply: le_trans F _.
-  rewrite ler0_norm ?opprB; last first.
+  rewrite ler0_norm ?opprB.
     by rewrite subr_le0 floorDrz // floor1 (ltW (floorD1_gt _)).
   by rewrite lerD2r floorDrz // floor1 ler_int.
 have [xLx2|x2Lx] := half_upP; last by rewrite floorDrz // floor1 intrD.
-rewrite [X in _ <= X]ler0_norm ?opprB; last first.
+rewrite [X in _ <= X]ler0_norm ?opprB.
   by rewrite subr_le0 floorDrz // floor1 (ltW (floorD1_gt _)).
 have xLx2' := ltW xLx2.
-rewrite ger0_norm; last by rewrite subr_ge0 floor_le.
+rewrite ger0_norm; first by rewrite subr_ge0 floor_le.
 apply: le_trans (_ : 2^-1 <= _); first by rewrite lerBlDl.
 rewrite floorDrz // floor1 intrD addrAC.
 rewrite [X in _ <= _ + X]splitr -[X in X <= _]add0r mul1r addrA lerD2r.
@@ -161,20 +161,20 @@ have tE : t = (`|cnx| : nat).
   have -> : Num.Def.ceil (n%:R : R) = n :> int.
     by apply/eqP; rewrite -(eqr_int R) -intrEceil.
   by rewrite -[LHS]distnEl ?intOrdered.gez0_norm.
-rewrite (big_cat_nat_idem _ (_ : 0 <= t)%N) //=; last 2 first.
+rewrite (big_cat_nat_idem _ (_ : 0 <= t)%N) //=.
 - by rewrite add0r.
 - by rewrite leq_subr.
-rewrite big_nat_cond /= big1 ?add0r => [|i iLt]; last first.
+rewrite big_nat_cond /= big1 ?add0r => [i iLt|].
   rewrite andbT tE in iLt.
   have iLt' : (i%:~R < n%:R * (1 - `{x})).
-    rewrite -real_ceil_gt_int; last by rewrite !realE mulr_ge0 // subr_ge0 ltW.
+    rewrite -real_ceil_gt_int; first by rewrite !realE mulr_ge0 // subr_ge0 ltW.
     by rewrite -ltz_nat // intOrdered.gez0_norm in iLt.
   have -> : 0 = 0%:~R :>R by [].
   congr (_%:~R); apply: floor_def.
-  rewrite add0r addr_ge0 //=; last by rewrite divr_ge0.
+  rewrite add0r addr_ge0 //=; first by rewrite divr_ge0.
   rewrite -[`{x}](mulfK n_neq0) -mulrDl ltr_pdivrMr // mul1r.
   by rewrite -ltrBrDl -[X in _ < X - _]mul1r -mulrBl mulrC.
-rewrite big_nat_cond (eq_bigr (fun _ => 1%R)).
+rewrite big_nat_cond (eq_bigr (fun _ => 1%R)); last first.
   rewrite -big_nat_cond sumr_const_nat natrB ?tE //.
   rewrite -tE natrB ?opprB //.
   by rewrite addrC subrK natr_absz ger0_norm.

@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot all_fingroup.
+From mathcomp Require Import boot finite_group.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -62,7 +62,7 @@ elim: l1 zNIl1 => /= [_ /and3P[_ yNIl2 _]|t l IH].
   by rewrite lcycle_not_in // inE negb_or eq_sym zDy.
 rewrite !inE negb_or => /andP[zDt zNIl /andP[tNI lU]].
 rewrite lcycle_cons2 permE /= permE /= eq_sym zDx.
-suff -> : x == t = false by apply: IH.
+suff -> : (x == t) = false by apply: IH.
 by move: tNI; rewrite mem_cat negb_or !inE eq_sym; case: (_ == _); 
    rewrite ?andbF.
 Qed.
@@ -86,7 +86,7 @@ case: (tpermP j) => [->|->|/eqP/negPf zDj /eqP/negPf zDk].
 - by rewrite (lcycle_next _ [::] [:: j]) // tpermL.
 have [->|/eqP /negPf zDi] := z =P i.
   by rewrite (lcycle_next _ [:: k] [::]) // tpermR.
-rewrite lcycle_not_in; last by rewrite !inE zDj zDk zDi.
+rewrite lcycle_not_in; first by rewrite !inE zDj zDk zDi.
 by rewrite tpermD // eq_sym ?zDi // zDj.
 Qed.
 

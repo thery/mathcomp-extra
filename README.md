@@ -98,15 +98,38 @@ A note about factorions is available [here](https://inria.hal.science/hal-052656
 - Author(s):
   - Laurent Théry
 - License: [MIT License](LICENSE)
-- Compatible Rocq/Coq versions: 9.1 or later
+- Compatible Rocq/Coq versions: 9.2 or later
 - Additional dependencies:
-  - [MathComp boot 2.5.0 or later](https://math-comp.github.io)
-  - [MathComp fingroup 2.5.0 or later](https://math-comp.github.io)
+  - [MathComp boot 2.6.0 or later](https://math-comp.github.io)
+  - [MathComp fingroup 2.6.0 or later](https://math-comp.github.io)
   - [MathComp algebra 2.5.0 or later](https://math-comp.github.io)
-  - [MathComp field 2.5.0 or later](https://math-comp.github.io)
-  - [MathComp zify 1.6.0+2.3+8.18 or later](https://github.com/math-comp/mczify)
-  - [MathComp Algebra Tactics 1.2.7 or later](https://github.com/math-comp/algebra-tactics)
+  - [MathComp field 2.6.0 or later](https://math-comp.github.io)
+  - [MathComp zify 1.7.0+2.4+9.0 or later](https://github.com/math-comp/mczify)
 - Rocq/Coq namespace: `mathcomp-extra`
 - Related publication(s): none
 
 ## Building and installation instructions
+
+The easiest way to install the latest released version of mathcomp-extra
+is via [OPAM](https://opam.ocaml.org/doc/Install.html):
+
+```shell
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install coq-mathcomp-extra
+```
+
+To instead build and install manually, you need to make sure that all the
+libraries this development depends on are installed.  The easiest way to do that
+is still to rely on opam:
+
+``` shell
+git clone https://github.com/thery/mathcomp-extra.git
+cd mathcomp-extra
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install --deps-only .
+make   # or make -j <number-of-cores-on-your-machine> 
+make install
+```
+
+
+

@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -42,34 +42,34 @@ have [Om|Em] := boolP (odd _); have [On|En] := boolP (odd _);
     have mDnE :  m.+2 - n.+2 = (m.+2 - n.+2)./2.*2.
       by rewrite -{1}(odd_double_half (_ - _)) oddB //= Om On.
     rewrite IH //.
-      rewrite  -{2}[m.+2](subnK nLm) [RHS]gcdnC [RHS]gcdnDr [RHS]gcdnC.
-      rewrite {2}mDnE -muln2 [LHS]gcdnC [RHS]gcdnC Gauss_gcdl //.
-      by rewrite /coprime -gcdn_modl modn2 /= On gcd1n.
-    rewrite -ltn_double -mDnE -mul2n -expnS (leq_trans _ Hm) //.
-    by rewrite (leq_trans _ (_ : m.+2 < _)) // ltnS leq_subr.
+      rewrite -ltn_double -mDnE -mul2n -expnS (leq_trans _ Hm) //.
+      by rewrite (leq_trans _ (_ : m.+2 < _)) // ltnS leq_subr.
+    rewrite  -{2}[m.+2](subnK nLm) [RHS]gcdnC [RHS]gcdnDr [RHS]gcdnC.
+    rewrite {2}mDnE -muln2 [LHS]gcdnC [RHS]gcdnC Gauss_gcdl //.
+    by rewrite /coprime -gcdn_modl modn2 /= On gcd1n.
   have m1Ln : m.+1 < n.+2 by apply: leq_trans mLn.
   have nDmE :  n.+2 - m.+2 = (n.+2 - m.+2)./2.*2.
     by rewrite -{1}(odd_double_half (_ - _)) oddB //= Om On.
-  rewrite addnC addSnnS IH //; last first.
+  rewrite addnC addSnnS IH //.
+  - by rewrite addnC addSnnS.
   - rewrite -ltn_double -nDmE -mul2n -expnS (leq_trans _ Hn) //.
     by rewrite (leq_trans _ (_ : n.+2 < _)) // ltnS leq_subr.
-  - by rewrite addnC addSnnS.
   rewrite  -{2}[n.+2](subnK m1Ln) gcdnDr.
   rewrite {2}nDmE -muln2 Gauss_gcdl 1?gcdnC //.
   by rewrite /coprime -gcdn_modl modn2 /= Om gcd1n.
-- rewrite -addSnnS IH //; last 2 first.
+- rewrite -addSnnS IH //.
   - by rewrite addSnnS.
   - rewrite -nE expnS mul2n in Hn.
     by rewrite (ltn_double _.+1) in Hn.
   rewrite -{2}nE -doubleS -muln2 Gauss_gcdl //.
   by rewrite /coprime -gcdn_modl modn2 /= Om gcd1n.
-- rewrite IH //; last first.
+- rewrite IH //.
     rewrite -mE expnS mul2n in Hm.
     by rewrite (ltn_double _.+1) in Hm.
   rewrite -{2}mE.
   rewrite -doubleS -muln2 [LHS]gcdnC [RHS]gcdnC Gauss_gcdl //.
   by rewrite /coprime -gcdn_modl modn2 /= On gcd1n.
-rewrite IH //; last 2 first.
+rewrite IH //.
 - by rewrite -mE -doubleS expnS mul2n ltn_double in Hm.
 - rewrite -nE -doubleS expnS mul2n ltn_double in Hn.
   by rewrite (leq_trans Hn) // leq_exp2l.

@@ -1,7 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_boot.
-
-From mathcomp Require Import all_algebra.
+From mathcomp Require Import boot algebra.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -236,9 +234,9 @@ elim: moves (@moves_depth t b) => [_ |b1 bs IH1 H1d].
    by rewrite  /= !big_nil.
 lazy zeta in IH1 |- *; rewrite !big_cons !sflip_min.
 rewrite IH ?IH1 //.
-  by move=> b2 Hb2; apply: H1d; rewrite in_cons Hb2 orbT.
-rewrite H1d; last by rewrite in_cons eqxx.
-by rewrite -ltnS; case: depth Hd.
+  rewrite H1d; first by rewrite in_cons eqxx.
+  by rewrite -ltnS; case: depth Hd.
+by move=> b2 Hb2; apply: H1d; rewrite in_cons Hb2 orbT.
 Qed.
 
 Lemma eval_rec_stable m n t b : (depth b <= m <= n)%N ->
@@ -259,7 +257,7 @@ rewrite /eval;
    case: ieval => //= _ Hd.
 congr sflip; elim: moves Hd => [|b1 bs IH] Hd.
   by rewrite !big_nil.
-rewrite !big_cons IH => [|b2 Hb2]; last by rewrite Hd // in_cons Hb2 orbT.
+rewrite !big_cons IH => [b2 Hb2|]; first by rewrite Hd // in_cons Hb2 orbT.
 rewrite (eval_rec_stable _ (_ : depth b1 <= depth b1 <= n)%nat) //. 
 by rewrite leqnn Hd ?leqnn // in_cons eqxx.
 Qed.
@@ -325,15 +323,15 @@ move=> b2I Hb2 H; rewrite evalE.
 case: ieval (liveness t b1) => /= [s /(@sym_equal _ _ _) /negbT|_].
   by rewrite negbK => /eqP H1; rewrite H1 in b2I.
 elim: moves H b2I => //= b3 bs IH H.
-rewrite big_cons sflip_min in_cons => /orP[/eqP<-| /IH->]; last first.
-- by move=> b4 Hb4; apply: H; rewrite in_cons Hb4 orbT.
-- by case (H b3) => [|-> |->] //; rewrite in_cons eqxx.
+rewrite big_cons sflip_min in_cons => /orP[/eqP<-| /IH->].
 rewrite Hb2.
 elim: (bs) H => [|b4 {IH}bs IH H]; first by rewrite big_nil.
 rewrite big_cons sflip_min smaxA [smax (sflip _) _]smaxC -smaxA IH //.
+- move=> b5 Hb5; apply: H; rewrite !in_cons orbA [(b5 == _) || _]orbC -orbA.
+    by rewrite -in_cons Hb5 orbT.
   by case: (H b4) => [|->|->] //; rewrite !in_cons eqxx orbT.
-move=> b5 Hb5; apply: H; rewrite !in_cons orbA [(b5 == _) || _]orbC -orbA.
-by rewrite -in_cons Hb5 orbT.
+- by move=> b4 Hb4; apply: H; rewrite in_cons Hb4 orbT.
+by case (H b3) => [|-> |->] //; rewrite in_cons eqxx. 
 Qed.
 
 (* First refinement we explictly compute the big op *)
@@ -350,7 +348,7 @@ Fixpoint eval_rec1 n t b :=
 
 Lemma process_eval_rec1_correct f res l l1 :
   res = \smin_(i <- l1) f i ->
-  process_eval_rec1 f res l = sflip (\smin_(i <- l ++ l1) f i).
+  process_eval_rec1 f res l = sflip (\smin_(i <- (l ++ l1)) f i).
 Proof.
 elim: l l1 res => /= [|i l IH] l1 res resE; first by rewrite resE.
 have /IH-> : smin (f i) res = \smin_(i <- (i :: l1)) f i.
@@ -489,7 +487,7 @@ have [E1|E1] := leqP res (f2 _ _ _).
     apply: leq_trans (ge_process_eval_rec3 _ _ _ _ _) => //.
     rewrite sflip_le.
     by apply: leq_trans E1 (f1Ha _); rewrite H.
-  rewrite smin_ler in H; last by apply: ltnW.
+  rewrite smin_ler in H; first by apply: ltnW.
   by apply: IH.
 have [E2|E2] := leqP beta (f2 _ _ _).
   have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
@@ -497,7 +495,7 @@ have [E2|E2] := leqP beta (f2 _ _ _).
     apply: leq_trans (ge_process_eval_rec3 _ _ _ _ _) => //.
     rewrite sflip_le.
     by apply: f1Ha; rewrite H.
-  rewrite smin_ler in H; last by apply: ltnW.
+  rewrite smin_ler in H; first by apply: ltnW.
   by apply: IH.
 have [E3|E3] := leqP (f2 _ _ _) alpha; first by rewrite sflip_le.
 apply: IH => //.
@@ -565,7 +563,7 @@ have [E3|E3] := leqP (f2 _ _ _) alpha => //.
   have [E4|E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
     rewrite (smin_lel E4) in H H1 H2 *.
     by rewrite (f1H aLsb H).
-  rewrite smin_ler // in H H1 H2 *; last by apply: ltnW.
+  rewrite smin_ler // in H H1 H2 *; first by apply: ltnW.
   have H3 : alpha < f1 i by apply: leq_ltn_trans H1 E4.
   have H4 : alpha <= f1 i by apply: ltnW.
   have [E5|E5] := leqP (f1 i) beta.
@@ -580,7 +578,7 @@ have [E4|E4] := leqP (f1 i) (\smin_(j <- l) f1 j).
   apply: sle_antisym; last by rewrite ge_process_eval_rec3.
   apply: process_eval_rec3_correct_b E4 => //.
   by rewrite E3 leqnn.
-rewrite smin_ler // in H H1 H2 *; last by apply: ltnW.
+rewrite smin_ler // in H H1 H2 *; first by apply: ltnW.
 have [E5|E5] := leqP (f1 i) beta.
   have H3 : alpha < f1 i by apply: leq_ltn_trans H1 E4.
   have H4 : alpha <= f1 i by apply: ltnW.
@@ -842,7 +840,7 @@ elim: l res => [|i l IH] res; first by rewrite big_nil (esflip_le _ edraw).
 rewrite big_cons [process_eval_rec4 _ _ _ _ _]/= => H1 H2.
 have [E1|E1] := leqP res (f2 _ _ _).
   by apply: IH => //; apply: leq_trans H2 (ge_sminr _ _).
-rewrite ifT; last first.
+rewrite ifT.
   by apply: H4loss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
 apply: IH => //.
   by apply: H4loss_draw_ge; apply: leq_trans H2 (ge_sminl _ _).
@@ -932,7 +930,7 @@ have [E1|E1] := leqP res (f2 _ _ _).
 have [E2|E2] := leqP _ (f2 _ _ _).
   apply: IH => //.
   by apply: H4loss_draw_win.
-rewrite ifN.
+rewrite ifN; last first.
   rewrite ltnNge in E2; case/negP: E2.
   by apply: leq_trans (H4loss_draw_win _).
 rewrite -ltnNge.
@@ -1071,7 +1069,7 @@ have [E2|E2] := leqP ewin (f2 _ _ _).
 have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H.
   by case: f2 (H4draw_win_loss H).
-rewrite smin_ler // in H; last by apply: ltnW.
+rewrite smin_ler // in H; first by apply: ltnW.
 have [E4|E4] := leqP (f2 _ _ _) edraw.
   have : lossdraw <= f2 edraw ewin i.
     apply: H4draw_win_ge.
@@ -1103,7 +1101,7 @@ have [E2|E2] := leqP ewin _.
   apply: IH => //.
     by rewrite (ge_ewinE E2) // le_ewin.
   by apply: leq_trans aLs (ge_sminr _ _).
-rewrite ifN; last first.
+rewrite ifN.
   rewrite -ltnNge es2ns2esK.
   apply: leq_ltn_trans _ (leq_trans aLs (ge_sminl _ _)).
   by case: (a).
@@ -1115,7 +1113,7 @@ have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   apply: leq_trans (process_eval_rec4_loss_draw_le _ _) _ =>//. 
   rewrite (esflip_le edraw).
   by apply: ltnW.
-rewrite smin_ler // in aLs *; last by apply: ltnW.
+rewrite smin_ler // in aLs *; first by apply: ltnW.
 suff -> : f1 i = win.
   by apply: IH => //; apply: le_ewin.
 by case: f1 E3 aLs => //; case: (\smin_(_ <- _) _) => //; case: (a).
@@ -1132,13 +1130,13 @@ have [E1|E1] := leqP res (f1 i).
   have [E2|E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
     rewrite smin_ler // in H *.
     by apply: IH.
-  rewrite smin_lel // in H *; last by apply: ltnW.
+  rewrite smin_lel // in H *; first by apply: ltnW.
   apply: esle_antisym; last first.
     apply: leq_trans (ge_process_eval_rec4 _ _ _ _ _).
     by rewrite es2ns2esK es2n_flip esflip_le es2ns2esK.
   rewrite es2ns2esK es2n_flip.
   by apply: process_eval_rec4_loss_win_lt; rewrite es2ns2esK.
-rewrite ifN; last first.
+rewrite ifN.
   by rewrite -leqNgt -ltnS (leq_trans E1) // le_ewin.
 have [E2|E2] := leqP (f1 i) loss.
   by rewrite (le_lossE E2) /= sminln.
@@ -1461,7 +1459,7 @@ have HHiv1 := Hiv_cons HHiv.
 have [E1|E1] := leqP res (f2 _ _ _ _).
   apply: IH => //; first by apply: (H5loss_draw_table HHiv).
   by apply: leq_trans H2 (ge_sminr _ _).
-rewrite ifT; last first.
+rewrite ifT.
   apply (H5loss_draw_ge HHiv) => //.
   apply: leq_trans H2 (ge_sminl _ _).
 apply: IH => //; first by apply: (H5loss_draw_table HHiv).
@@ -1575,9 +1573,9 @@ have [E2|E2] := leqP _ (f2 _ _ _ _).
   apply: IH => //; first by apply: (H5loss_draw_table HHiv).
   by apply: (H5loss_draw_win HHiv).
 rewrite ifN.
-  rewrite ltnNge in E2; case/negP: E2.
+  rewrite -ltnNge.
   by apply: leq_trans (H5loss_draw_win HHiv _ _).
-rewrite -ltnNge.
+rewrite ltnNge in E2; case/negP: E2.
 by apply: leq_trans (H5loss_draw_win HHiv _ _).
 Qed.
 
@@ -1783,7 +1781,7 @@ have [E2|E2] := leqP ewin (f2 _ _ _ _).
 have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
   rewrite smin_lel // in H.
   by case: pres2state (H5draw_win_loss HHiv Hv H).
-rewrite smin_ler // in H; last by apply: ltnW.
+rewrite smin_ler // in H; first by apply: ltnW.
 have [E4|E4] := leqP (f2 _ _ _ _) edraw.
   have : lossdraw <= f2 edraw ewin ht i.
     apply: (H5draw_win_ge HHiv) => //.
@@ -1853,7 +1851,7 @@ have [E2|E2] := leqP ewin _.
   apply: IH => //; first by apply: (H5loss_win_table HHiv).
     by rewrite (ge_ewinE E2) // le_ewin.
   by apply: leq_trans aLs (ge_sminr _ _).
-rewrite ifN; last first.
+rewrite ifN.
   rewrite -ltnNge es2ns2esK.
   apply: leq_ltn_trans _ (leq_trans aLs (ge_sminl _ _)).
   by case: (a).
@@ -1866,7 +1864,7 @@ have [E3|E3] := leqP (f1 i) (\smin_(j <- l) f1 j).
     by apply: (H5loss_win_table HHiv). 
   rewrite (esflip_le edraw).
   by apply: ltnW.
-rewrite smin_ler // in aLs *; last by apply: ltnW.
+rewrite smin_ler // in aLs *; first by apply: ltnW.
 suff -> : f1 i = win.
   apply: IH => //; first by apply: (H5loss_win_table HHiv).
   by apply: le_ewin.
@@ -1892,14 +1890,14 @@ have [E1|E1] := leqP res (f1 i).
   have [E2|E2] := leqP (\smin_(j <- l) f1 j) (f1 i).
     rewrite smin_ler // in H *.
     by apply: IH => //; apply: (H5loss_win_table HHiv).
-  rewrite smin_lel // in H *; last by apply: ltnW.
+  rewrite smin_lel // in H *; first by apply: ltnW.
   apply: esle_antisym; last first.
     apply: leq_trans (ge_process_eval_rec5 _ _ _ _ _ _).
     by rewrite es2ns2esK es2n_flip esflip_le es2ns2esK.
   rewrite es2ns2esK es2n_flip.
   apply: process_eval_rec5_loss_win_lt; rewrite ?es2ns2esK //.
   by apply: (H5loss_win_table HHiv).
-rewrite ifN; last first.
+rewrite ifN.
   by rewrite -leqNgt -ltnS (leq_trans E1) // le_ewin.
 have [E2|E2] := leqP (f1 i) loss.
   by rewrite (le_lossE E2) /= sminln.
@@ -2117,12 +2115,12 @@ repeat split => //=.
   case: hget (Hv i t) => [|_ ]; last first.
     case E1 : process_eval_rec5 => [ht1 res2] /=.
     rewrite -[res2]/(Pres ht1 res2 : estate) -E1.
-      apply: hput_correct => //.
-        rewrite -[ht1]/(Pres ht1 res2 : htable) -E1.
-        by apply: (process_eval_rec5_loss_win_valid HHiv).
-      rewrite (process_eval_rec5_loss_win HHiv) //.
-      by rewrite -evalE /= E; case: sflip.
-    by apply: le_win.
+    apply: hput_correct => //.
+      rewrite -[ht1]/(Pres ht1 res2 : htable) -E1.
+      by apply: (process_eval_rec5_loss_win_valid HHiv).
+    rewrite (process_eval_rec5_loss_win HHiv) //.
+      by apply: le_win.
+    by rewrite -evalE /= E; case: sflip.
   move=> es /(_ es (refl_equal _)) Hes.
   have [//|E1] := boolP (is_state es).
   case: es Hes E1 => // Hes E1.

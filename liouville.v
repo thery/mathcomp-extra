@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 Require Import nicomachus.
 
 (******************************************************************************)
@@ -46,7 +46,7 @@ wlog : m n mCn i'pDmn / p %| m => [H pDmn|/dvdnP[k kE] _].
   by apply: H; rewrite 1?[n * _]mulnC // coprime_sym.
 rewrite {}kE in mCn i'pDmn *.
 rewrite -muln_gcdl mulnAC; congr (_ * _).
-rewrite [X in _ * X]gcdnC Gauss_gcdl 1?[X in _ * X]gcdnC; last first.
+rewrite [X in _ * X]gcdnC Gauss_gcdl 1?[X in _ * X]gcdnC.
   by have := mCn; rewrite coprimeMl => /andP[_]; rewrite coprime_sym.
 apply: IH => //.
 - apply: leq_trans jLi.

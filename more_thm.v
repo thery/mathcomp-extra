@@ -1,5 +1,5 @@
 (* Theorems to be added to the mathcomp library  *)
-From mathcomp Require Import all_boot all_fingroup all_field.
+From mathcomp Require Import boot fingroup field.
 From mathcomp Require Import ssralg finalg poly polydiv zmodp vector qpoly.
 
 Set Implicit Arguments.
@@ -47,7 +47,7 @@ Lemma size_exp_monic (p: {poly R}) n :
 Proof.
 move=> pM; elim: n => // [|n IH].
   by rewrite !expr0 muln0 size_polyC oner_eq0.
-rewrite exprS size_proper_mul ?IH; last first.
+rewrite exprS size_proper_mul ?IH.
   by rewrite (eqP pM) (eqP (monic_exp n pM)) mul1r oner_neq0.
 have : (0 < size p)%nat.
   by have := monic_neq0 pM; rewrite -size_poly_eq0; case: size.
@@ -68,7 +68,7 @@ have := (pM); rewrite monicE /lead_coef.
 have : (0 < size p)%nat.
   by have := monic_neq0 pM; rewrite -size_poly_eq0; case: size.
 case: size => //= k _ pkE.
-rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r.
+rewrite big_ord_recr /= (eqP pkE) scale1r big1 ?add0r; last first.
   have := monic_exp k qM.
   by rewrite qualifE /= /lead_coef size_exp_monic //= mulnC.
 move=> i _; rewrite coefZ [_`_(k * _)]nth_default ?mulr0 //.
@@ -130,7 +130,7 @@ rewrite -Pdiv.WeakIdomain.dvdpE in qDp.
 case: (IH _ _ Sq_gt1) => [|r rI rDq]; last first.
   by exists r => //; apply: dvdp_trans qDp.
 rewrite -ltnS; apply: leq_ltn_trans SpLk.
-rewrite -[X in _ < X]prednK ?ltnS; first apply: size_npoly.
+rewrite -[X in _ < X]prednK ?ltnS; last by apply: size_npoly.
 by apply: leq_ltn_trans Sp_gt1.
 Qed.
 
@@ -141,7 +141,7 @@ Section irreducible.
 Variable R : idomainType.
 
 Lemma irreducible_exp n (p q : {poly R}) :
-  irreducible_poly p -> 0 < n -> p %| q ^+ n = (p %| q).
+  irreducible_poly p -> 0 < n -> (p %| q ^+ n) = (p %| q).
 Proof.
 move=> pI.
 elim: n => // [] [|n] // /(_ isT) IH _.
@@ -161,7 +161,7 @@ End irreducible.
 Section separable.
 
 Lemma separable_exp (F : finFieldType) n (p q : {poly F}) :
-  separable_poly p -> 0 < n -> p %| q ^+ n = (p %| q).
+  separable_poly p -> 0 < n -> (p %| q ^+ n) = (p %| q).
 Proof.
 case: n => // n pS _.
 apply/idP/idP; last first.
@@ -182,14 +182,15 @@ rewrite pE Gauss_dvdp //; apply/andP; split; last first.
 apply: IH; last 2 first.
 - by apply: dvdp_separable pS; rewrite pE dvdp_mulr.
 - by rewrite (dvdp_trans _ pDqn).
-rewrite -(ltn_add2r (size r)) -[(_ + size _)%N]prednK; last first.
+rewrite -(ltn_add2r (size r)) -[(_ + size _)%N]prednK.
   by case: rI; case: size => // k1; rewrite addnS.
-rewrite -size_mul; last by apply: irredp_neq0.
-  rewrite -pE (leq_trans _ (_ : (k + 2 <= _))) //.
-    by rewrite !addnS addn0 ltnS.
-  by rewrite leq_add2l; case: rI.
-apply: separable_poly_neq0.
-by apply: dvdp_separable pS; rewrite pE dvdp_mulr.
+rewrite -size_mul.
+- apply: separable_poly_neq0.
+  by apply: dvdp_separable pS; rewrite pE dvdp_mulr.
+- by apply: irredp_neq0.
+rewrite -pE (leq_trans _ (_ : (k + 2 <= _))) //.
+  by rewrite !addnS addn0 ltnS.
+by rewrite leq_add2l; case: rI.
 Qed.
 
 Lemma separable_polyXnsub1 (R : fieldType) n :
@@ -444,8 +445,8 @@ have kCq : coprime k q.
   by rewrite mem_primes in qP; case/and3P: qP.
 have [H1 H2 _] := order_modnP k_gt1 kCq.
 rewrite -modnXm -[q]expn1 -{1}(_ : order_modn k q = 1%nat).
-  by rewrite H2 modnXm exp1n modn_small.
-by apply/eqP; rewrite eqn_leq oL1.
+  by apply/eqP; rewrite eqn_leq oL1.
+by rewrite H2 modnXm exp1n modn_small.
 Qed.
 
 (* Definition of order for poly *)

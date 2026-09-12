@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -9,7 +9,6 @@ Unset Printing Implicit Defensive.
 (*                      Formalisation of Montgomery reduction                 *)
 (*                                                                            *)
 (******************************************************************************)
-
 
 Section Montgomery.
 
@@ -65,11 +64,11 @@ rewrite /oppw -[(v1 * v2) %% _]modnMml.
 case: (v1 %% _) (ltn_pmod v1 w_gt0) => [|v3]; rewrite /= ?mod0n // => v3Lw.
 case: eqP => [wL|wL].
   rewrite mulnBl modnB //.
-    by rewrite wL subn0 modnMr addn0 ltnn mod0n.
-  by rewrite leq_mul2r ltnW ?orbT.
-rewrite mulnBl !modnB //; last 2 first.
-- by rewrite ltnW // ltn_mod.
+    by rewrite leq_mul2r ltnW ?orbT.
+  by rewrite wL subn0 modnMr addn0 ltnn mod0n.
+rewrite mulnBl !modnB //.
 - by rewrite leq_mul2r ltnW ?orbT.
+- by rewrite ltnW // ltn_mod.
 rewrite !modnn modn_mod.
 by rewrite -modnMml modnn mod0n.
 Qed.
@@ -149,7 +148,7 @@ Definition encode m a := reduce m (a * w2 m).
 Lemma encodeE m a : a < w m -> encode m a = (a * w m) %% p m.
 Proof.
 move=> aLp.
-rewrite /encode reduceE /w2 -addnn expnD // -[b m ^ n m]/(w m).
+rewrite /encode reduceE /w2 -addnn expnD // -[b m ^ n m]/(w m); last first.
   by rewrite -modnMml modnMmr modnMml !mulnA -mulnA -modnMmr invwE modnMmr muln1.
 apply: leq_ltn_trans (_ : a * p m < _).
   by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
@@ -166,10 +165,6 @@ move=> aL bL.
 have aL1 : a < w m by apply: ltn_trans aL (pLw _).
 have bL1 : b < w m by apply: ltn_trans bL (pLw _).
 rewrite /mult /decode !encodeE // ?reduceE.
-- rewrite modnMml -!mulnA modnMml mulnC -!mulnA modnMml.
-  rewrite [invw m * (a * _)]mulnC !mulnA -mulnA.
-  rewrite -modnMmr invwE modnMmr muln1 mulnC !mulnA -mulnA.
-  by rewrite -modnMmr invwE modnMmr muln1.
 - apply: leq_ltn_trans (_ : (a * w m) %% p m * p m < _).
     by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
   rewrite ltn_mul2r p_gt0.
@@ -177,10 +172,14 @@ rewrite /mult /decode !encodeE // ?reduceE.
 - apply: leq_trans (_ : 1 * p m <= _).
     by rewrite mul1n ltn_mod p_gt0.
   by rewrite leq_mul2r w_gt0 orbT.
-apply: leq_ltn_trans (_ : (a * w m) %% p m * p m < _).
-  by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
-rewrite ltn_mul2r p_gt0.
-by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_gt0.
+- apply: leq_ltn_trans (_ : (a * w m) %% p m * p m < _).
+    by rewrite leq_mul2l ltnW ?orbT // ltn_mod p_gt0.
+  rewrite ltn_mul2r p_gt0.
+  by apply: leq_ltn_trans (pLw m); rewrite ltnW // ltn_mod p_gt0.
+- rewrite modnMml -!mulnA modnMml mulnC -!mulnA modnMml.
+rewrite [invw m * (a * _)]mulnC !mulnA -mulnA.
+rewrite -modnMmr invwE modnMmr muln1 mulnC !mulnA -mulnA.
+by rewrite -modnMmr invwE modnMmr muln1.
 Qed.
 
 (* An example *)

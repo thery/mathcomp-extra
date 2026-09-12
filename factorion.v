@@ -1,5 +1,5 @@
 From Stdlib Require Import String NArith.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 Require Import digitn.
 
 (******************************************************************************)
@@ -184,7 +184,7 @@ case E : d1 => [|d].
   have nE : N.to_nat (10 * n) = 10 * n1 by rewrite N2Nat.inj_mul.
   apply: IH => //; first by rewrite nE muln_gt0.
     rewrite nE mE1 addn0 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factM // -p1E N2Nat.inj_add.
 case: d E => [d1E|].
@@ -194,7 +194,7 @@ case: d E => [d1E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE addn1.
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d2E|].
@@ -204,7 +204,7 @@ case=> [d2E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d3E|].
@@ -214,7 +214,7 @@ case=> [d3E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d4E|].
@@ -224,7 +224,7 @@ case=> [d4E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d5E|].
@@ -234,7 +234,7 @@ case=> [d5E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d6E|].
@@ -244,7 +244,7 @@ case=> [d6E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d7E|].
@@ -254,7 +254,7 @@ case=> [d7E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d8E|].
@@ -264,7 +264,7 @@ case=> [d8E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   by rewrite nE sum_factMD // -p1E N2Nat.inj_add.
 case=> [d9E|].
@@ -273,7 +273,7 @@ case=> [d9E|].
     by  rewrite N2Nat.inj_add N2Nat.inj_mul addnC.
   apply: IH => //; first by rewrite nE (leq_trans _ (leq_addl _ _)).
     rewrite nE mE1 divnMDl ?expn_gt0 //.
-    rewrite mE divn_small; last by rewrite ltn_mod expn_gt0.
+    rewrite mE divn_small; first by rewrite ltn_mod expn_gt0.
     by rewrite addn0 mulnC.
   rewrite nE sum_factMD // -p1E N2Nat.inj_add N362880.
   by congr ((_ * (_ * (_ * _)%coq_nat)%coq_nat)%coq_nat + _)%coq_nat.
@@ -354,7 +354,7 @@ suff : d1 < 10 by rewrite d1E.
 by apply: ltn_digitn.
 Qed.
 
-Lemma factorionE m : m \is a factorion = (m \in [::1; 2; 145; v40585]).
+Lemma factorionE m : (m \is a factorion) = (m \in [::1; 2; 145; v40585]).
 Proof.
 apply/idP/idP; last first.
   rewrite !inE; case/or4P => /eqP->.
@@ -442,12 +442,12 @@ Proof.
 case: b => [|b]; first by rewrite divn0 PeanoNat.Nat.div_0_r.
 have [k aLk]:= ubnP a; elim: k a aLk => [[]//|k IH a aLk].
 have [bLa|aLb] := leqP b.+1 a; last first.
-  rewrite PeanoNat.Nat.div_small; last by apply/ltP.
+  rewrite PeanoNat.Nat.div_small; first by apply/ltP.
   by rewrite divn_small.
 rewrite -(subnK bLa) -{2 5}[b.+1]mul1n addnC PeanoNat.Nat.div_add_l // IH //.
-  by rewrite divnMDl.
-rewrite ltnS in aLk. 
-by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+  rewrite ltnS in aLk. 
+  by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+by rewrite divnMDl.
 Qed.
 
 Lemma Natmod_mod a b : PeanoNat.Nat.modulo a b = a %% b.
@@ -455,12 +455,12 @@ Proof.
 case: b => [|b]; first by rewrite modn0 PeanoNat.Nat.mod_0_r.
 have [k aLk]:= ubnP a; elim: k a aLk => [[]//|k IH a aLk].
 have [bLa|aLb] := leqP b.+1 a; last first.
-  rewrite PeanoNat.Nat.mod_small; last by apply/ltP.
+  rewrite PeanoNat.Nat.mod_small; first by apply/ltP.
   by rewrite modn_small.
 rewrite -(subnK bLa) -{2 5}[b.+1]mul1n PeanoNat.Nat.Div0.mod_add IH //.
-  by rewrite addnC modnMDl.
-rewrite ltnS in aLk. 
-by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+  rewrite ltnS in aLk. 
+  by rewrite (leq_trans _ aLk) // ltn_subLR // addSnnS leq_addl.
+by rewrite addnC modnMDl.
 Qed.
 
 Lemma Nsum_fact10_aux_spec n p : 
@@ -478,7 +478,7 @@ elim: n p => [n IH p| n IH p| p] pB /=.
     by rewrite Nfact_small_spec // sum_fact_small.
   have pD10_pos : 0 < N.to_nat (p / 10).
     by rewrite -[X in X <> _]N2Nat.id in HNE; case: N.to_nat HNE.
-  rewrite sum_factMD // Nat2N.inj_add -IH //.
+  rewrite sum_factMD // Nat2N.inj_add -IH //; last first.
     by rewrite -Nfact_small_spec // N2Nat.id.
   rewrite pD10_pos N2Nat.inj_div NatDiv_div.
   rewrite -[X in _ <= X](mulnK _ (isT : 0 < 10)).
@@ -498,7 +498,7 @@ elim: n p => [n IH p| n IH p| p] pB /=.
     by rewrite Nfact_small_spec // sum_fact_small.
   have pD10_pos : 0 < N.to_nat (p / 10).
     by rewrite -[X in X <> _]N2Nat.id in HNE; case: N.to_nat HNE.
-  rewrite sum_factMD // Nat2N.inj_add -IH //.
+  rewrite sum_factMD // Nat2N.inj_add -IH //; last first.
     by rewrite -Nfact_small_spec // N2Nat.id.
   rewrite pD10_pos N2Nat.inj_div NatDiv_div.
   rewrite -[X in _ <= X](mulnK _ (isT : 0 < 10)).

@@ -14,7 +14,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From mathcomp Require Import zify.
 From Stdlib Require Import String.
 
@@ -218,7 +218,7 @@ Proof.  by case: p => x y; rewrite /= andbT; case: ltngtP. Qed.
 (* Create the seq of positions (x, y) such that 0 <= x < h and 0 <= y < w     *)
 Definition cross := [seq (x, y) | x <- iota 0 h , y <- iota 0 w].
 
-Lemma mem_cross p : p \in cross = ((p.1 < h) && (p.2 < w)).
+Lemma mem_cross p : (p \in cross) = ((p.1 < h) && (p.2 < w)).
 Proof.
 apply/allpairsP/idP=> [[[x1 y1]/= []]|/andP[Hh Hw]].
   by rewrite !mem_iota !andTb !add0n => Hx Hy -> /=; apply/andP.
@@ -228,7 +228,7 @@ Qed.
 (* Create the seq of pairs (x, y) such that 0 <= x < hw and 1 <= y <= hw      *)
 Definition cross1 := [seq (x, y) | x <- indexes , y <- sref].
 
-Lemma mem_cross1 p : p \in cross1 = ((p.1 \in indexes) && (p.2 \in sref)).
+Lemma mem_cross1 p : (p \in cross1) = ((p.1 \in indexes) && (p.2 \in sref)).
 Proof.
 apply/allpairsP/idP=> [[[x1 y1]/= [Hx1 Hy1 ->]]|/andP[Hh Hw]].
   by rewrite Hx1.
@@ -287,7 +287,6 @@ Proof. by rewrite /get nth_nseq if_same out_not_in_refl. Qed.
 (* Relation between get and next                                              *)
 Lemma get_next p a g : get (next p) (a :: g) = get p g.
 Proof. by rewrite /get next_pos. Qed.
-
 
 (******************************************************************************)
 (*    Update                                                                  *)
@@ -373,13 +372,13 @@ rewrite /grestrict /get /update substE next_pos.
 rewrite leq_eqVlt => /orP[/eqP He|pLg].
   have pLg : pos2n p < size g by rewrite He.
   rewrite He ltnn eqxx /= size_cat size_take.
-  rewrite size_nseq pLg addnC subnK; last by rewrite ltnW.
+  rewrite size_nseq pLg addnC subnK; first by rewrite ltnW.
   rewrite leqnn take_cat size_take pLg ltnn subnn take0 cats0.
   rewrite drop_cat size_take pLg ltnNge (ltnW pLg) /= drop_nseq subnn //=.
   rewrite -[LHS](cat_take_drop (pos2n p)) //.
   by rewrite (drop_nth out) // drop_oversize // He.
 have pLg1 : pos2n p < size g by rewrite ltnW.
-rewrite pLg orbT size_cat size_nseq size_take pLg1 ifT; last first.
+rewrite pLg orbT size_cat size_nseq size_take pLg1 ifT.
   by rewrite addnC subnK // ltnW.
 rewrite take_cat drop_cat !size_take !pLg1 ltnn ifN -?leqNgt ?leqnS //.
 rewrite subSn // subnn take0 cats0 drop_nseq subn1 subnS.
@@ -426,8 +425,7 @@ apply: (iffP and3P) => [[/eqP Heq1 /eqP Heq2 /forallP /= Hf]|
                         [Heq1 Heq2 Hf]]; split => //; try by apply/eqP.
   move=> [x y] Hp.
   have /implyP := Hf (Ordinal (valid_pos_pos2n_lt Hp)).
-  rewrite /get pos2nK /= //.
-  by move=> Hk Hg; have /eqP := (Hk Hg).
+  rewrite /get pos2nK /= //; last by move=> Hk Hg; have /eqP := (Hk Hg).
   by apply: valid_pos_pos2n_lt.
 apply/forallP=> /= n; rewrite /get pos2nK //.
 have hw_pos : 0 < hw.
@@ -518,13 +516,12 @@ have tLs : t <= size s.
 rewrite nth_cat size_take_min (minn_idPl _) //.
 case: leqP => [tLm|mLt]; last first.
   by rewrite divn_small // add0n modn_small // nth_take.
-rewrite {}IH //.
-- rewrite nth_drop -{3 4}(subnK tLm).
-  by rewrite divnDr ?divnn // t_gt0 addn1 mulSn addnA modnDr.
-- by rewrite ltn_subLR.
-case: n mLtd tdLs => [|n mLtd tdLs]; first by rewrite mul1n ltnNge tLm.
-rewrite size_drop leq_subRL //=; first by rewrite addnA -mulSn.
-by apply: leq_trans tdLs; rewrite mulSn -addnA leq_addr.
+rewrite {}IH //; first by rewrite ltn_subLR.
+  case: n mLtd tdLs => [|n mLtd tdLs]; first by rewrite mul1n ltnNge tLm.
+  rewrite size_drop leq_subRL //=; last by rewrite addnA -mulSn.
+  by apply: leq_trans tdLs; rewrite mulSn -addnA leq_addr.
+rewrite nth_drop -{3 4}(subnK tLm).
+by rewrite divnDr ?divnn // t_gt0 addn1 mulSn addnA modnDr.
 Qed.
 
 Lemma take_and_drop_nil (A : Type) t d n :
@@ -538,8 +535,8 @@ Proof.
 elim: n s => [/= //|/= [|n] IH s tLs]; rewrite ?addn0 in tLs.
   rewrite size_cat size_take addn0 mul1n; case: ltngtP => //.
   by rewrite ltnNge tLs.
-rewrite size_cat size_take IH; last first.
-  rewrite size_drop leq_subRL; first by rewrite addnA.
+rewrite size_cat size_take IH.
+  rewrite size_drop leq_subRL; last by rewrite addnA.
   by rewrite (leq_trans _ tLs) // mulSn -addnA leq_addr.
 case: ltngtP => [||<-] //.
 by rewrite ltnNge (leq_trans _ tLs) // leq_addl.
@@ -562,9 +559,9 @@ Lemma get_column x y g :
 Proof.
 move=> Hs xLhw yLhw.
 rewrite /get /column /pos2n nth_take_and_drop ?muln1 //=.
-- by rewrite nth_drop divn1 modn1 addn0 addnC.
 - by apply: leq_ltn_trans xLhw.
-rewrite size_drop addn1 Hs; nia.
+- by rewrite size_drop addn1 Hs; nia.
+by rewrite nth_drop divn1 modn1 addn0 addnC.
 Qed.
 
 (******************************************************************************)
@@ -587,16 +584,16 @@ have h_pos := h_pos xLhw; have w_pos := w_pos xLhw.
 have x_d_h := hw_divh xLhw; have x_m_h := hw_modh xLhw.
 have y_d_w := hw_divw yLhw; have y_m_w := hw_modw yLhw.
 rewrite nth_take_and_drop.
-- rewrite nth_drop /get /pos2n /= !divnMDl // !modnMDl.
-  rewrite modn_small // [(y  %/ w)%/ h]divn_small // addn0.
-  rewrite [(_  %% _)%/ _]divn_small // addn0.
-  rewrite modn_mod [x in LHS](divn_eq _ h) [y in LHS](divn_eq _ w).
-  congr nth; lia.
 - by rewrite w_pos -[w]mul1n leq_mul2r eqn0Ngt w_pos.
 - by rewrite hw_modwMDmod.
-rewrite modnMDl divnMDl // modn_small // [(_ %/ _) %/ h]divn_small //.
-rewrite addn0 size_drop Hs.
-rewrite /hw in hw_pos xLhw yLhw *; nia.
+- rewrite modnMDl divnMDl // modn_small // [(_ %/ _) %/ h]divn_small //.
+  rewrite addn0 size_drop Hs.
+  by rewrite /hw in hw_pos xLhw yLhw *; nia.
+rewrite nth_drop /get /pos2n /= !divnMDl // !modnMDl.
+rewrite modn_small // [(y  %/ w)%/ h]divn_small // addn0.
+rewrite [(_  %% _)%/ _]divn_small // addn0.
+rewrite modn_mod [x in LHS](divn_eq _ h) [y in LHS](divn_eq _ w).
+by congr nth; lia.
 Qed.
 
 Lemma get_rect_rev i j g :
@@ -810,7 +807,7 @@ by move=> _ p2E p3E; case: p1Dp3; rewrite -p2E.
 Qed.
 
 Lemma in_state_init n p bs : 
-  (n, p, bs) \in init_state =
+  ((n, p, bs) \in init_state) =
   [&& n == hw, valid_pos p & bs == false :: nseq hw true].
 Proof.
 have rE : rank_val (false :: nseq hw true) = hw.
@@ -861,7 +858,7 @@ Definition rm_state p st :=
   [seq i <- st | let: (_, p1, v1) := i in (p != p1)].
 
 Lemma spos_rm_state st p p1 :
-  p1 \in spos (rm_state p st) = (p1 != p) && (p1 \in spos st).
+  (p1 \in spos (rm_state p st)) = (p1 != p) && (p1 \in spos st).
 Proof.
 case: p => x y; elim: st => /= [|[[n [x2 y2]] v] st IH].
   by rewrite in_nil andbF.
@@ -1046,9 +1043,8 @@ Proof.
 move=> Hu.
 elim: s => //= u s IH; case: (h1 _) => /=.
 rewrite IH //.
-rewrite in_state_update.
-rewrite in_cons negb_or xpair_eqE negb_and IH // andbA //.
-by apply: uniq_spos_fold.
+rewrite in_state_update; first by apply: uniq_spos_fold.
+by rewrite in_cons negb_or xpair_eqE negb_and IH // andbA.
 Qed.
 
 Lemma in_state_update_anti p1 p2 z1 z2 st :
@@ -1059,9 +1055,9 @@ Proof.
 move=> Hu.
 case: p2 => x2 y2 => /=.
 rewrite !update_fold //.
-- by rewrite !mem_cat !negb_or; do 3 case: (_ \in _).
-- by apply: uniq_spos_fold.
 - by apply/uniq_spos_fold/uniq_spos_fold.
+- by apply: uniq_spos_fold.
+by rewrite !mem_cat !negb_or; do 3 case: (_ \in _).
 Qed.
 
 Lemma perm_spos_fold (A : Type) (st : state) (s : seq A)  h1 f1 z :
@@ -1312,10 +1308,10 @@ apply: (iffP and4P) => [[/eqP Hs /forallP Hr /forallP Hc /forallP Hre]|
   have /uniqP : uniq (rect (x1 %/ h * h + y1 %/ w) g).
     by rewrite (perm_uniq (Hre (Ordinal (hw_divhMD x1Lhw y1wLh)))) sref_uniq.
   move/(_ out); apply => //=; rewrite -?topredE /= ?size_rect //.
+  + by apply: hw_divhMD.
   + by rewrite /hw; nia.
   + by apply :hw_divhMD.
-  + by apply: hw_modwMDmod.
-  by apply: hw_divhMD.
+  by apply: hw_modwMDmod.
 - by apply/eqP.
 - apply/forallP => /= [] [x xLhw] /=.
   suff Hi : row x g =i sref.
@@ -1365,7 +1361,7 @@ case (@uniq_min_size _ (rect i g) sref) => //.
     apply/andP; split=> /=; first by rewrite hw_divhMD // hw_divw.
     by apply: hw_modwMDmod.
   rewrite !mem_cat; apply/orP; right; apply/orP; right.
-  rewrite !divnMDl // [(_ %/ _) %/ _]divn_small; last by rewrite ltn_divLR.
+  rewrite !divnMDl // [(_ %/ _) %/ _]divn_small; first by rewrite ltn_divLR.
   rewrite addn0 [(_ %% _) %/ _]divn_small ?ltn_mod // addn0.
   have -> : p2 = shift (j2 %/ w, j2 %% w) (i %/ h * h) (i %% h * w).
     by apply/eqP; rewrite xpair_eqE !eqn_add2l // !eqxx.
@@ -1456,8 +1452,7 @@ move=> p1 p2.
   by rewrite !update_diff_get //; apply: Hi.
 split.
   move=> p1 p2 z1.
-  rewrite in_state_update_anti; last first.
-    by have [] := valid_state_rm_state p Hpos.
+  rewrite in_state_update_anti; first by have [] := valid_state_rm_state p Hpos.
   case: (p2 =P p) => [->|/eqP p2Dp].
     rewrite update_get //.
     by move=> Hp1 Hp2 _ _ /andP[Hna _].
@@ -1469,7 +1464,7 @@ move=> p1 z1 Hp1 Hz1.
 case: (p1 =P p) => [->|/eqP p1Dp].
   by rewrite update_get // Hz.
 rewrite update_diff_get //.
-rewrite in_state_update_anti; last first.
+rewrite in_state_update_anti.
   by have [] := valid_state_rm_state p Hpos.
 rewrite negb_and negbK => Hg1 /orP[Han|HNi]; last first.
   case: (His2 p1 z1) => //.
@@ -1595,12 +1590,11 @@ have [vis|vnis] := boolP (v \in sref); last first.
     move=> p1 Hp1 Hg1.
     case: (leqP (pos2n p1) (pos2n p)) => Lp; last first.
       rewrite grestrict_get_default // in Hg1.
-        by case/negP: out_not_in_refl.
-      by rewrite next_pos.
+        by rewrite next_pos.
+      by case/negP: out_not_in_refl.
     case: ltngtP Lp => // Lp1 .
       by rewrite !grestrict_get // next_pos (leq_trans Lp1).
-    rewrite grestrict_get // in Hg1; last first.
-      by rewrite next_pos Lp1.
+    rewrite grestrict_get // in Hg1; first by rewrite next_pos Lp1.
     case/negP: vnis.
     by rewrite /get Lp1 -[pos2n _]addn0 -nth_drop -Hd in Hg1.
 have [His|Hnis] := boolP (in_state p v st); last first.
@@ -1617,10 +1611,10 @@ have [His|Hnis] := boolP (in_state p v st); last first.
   have /refineP[_ _ <-//] := Hrss2.
   by rewrite Hgv.
 apply: IH => //.
-rewrite grestrict_update.
-have->: get p g = v.
-  by rewrite /get -[pos2n p]addn0 -nth_drop -Hd.
-apply: invariant_update => //.
+rewrite grestrict_update; last first.
+  have->: get p g = v.
+    by rewrite /get -[pos2n p]addn0 -nth_drop -Hd.
+  by apply: invariant_update => //.
 case: leqP => // H.
 by rewrite drop_oversize // -ltnS -next_pos // in Hd.
 Qed.
@@ -1673,7 +1667,7 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
     have [H1 H2 H3 H4 [H5 H6]] := Hin; apply: H6 => //.
     - by apply: H2su.
     - by rewrite H3 //= inE eqxx.
-    rewrite in_state_cons; last by case: Hin.
+    rewrite in_state_cons; first by case: Hin.
     by rewrite /in_val -(subnK kLg) addnC -nth_drop -Hdr nth_nil.
   rewrite in_nil; rewrite (H3rss1 p3) // in H3p3. 
   by have /eqP[] := (H3su _ _ _ H1p3 H3p3).
@@ -1687,21 +1681,21 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
       by apply: IH11.
     rewrite mem_merge_sudoku mem_cat; apply/orP; left.
     rewrite IH //.
-    - rewrite Hsu andbT.
-      apply/refineP; split => //.
-      + by rewrite size_update.
-      + by case/refineP : Hrss1.
-      move=> p2 Hp2.
-      case: (p2 =P p1) => [->|/eqP p2Dp1].
-        by rewrite update_get.
-      rewrite update_diff_get // => HH.
-      by have /refineP[_ _ <-] := Hrss1.
     - by rewrite size_update.
     - by rewrite size_update_anti_literals.
-    have <- := @rm_state_cons n1 p1 v1 st; last by case: Hin.
-    apply: invariant_update => //.
-    rewrite in_state_cons //; last by case: Hin.
-    by rewrite /in_val -[k]addn0 -nth_drop -Hdr.
+    - have <- := @rm_state_cons n1 p1 v1 st; first by case: Hin.
+      apply: invariant_update => //.
+      rewrite in_state_cons //; first by case: Hin.
+      by rewrite /in_val -[k]addn0 -nth_drop -Hdr.
+    rewrite Hsu andbT.
+    apply/refineP; split => //.
+    + by rewrite size_update.
+    + by case/refineP : Hrss1.
+    move=> p2 Hp2.
+    case: (p2 =P p1) => [->|/eqP p2Dp1].
+      by rewrite update_get.
+    rewrite update_diff_get // => HH.
+    by have /refineP[_ _ <-] := Hrss1.
   case: (IH1 k.+1) => [|IH11 IH12].
     by rewrite -add1n -drop_drop -Hdr /= drop0.
   apply: IH11 => //.
@@ -1714,25 +1708,25 @@ elim: behead 1 => /= [k Hdr|kb bs IH1 k Hdr]; split.
     have [H1 H2 H3 H4 [H5 H6]] := Hin; apply: H6 => //.
     - by apply: H2su.
     - by rewrite H3 //= inE eqxx.
-    rewrite in_state_cons; last by case: Hin.
+    rewrite in_state_cons; first by case: Hin.
     by rewrite /in_val -kE -[k]addn0 -nth_drop -Hdr.
   rewrite (H3rss1 p3) // in H3p3. 
   by have /eqP[] := (H3su _ _ _ H1p3 H3p3).
 case: kb Hdr => Hdr.
   rewrite mem_merge_sudoku mem_cat => /orP[].
     rewrite IH //.
-    - move=>/andP[Hr Hu]; split=> //.
-      apply: refine_trans Hr.
-      apply: refine_update => //.
-      have [_  _ Hin1 _ _] := Hin.
-      by rewrite Hin1 //= in_cons eqxx.
     - by rewrite size_update.
     - by rewrite size_update_anti_literals.
-    have <- := @rm_state_cons n1 p1 v1 st; last by case: Hin.
-    apply: invariant_update => //.
-    rewrite in_state_cons //; last by case: Hin.
-    by rewrite /in_val -[k]addn0 -nth_drop -Hdr.
-   case: (IH1 k.+1) => [|IH11 IH12].
+    - have <- := @rm_state_cons n1 p1 v1 st; first by case: Hin.
+      apply: invariant_update => //.
+      rewrite in_state_cons //; first by case: Hin.
+      by rewrite /in_val -[k]addn0 -nth_drop -Hdr.
+    move=>/andP[Hr Hu]; split=> //.
+    apply: refine_trans Hr.
+    apply: refine_update => //.
+    have [_  _ Hin1 _ _] := Hin.
+    by rewrite Hin1 //= in_cons eqxx.
+  case: (IH1 k.+1) => [|IH11 IH12].
     by rewrite -add1n -drop_drop -Hdr /= drop0.
   by apply: IH12.
 case: (IH1 k.+1) => [|IH11 IH12].

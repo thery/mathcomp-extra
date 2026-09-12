@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot order perm algebra.zmodp.
+From mathcomp Require Import boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 Require Import more_tuple nsort.
 
@@ -130,8 +130,8 @@ rewrite tetakeE totakeE (eqP tE) !(etake_cat, otake_cat, otake_nseq,
 case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
   case: (boolP (odd a4)) b4O => [a4O /negP/negP b4O|/negPf a4E b4E].
 (* First case *)
-    rewrite a3O a4O b3O b4O [if true (+) true then _ else _]/= !add1n in n1P.
-    rewrite a3O a4O b3O b4O [if true (+) true then _ else _]/= !add1n in n2P.
+    rewrite a3O a4O b3O b4O [if true (+) true then _ else _]/= in n1P.
+    rewrite a3O a4O b3O b4O [if true (+) true then _ else _]/= in n2P.
     have [/eqP Ea1 /eqP Eb1] : a1 == (a3./2 + a4./2).+2 /\
                                b1 == b3./2 + b4./2.
       move/allP/(_ false) : (n1P); move/allP/(_ true) : n1P.
@@ -150,8 +150,7 @@ case: (boolP (odd a3)) b3O => [a3O /negP/negP b3O |/negPf a3E b3E].
     by move=> {a3O b3O a4O b4O n1P n2P}//; lia.
 (* Second case *)
   rewrite /= in b4E.
-  rewrite a3O b3O a4E b4E [if true (+) true then _ else _]/= 
-          !add0n !add1n in n1P. 
+  rewrite a3O b3O a4E b4E [if true (+) true then _ else _]/= !add0n in n1P. 
   rewrite a3O a4E b3O b4E [if true (+) true then _ else _]/= in n2P.
   have [/eqP Ea1 /eqP Eb1] : a1 == (a3./2 + a4./2).+1 /\ b1 == b3./2 + b4./2.
     move/allP/(_ false) : (n1P); move/allP/(_ true) : n1P.

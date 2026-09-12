@@ -104,43 +104,38 @@ license:
   identifier: MIT
 
 supported_coq_versions:
-  text: '9.1 or later'
-  opam: '{(>= "9.1")}'
+  text: '9.2 or later'
+  opam: '{(>= "9.2")}'
 
 dependencies:
 - opam:
     name: rocq-mathcomp-boot
-    version: '{(>= "2.5.0")}'
+    version: '{(>= "2.6.0")}'
   description: |-
-    [MathComp boot 2.5.0 or later](https://math-comp.github.io)
+    [MathComp boot 2.6.0 or later](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-fingroup
-    version: '{(>= "2.5.0")}'
+    version: '{(>= "2.6.0")}'
   description: |-
-    [MathComp fingroup 2.5.0 or later](https://math-comp.github.io)
+    [MathComp fingroup 2.6.0 or later](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-algebra
-    version: '{(>= "2.5.0")}'
+    version: '{(>= "2.6.0")}'
   description: |-
     [MathComp algebra 2.5.0 or later](https://math-comp.github.io)
 - opam:
     name: rocq-mathcomp-field
-    version: '{(>= "2.5.0")}'
+    version: '{(>= "2.6.0")}'
   description: |-
-    [MathComp field 2.5.0 or later](https://math-comp.github.io)
+    [MathComp field 2.6.0 or later](https://math-comp.github.io)
 - opam:
-    name: coq-mathcomp-zify
-    version: '{(>= "1.6.0+2.3+8.18")}'
+    name: rocq-mathcomp-zify
+    version: '{(>= "1.7.0+2.4+9.0")}'
   description: |-
-    [MathComp zify 1.6.0+2.3+8.18 or later](https://github.com/math-comp/mczify)
-- opam:
-    name: coq-mathcomp-algebra-tactics
-    version: '{(>= "1.2.7")}'
-  description: |-
-    [MathComp Algebra Tactics 1.2.7 or later](https://github.com/math-comp/algebra-tactics)
+    [MathComp zify 1.7.0+2.4+9.0 or later](https://github.com/math-comp/mczify)
 
 tested_coq_opam_versions:
-- version: '2.5.0-rocq-prover-9.1'
+- version: '2.6.0-rocq-prover-9.2'
   repo: 'mathcomp/mathcomp'
 
 namespace: mathcomp-extra

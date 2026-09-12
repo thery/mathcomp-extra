@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -44,7 +44,7 @@ Qed.
 Lemma rM_dvd_div r (i j : nat) : 
   i != j -> i \in rl r -> j \in rl r -> i %| (rM r %/ j).
 Proof.
-move=> iDj iI jI; rewrite dvdn_divRL; last by apply: rM_dvd.
+move=> iDj iI jI; rewrite dvdn_divRL; first by apply: rM_dvd.
 have rU := rl_uniq r.
 rewrite rME (bigD1_seq j) //= big_mkcond_idem //= (bigD1_seq i) //= iDj.
 by rewrite mulnA [j * _]mulnC; apply: dvdn_mulr.
@@ -71,8 +71,8 @@ Qed.
 Lemma coprime_rM_div r (i : nat) : i \in rl r -> coprime (rM r %/ i) i.
 Proof.
 move=> iI.
-rewrite rME (bigD1_seq i) //=; last by apply: rl_uniq.
-rewrite mulKn; last by case: i iI; case: r => ? ? /= /and4P[]; case: (_ \in _).
+rewrite rME (bigD1_seq i) //=; first by apply: rl_uniq.
+rewrite mulKn; first by case: i iI; case: r => ? ? /= /and4P[]; case: (_ \in _).
 rewrite coprime_sym; apply: coprime_prod => j jDi jI.
 by apply: rl_coprime iI jI _; rewrite eq_sym.
 Qed.
@@ -146,7 +146,7 @@ case: a => a b /=; elim: s t => [|c s IH] [|d t]; rewrite //= ?inE.
 rewrite eq_sym.
 case: eqP => /=; first by case => -> _; rewrite !eqxx.
 move=> cdDab /andP[cNIs sU] abI.
-rewrite ifN; first by congr (_.+1); apply: IH.
+rewrite ifN; last by congr (_.+1); apply: IH.
 by apply: contra cNIs => /eqP->; have [] := mem_zip abI.
 Qed.
 
@@ -172,19 +172,18 @@ move=> Hr; apply: (@eq_from_nth _ 0) => [|i].
 have Hs : size (zip (rl r) l) = size (rl r).
   by rewrite size_zip (size_rnorm Hr) minnn.
 rewrite size_rn_rl => iLs.
-rewrite (nth_map 0) // rl_rnE (bigD1_seq (nth (0,0) (zip (rl r) l) i)) //=; 
-  last 2 first.
+rewrite (nth_map 0) // rl_rnE (bigD1_seq (nth (0,0) (zip (rl r) l) i)) //=.
 - by apply: mem_nth; rewrite Hs.
 - by apply/zip_uniql/rl_uniq.
-rewrite (nth_zip 0 0) /=; last by rewrite (size_rnorm Hr).
+rewrite (nth_zip 0 0) /=; first by rewrite (size_rnorm Hr).
 set a := nth _ _ _; set b := nth _ _ _.
 have abE : (a, b) = nth (0, 0) (zip (rl r) l) i.
   by rewrite nth_zip //; apply/sym_equal/size_rnorm.
 have aI : a \in rl r by apply/mem_nth.
-rewrite modn_dvdm; last by apply/rM_dvd/mem_nth.
+rewrite modn_dvdm; first by apply/rM_dvd/mem_nth.
 rewrite -modnDmr -modn_summ modnDmr.
 rewrite big_mkcond_idem //=.
-rewrite big_seq big1 /=; last first.
+rewrite big_seq big1 /=.
   case => i1 j1 i1j1I /=; case: eqP => //= /eqP i1j1D.
   have i1Da : i1 != a.
     apply: neq_uniq_zipl i1j1I _ i1j1D; first by apply: rl_uniq.
@@ -195,7 +194,7 @@ rewrite big_seq big1 /=; last first.
   by apply/eqP/rM_dvd_div => //; rewrite eq_sym.
 rewrite addn0 modnMml modnMmr.
 case: egcdnP => [|km kl kmlE _]//=.
-  rewrite divn_gt0; last first.
+  rewrite divn_gt0.
     by case: a {abE}aI; case: {Hr Hs iLs}r => /= ? ? /and4P[]; case: (_ \in _).
   apply: dvdn_leq; first by apply: rM_gt0.
   by apply: rM_dvd.
@@ -229,7 +228,7 @@ suff : forall i : nat, i \in rl r -> i %| m2 - m1.
     by have /allP/(_ _ jI) := HH _ iI; rewrite iDj.
   elim: rl (rl_uniq r) => /= [|a rl IH /andP[aNI Hu] Hc Hi].
     by rewrite big_nil dvd1n.
-  rewrite big_cons Gauss_dvd; last first.
+  rewrite big_cons Gauss_dvd.
     apply: coprime_prod => i _ iI; apply: Hc; rewrite ?inE ?eqxx ?iI ?orbT //.
     by apply: contra aNI => /eqP->.
   rewrite Hi ?inE ?eqxx //= IH // => [i j Hi1 Hj1|i Hi1].
@@ -250,7 +249,7 @@ apply: (@rn_rl_inj r) => //; first by rewrite ltn_mod; apply: rM_gt0.
 by apply/rl_rnK/rnorm_rn_rl.
 Qed.
 
-Definition r_ex := {|rM := 5187; rl := [::3; 7; 13; 19]; rco := isT|}.
+Definition r_ex := {|rM := 7 + 10 * 518; rl := [::3; 7; 13; 19]; rco := isT|}.
 
 Compute (rl_rn r_ex (rn_rl r_ex  121)). 
 
@@ -287,7 +286,7 @@ Lemma rN_add_rn_rl r m n :
 Proof.
 rewrite /rn_rl /rN_add /rN_op.
 elim: rl (@rM_dvd r) => //= a l IH Hd.
-rewrite IH; last by move => i Hi; apply: Hd; rewrite inE Hi orbT.
+rewrite IH; first by move => i Hi; apply: Hd; rewrite inE Hi orbT.
 by rewrite modnDml modnDmr modn_dvdm // Hd // inE eqxx.
 Qed.
 
@@ -311,7 +310,7 @@ Lemma rN_mul_rn_rl r m n :
 Proof.
 rewrite /rn_rl /rN_mul /rN_op.
 elim: rl (@rM_dvd r) => //= a l IH Hd.
-rewrite IH; last by move => i Hi; apply: Hd; rewrite inE Hi orbT.
+rewrite IH; first by move => i Hi; apply: Hd; rewrite inE Hi orbT.
 by rewrite modnMml modnMmr modn_dvdm // Hd // inE eqxx.
 Qed.
 

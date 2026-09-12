@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 (******************************************************************************)
 (* This file contains the definitions of:                                     *)
 (*       'L(n,m) <=>                                                          *)
@@ -14,7 +14,7 @@ From mathcomp Require Import all_boot.
 Definition leibnizn m n := m.+1 *  'C(m, n).
 
 Notation "''L' ( n , m )" := (leibnizn n m)
-  (at level 8, format "''L' ( n ,  m )") : nat_scope.
+  (at level 0, format "''L' ( n ,  m )") : nat_scope.
 
 Lemma leibn0 n : 'L(n, 0) = n.+1.
 Proof. by rewrite /leibnizn bin0 muln1. Qed.
@@ -94,13 +94,12 @@ elim: k i => [i|k1 IH i].
 rewrite big_ord_recl /= addn0.
 rewrite lcmnA leibn_lcm_swap.
 rewrite (eq_bigr (fun j : 'I_k1 => 'L(n, i.+1 + j))).
+  by move=> j _; rewrite addnS.
 rewrite -lcmnA.
 rewrite IH.
 rewrite [RHS]big_ord_recl.
 rewrite addn0; congr (lcmn _ _).
 by apply: eq_bigr => j _; rewrite addnS.
-move=> j _.
-by rewrite addnS.
 Qed.
 
 Lemma leib_corner n : \lcm_(i < n.+1) 'L(i, 0) = \lcm_(i < n.+1) 'L(n, i).
@@ -117,11 +116,12 @@ case: n => [|n /=]; first by rewrite big_ord0.
 have <-: \lcm_(i < n.+1) 'L(i, 0) = \lcm_(i < n.+1) i.+1.
   by apply: eq_bigr => i _; rewrite leibn0.
 rewrite leib_corner.
-have -> : forall j, \lcm_(i < j.+1) 'L(n, i) = n.+1 *  \lcm_(i < j.+1) 'C(n, i).
+have -> : 
+    forall j, \lcm_(i < j.+1) 'L(n, i) = n.+1 *  (\lcm_(i < j.+1) 'C(n, i)).
   elim=> [|j IH]; first by rewrite !big_ord_recr !big_ord0 /= !lcm1n.
   by rewrite big_ord_recr [in RHS]big_ord_recr /= IH muln_lcmr.
 rewrite (expnDn 1 1) /=  (eq_bigr (fun i : 'I_n.+1 => 'C(n, i))) => 
-       [|i _]; last by rewrite !exp1n !muln1.
+       [i _|]; first by rewrite !exp1n !muln1.
 have <- : forall n m,  \sum_(i < n) m = n * m.
   by move=> m1 n1; rewrite sum_nat_const card_ord.
 apply: leq_sum => i _.

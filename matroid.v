@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -190,15 +190,16 @@ Lemma mclosure_invo s : mclosure (mclosure s) = mclosure s.
 Proof.
 apply/eqP; rewrite eqEsubset mclosure_sub andbT.
 apply/subsetP=> x; rewrite !inE mclosure_mrank => /eqP rkxsE.
-rewrite eqn_leq -[X in (_ <= X) && _]rkxsE !mrank_subset //; first by apply: subsetUr.
-by apply/setUS/mclosure_sub.
+rewrite eqn_leq -[X in (_ <= X) && _]rkxsE !mrank_subset //.
+  by apply/setUS/mclosure_sub.
+by apply: subsetUr.
 Qed.
 
 (* P3P *)
 Lemma mclosure_subset s1 s2 : s1 \subset s2 -> mclosure s1 \subset mclosure s2.
 Proof.
 move=> s1Ss2; apply/subsetP=> x; rewrite !inE => /eqP rxs1E.
-rewrite eqn_leq [_ <= mrank (_ |: _)]mrank_subset ?andbT; last first.
+rewrite eqn_leq [_ <= mrank (_ |: _)]mrank_subset ?andbT.
   by apply: subsetUr.
 have->: x |: s2 = (x |: s1) :|: s2.
   rewrite -setUA; congr (_ |: _).
@@ -209,7 +210,7 @@ suff mrE : mrank ((x |: s1) :&: s2) = mrank (x |: s1).
 have [xIs2|xNIs2] := boolP (x \in s2).
   congr mrank; apply/setIidPl.
   by rewrite subUset /= sub1set xIs2.
-rewrite rxs1E setIUl (_ : _ :&: _ = set0) ?set0U.
+rewrite rxs1E setIUl (_ : _ :&: _ = set0) ?set0U; last first.
   by congr mrank; apply/setIidPl.
 apply/setP=> y; rewrite !inE; case: eqP => [->|] //.
 by rewrite (negPf xNIs2).
@@ -340,8 +341,7 @@ move=> s1F aNIs1.
 have [|s sCs1 s1Sas1] := mcover_sub_ex s1F (mclosure_mflats (a |: s1)).
   rewrite properE (subset_trans _ (mclosure_sub _)) ?subsetUr //=.
   apply/negP=> /subsetP/(_ a).
-  rewrite (negPf aNIs1) (subsetP (mclosure_sub _)).
-    by move=> /(_ isT).
+  rewrite (negPf aNIs1) (subsetP (mclosure_sub _)); last by move=> /(_ isT).
   by rewrite !inE eqxx.
 have [b bNIs1 sE] := mcoverE sCs1.
 suff/eqP->: cl(a |: s1) == cl(b |: s1) by rewrite -sE.

@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot order all_algebra ssrnum.
+From mathcomp Require Import boot order algebra ssrnum.
 
 (** ITERATIVE : Turning a recursive algo in an iterative one                  *)
 
@@ -17,7 +17,7 @@ Variable R : nzRingType.
 
 Implicit Type p : {poly R}.
 
-Local Notation nat := Datatypes.nat.
+Local Abbreviation nat := Datatypes.nat.
 
 Variable left : nat -> {poly R} -> {poly R}.
 Variable right : nat -> {poly R} -> {poly R}.
@@ -52,7 +52,7 @@ Lemma size_bottom n p : (size (bottom n p) <= 2 ^ n)%N.
 Proof.
 elim: n p => /= [|n IH] p; first by apply: size_polyC_leq1.
 apply: leq_trans (size_polyD _ _) _.
-rewrite geq_max (leq_trans (IH _)) //=; last by rewrite leq_exp2l.
+rewrite geq_max (leq_trans (IH _)) //=; first by rewrite leq_exp2l.
 apply: leq_trans (size_polyMleq _ _) _.
 by rewrite size_polyXn expnS mul2n -addnn leq_add.
 Qed.
@@ -174,11 +174,11 @@ Lemma invariant_algo_bottom p m :
 Proof.
 elim: m p => //= m IH p.
 rewrite addn0 left_poly_add right_poly_add; split.
-  rewrite left_polyMXn addr0 left_poly_id; first by by apply: IH.
+  rewrite left_polyMXn addr0 left_poly_id; last by apply: IH.
   by apply: size_bottom.
   
 rewrite (right_poly_size_0 (size_bottom _ _)) add0r.
-rewrite right_polyMXn; last by apply: size_bottom.
+rewrite right_polyMXn; first by apply: size_bottom.
 by apply: IH.
 Qed.
 
@@ -210,7 +210,7 @@ case: leqP => [mnLi|iLmn].
   rewrite nth_default //.
   by apply: leq_trans (size_step _ _ _) _.
 rewrite !coef_sum expnS mul2n -addnn big_split_ord /=.
-rewrite [X in _ + X = _]big1 ?addr0 => [|j _]; last first.
+rewrite [X in _ + X = _]big1 ?addr0 => [j _|].
   by rewrite coefMXn ifT // (leq_trans iLmn) // mulnDl -expnD addnS leq_addr.
 apply: eq_bigr => j _.
 congr ((merge _ _ _ * _) `_ _).
@@ -241,21 +241,21 @@ case: leqP => [mnLi|iLmn].
   rewrite nth_default //.
   by apply: leq_trans (size_step _ _ _) _.
 rewrite !coef_sum expnS mul2n -addnn big_split_ord /=.
-rewrite [X in X + _ = _]big1 ?add0r => [|j _]; last first.
-  rewrite coefMXn ifN; last first.
+rewrite [X in X + _ = _]big1 ?add0r => [j _|].
+  rewrite coefMXn ifN.
     rewrite -leqNgt (leq_trans _ (leq_addl _ _)) //.
     by rewrite -addnS expnD leq_mul2r // ltnW ?orbT.
   rewrite nth_default // (leq_trans (size_merge _ _)) // ?size_poly //.
   rewrite leq_subRL (leq_trans _ (leq_addl _ _)) //.
-    by rewrite addnC -mulSn -addnS expnD leq_mul2r ltn_ord orbT.
-  by rewrite -addnS expnD leq_mul2r ltnW ?orbT // ltn_ord.
+    by rewrite -addnS expnD leq_mul2r ltnW ?orbT // ltn_ord.
+  by rewrite addnC -mulSn -addnS expnD leq_mul2r ltn_ord orbT.
 apply: eq_bigr => j _.
 rewrite !coefMXn addnC mulnDl -expnD addnS ltn_add2l.
 case: leqP => // jLi; rewrite subnDl.
 congr ((merge _ _ _) `_ _).
   apply/polyP => k; rewrite !coef_poly.
   case: leqP => // kLn.
-  rewrite ifT; first by rewrite addnAC addnA.
+  rewrite ifT; last by rewrite addnAC addnA.
   rewrite -[in X in (_ < X)%N]addnS expnD.
   rewrite -[X in (_ < X * _)%N]prednK ?expn_gt0 // mulSn -addSn.
   apply: leq_add.
@@ -263,9 +263,9 @@ congr ((merge _ _ _) `_ _).
   by rewrite leq_mul2r -ltnS prednK ?expn_gt0 // ltn_ord orbT.
 apply/polyP => k; rewrite !coef_poly.
 case: leqP => // kLn.
-rewrite ifT.
+rewrite ifT; last first.
   rewrite -!addnA.
-  congr (_ `_ (_ + _)); first by rewrite addnC !addnA.
+  by congr (_ `_ (_ + _)); rewrite addnC !addnA.
 rewrite addnAC -[in X in (_ < X)%N]addnS expnD.
 rewrite -[X in (_ < X * _)%N]prednK ?expn_gt0 // mulSn -addSn.
 apply: leq_add.

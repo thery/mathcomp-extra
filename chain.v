@@ -1,5 +1,5 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From Stdlib Require Import ZArith.
 
 
@@ -36,7 +36,7 @@ Fixpoint lfrac_aux k (m n : nat) :=
 
 Definition lfrac m n := lfrac_aux m m n.
 
-Notation " `L( m , n ) " := (lfrac m n) (at level 10, format "`L( m ,  n )").
+Notation " `L( m , n ) " := (lfrac m n) (at level 0, format "`L( m ,  n )").
 
 Compute `L(29, 23).
 Compute `L(11, 8).
@@ -56,8 +56,9 @@ case: m nLm => [|m /=]; first by case: n.
 case: n => // [] [//|n]; rewrite !ltnS => /andP[nLm mLk].
 move: nLm; rewrite leq_eqVlt => /orP[/eqP<-|nLm].
   by rewrite modnn !lfrac_aux_n0.
-rewrite !IH //; first by rewrite (leq_trans mLk).  
-  by rewrite ltnW // ltn_mod.
+rewrite !IH //.
+- by rewrite ltnW  ?ltn_mod // (leq_trans nLm).
+- by rewrite (leq_trans mLk).
 by rewrite ltnW // ?ltn_mod //= (leq_trans nLm).
 Qed.
 
@@ -84,8 +85,8 @@ Proof.
 elim: m {-2}m (leqnn m) n => [|k IH m mLk n]; first by case => //  _ [].
 rewrite leq_eqVlt => /andP[] /orP[/eqP<-|n_pos nLm].
   by rewrite lfrac_n1; case: (m).
-rewrite lfrac_rec /=; last by rewrite n_pos.
-rewrite -lt0n divn_gt0; last by rewrite ltnW.
+rewrite lfrac_rec /=; first by rewrite n_pos.
+rewrite -lt0n divn_gt0; first by rewrite ltnW.
 move: nLm; rewrite leq_eqVlt => /orP[/eqP->|nLm].
   by rewrite eqxx modnn lfrac_n0.
 rewrite nLm orbT /=; case: (m %% n =P 0) => [->|]; first by rewrite lfrac_n0.
@@ -124,7 +125,7 @@ elim: {s}(size s) {-2}s (leqnn (size s)) => [[]|k IH [|x1[|y1 s]]] // Hl.
 - by rewrite /= mulnC.
 - by rewrite /= !mulnDr !muln1 addnAC mulnA mulnC.
 rewrite /= ltnS in Hl.
-rewrite [rcons _ _]/= pcont_rec -!rcons_cons !IH //; last by rewrite ltnW.
+rewrite [rcons _ _]/= pcont_rec -!rcons_cons !IH //; first by rewrite ltnW.
 rewrite !rcons_cons !pcont_rec !mulnDr !addnA !mulnA.
 by congr (_ + _); rewrite addnAC [_ * x]mulnC.
 Qed.
@@ -145,27 +146,27 @@ elim: m {-2}m (leqnn m) n n_pos => [|k IH m mLk n n_pos nLm].
 rewrite leq_eqVlt in n_pos; case/orP : n_pos => [/eqP<-|n_pos1].
   by rewrite lfrac_n1 pcont_one gcdn1 muln1.
 have := leq0n (m %% n); rewrite leq_eqVlt; case/orP=>[/eqP mMnE|mMn_pos].
-rewrite lfrac_rec; last by rewrite n_pos1.
+rewrite lfrac_rec; first by rewrite n_pos1.
   rewrite -mMnE lfrac_n0 pcont_one.
   by rewrite {1 3}(divn_eq m n) -mMnE addn0 gcdnC gcdnMl.
 rewrite -gcdn_modl.
 move: nLm; rewrite leq_eqVlt; case/orP=>[/eqP nEm|nLm].
-  rewrite nEm lfrac_rec //; last by rewrite -nEm n_pos1 leqnn.
+  rewrite nEm lfrac_rec //; first by rewrite -nEm n_pos1 leqnn.
   by rewrite modnn lfrac_n0 divnn -nEm ltnW // gcd0n pcont_one mul1n.
 rewrite lfrac_rec ?n_pos1 1?ltnW //.
 move: mMn_pos; rewrite leq_eqVlt; case/orP=>[/eqP mMnE|mMn_pos].
   by rewrite -mMnE lfrac_n1 gcd1n muln1 pcont_rec pcont_one 
              pcont_nil mMnE -divn_eq.
-rewrite lfrac_rec; last by rewrite mMn_pos /= ltnW // ltn_mod // ltnW.
-rewrite pcont_rec -lfrac_rec; last by rewrite mMn_pos ltnW // ltn_mod ltnW.
-rewrite mulnDl -mulnA gcdnC -IH; last 3 first.
+rewrite lfrac_rec; first by rewrite mMn_pos /= ltnW // ltn_mod // ltnW.
+rewrite pcont_rec -lfrac_rec; first by rewrite mMn_pos ltnW // ltn_mod ltnW.
+rewrite mulnDl -mulnA gcdnC -IH.
 - by rewrite -ltnS (leq_trans nLm).
 - by rewrite ltnW.
 - by rewrite ltnW // ltn_mod ltnW.
 have := leq0n (n %% (m %% n));
    rewrite leq_eqVlt; case/orP=>[/eqP nMmMnE|nMmMn_pos].
   by rewrite -nMmMnE lfrac_n0 pcont_nil mul1n -gcdn_modl -nMmMnE gcd0n -divn_eq.
-rewrite -gcdn_modl gcdnC -IH //; last 2 first.
+rewrite -gcdn_modl gcdnC -IH //.
 - by rewrite -ltnS (leq_trans _ mLk) // (ltn_trans _ nLm) // ltn_mod ltnW.
 - by rewrite ltnW // ltn_mod ltnW.
 by rewrite -divn_eq.
@@ -379,10 +380,10 @@ elim/bnseqr_ind : s => /= [k |b s].
 rewrite run_cat.
 case: run (run_lt _ _ s (isT : 0 < 1 < 2)) => m n /andP[n_pos nLm] IH.
 rewrite -cat_cons bs2ns_false_nseq rev_rcons -IH /=.
-rewrite run_nseq /= lfrac_rec; last first.
+rewrite run_nseq /= lfrac_rec.
   by rewrite (leq_trans _ nLm) //= (leq_trans _ (leq_addr _ _)) // leq_addl.
-rewrite -addnA mulnC -mulnS divnDr; last by rewrite dvdn_mulr.
-rewrite divn_small // mulKn; last by rewrite (leq_trans _ nLm).
+rewrite -addnA mulnC -mulnS divnDr; first by rewrite dvdn_mulr.
+rewrite divn_small // mulKn; first by rewrite (leq_trans _ nLm).
 by rewrite add0n addnC mulnC modnMDl modn_small.
 Qed.
 
@@ -391,12 +392,12 @@ Proof.
 rewrite !frunE.
 case Hr : run (run_gcdn 1 2 (rcons s true)) (frac_run_bs2ns (rcons s true)) => 
    /= [m n] Hc Hf.
-rewrite (lfrac_cont_gcdl n m); last first.
+rewrite (lfrac_cont_gcdl n m).
   by have := run_lt 2 1 (rcons s true) isT; rewrite Hr; case/andP => _ /ltnW.
 rewrite gcdnC Hc muln1 -pcont_rev Hf revK.
 case Hr1: run (run_gcdn 1 2 (rcons (rev s) true)) 
          (frac_run_bs2ns (rcons (rev s) true)) => /= [m1 n1] Hc1 Hf1.
-rewrite (lfrac_cont_gcdl n1 m1); last first.
+rewrite (lfrac_cont_gcdl n1 m1).
   by have := run_lt 2 1 (rcons (rev s) true) isT; rewrite Hr1; 
      case/andP => _ /ltnW.
 by rewrite gcdnC Hc1 muln1 Hf1 /= rev_bs2ns rev_cons rev_rcons revK.

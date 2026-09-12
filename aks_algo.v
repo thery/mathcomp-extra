@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 From Stdlib Require BinPos.
 
 Set Implicit Arguments.

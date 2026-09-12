@@ -1,5 +1,5 @@
 (* (c) Copyright Microsoft Corporation and Inria. All rights reserved. *)
-From mathcomp Require Import all_boot all_algebra.
+From mathcomp Require Import boot algebra.
 
 (******************************************************************************)
 (* This files contains a proof of Euler Criterion                             *)
@@ -100,11 +100,11 @@ have -> : \prod_(i in 'F_p | i != 0%R) i =
   by have /eqP/val_eqP/negPf/=-> := fI_neq0 _ i_neq0.
 apply: etrans (_ : \prod_(j in 'F_p | j < f j) (j * f j) = _ %[mod p]).
   congr (_ %% _); apply: eq_bigr => j /andP[jF jLfj].
-  rewrite (bigD1 j); last first.
+  rewrite (bigD1 j).
     rewrite jF /can jLfj eqxx andTb andbT.
     by apply/eqP=> j_eq0; rewrite j_eq0 f_eq0 ltnn in jLfj.
-  rewrite (bigD1 (f j)); last first.
-    rewrite inE /can ifN.
+  rewrite (bigD1 (f j)).
+    rewrite inE /can ifN; last first.
       rewrite fI eqxx.
       case: (f j =P 0%R) => [fj_eq0|].
         by rewrite fj_eq0 -[j]fI fj_eq0 f_eq0 ltnn in jLfj.
@@ -130,10 +130,10 @@ pose B := [pred i |  (i : 'F_p) < f i].
 rewrite -(cardID B A).
 have <- : #|image f [predI A & B]| = #|[predD A & B]|.
   apply: eq_card => i; rewrite !inE.
-  rewrite -[in LHS](fI i) mem_map; last first.
+  rewrite -[in LHS](fI i) mem_map.
     by move=> i1 j1 fiEfj; rewrite -[i1]fI fiEfj fI.
   have -> : (f i  \in enum [predI A & B])  = ([predI A & B] (f i)).
-    have F (U : finType) (p1 : pred U) (x : U) : x \in enum p1 = p1 x.
+    have F (U : finType) (p1 : pred U) (x : U) : (x \in enum p1) = p1 x.
       by rewrite mem_enum .
     by rewrite F.
   rewrite [LHS]/= !inE fI.
@@ -142,7 +142,7 @@ have <- : #|image f [predI A & B]| = #|[predD A & B]|.
     by case; rewrite -(fI i) fi0 f_eq0.
   case: ltngtP => // /eqP/val_eqP fiEi.
   by have := fI_neq0 i i_neq0; rewrite fiEi eqxx.
-rewrite card_image; last by move=> i j fiEfj; rewrite -[i]fI fiEfj fI.
+rewrite card_image; first by move=> i j fiEfj; rewrite -[i]fI fiEfj fI.
 rewrite addnn (half_bit_double _ false).
 apply: eq_card => i; rewrite !inE.
 by case: eqP => // ->; rewrite f_eq0 ltnn.
@@ -165,13 +165,13 @@ have [pO|/(prime_oddPn pP) pE2]:= boolP (odd p); last first.
 have i_gt0 : 0 < i.
   case: i Hi pNDa => [] [] //= _.
   by rewrite /dvdn => <- /[!mod0n].
-rewrite even_halfK; last by case: (p) pP pO.
-apply/eqP; rewrite eqn_mod_dvd //; last by rewrite expn_gt0 i_gt0.
-rewrite -(Gauss_dvdr _ (_ : coprime _ i)); last first.
+rewrite even_halfK; first by case: (p) pP pO.
+apply/eqP; rewrite eqn_mod_dvd //; first by rewrite expn_gt0 i_gt0.
+rewrite -(Gauss_dvdr _ (_ : coprime _ i)).
   rewrite prime_coprime //; apply/negP => /dvdnP [k iE].
   rewrite iE mulnA modnMl in Hi.
   by case/negP: pNDa; rewrite /dvdn -Hi.
 rewrite mulnBr muln1 -expnS prednK //.
-rewrite -eqn_mod_dvd //; first by apply/eqP/fermat_little.
+rewrite -eqn_mod_dvd //; last by apply/eqP/fermat_little.
 by apply: leq_pexp2l (_ : 1 <= p).
 Qed.

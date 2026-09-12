@@ -1,5 +1,5 @@
 From Stdlib Require Import String NArith.
-From mathcomp Require Import all_boot.
+From mathcomp Require Import boot.
 Require Import digitn.
 
 (******************************************************************************)
@@ -76,7 +76,7 @@ have fO_inj : injective fO.
 rewrite [LHS](reindex_inj fO_inj).
 apply: eq_bigr => /= i _; congr (digitn _ _ _ * _ ^ _).
 rewrite /f modnDml addnC addnA -modnDml -[(p + _)%% _]modnDml.
-rewrite [p %% v + _]addnC subnK; last by rewrite ltnW ?ltn_mod.
+rewrite [p %% v + _]addnC subnK; first by rewrite ltnW ?ltn_mod.
 by rewrite modnn modn_small // ltn_ord.
 Qed.
 
@@ -144,7 +144,7 @@ have kDm : gcdn k b %| m.
   case: ndigits => [|v]; first by rewrite big_ord0 dvdn0.
   rewrite big_ord_recl /= dvdn_add // -dE.
     rewrite dvdn_mulr // digitn_cpermn // addn0.
-    rewrite [(_ - i) %% _]modn_small; last by rewrite ltn_psubCl ?subnn.
+    rewrite [(_ - i) %% _]modn_small; first by rewrite ltn_psubCl ?subnn.
     by rewrite subKn ?modn_small ?dvdn_gcdl // ltnW.
   rewrite dE; apply: dvdn_trans (dvdn_gcdr _ _) _.
   under eq_bigr do rewrite expnD expn1 mulnCA .
@@ -169,7 +169,7 @@ have bDk : b %| p.
   by rewrite (divn_eq p b) dvdn_add ?dvdn_mull // -digitn0 d_eq0 dvdn0.
 have /primeP[_ /(_ _ bDk)] := pP.
 case/orP=>[|/eqP bE]; first by case: (b) b_gt1 => // [] [].
-rewrite bE (digitn_exp 1) in dE; last by rewrite -bE.
+rewrite bE (digitn_exp 1) in dE; first by rewrite -bE.
 rewrite -dE in k_pos.
 by case: eqP k_pos.
 Qed.
@@ -199,7 +199,7 @@ have mP : prime m.
   by rewrite mem_iota andTb add0n ltn_subrL i_pos ndigits_gt0.
 have dmE0 : digitn b m 0 = 0.
   rewrite digitn_cpermn -/v // addn0.
-  rewrite [(_ - i) %% _]modn_small; last by rewrite ltn_psubCl ?subnn.
+  rewrite [(_ - i) %% _]modn_small; first by rewrite ltn_psubCl ?subnn.
   by rewrite subKn ?modn_small // ltnW.
 have bDk : b %| m.
   by rewrite (divn_eq m b) dvdn_add ?dvdn_mull // -digitn0 dmE0 dvdn0.

@@ -1,5 +1,5 @@
 (* Copyright (c)  Inria. All rights reserved. *)
-From mathcomp Require Import all_boot order all_algebra ssrnum.
+From mathcomp Require Import boot order algebra ssrnum.
 Require Import digitn.
 
 (******************************************************************************)
@@ -30,7 +30,7 @@ Section FFT.
 
 Local Open Scope ring_scope.
 
-Notation nat := Datatypes.nat.
+Abbreviation nat := Datatypes.nat.
 (* Arbitary idomain                                                           *)
 (* In fact  it works for an arbitray ring. We ask for idomain in order to use *)
 (* primitive-root and sqr_eqf1                                                *)
@@ -249,8 +249,9 @@ have F1 : (2 ^ n <= j -> j = 2 ^ n + j1)%N.
 have F2 : (j < 2 ^ n -> j = j1)%N.
   move=> F2.
   by rewrite -(modn_small F2) modn_dvdm // dvdn_Pexp2l.
-rewrite coef_sum (bigD1 (Ordinal lL2m)) //= [X in _ + X]big1 ?addr0.
-  rewrite coef_sum (bigD1 (Ordinal j1L2n)) //= [X in _ + X]big1 ?addr0.
+rewrite coef_sum (bigD1 (Ordinal lL2m)) //= [X in _ + X]big1 ?addr0; last first.
+  rewrite coef_sum (bigD1 (Ordinal j1L2n)) //= [X in _ + X]big1 
+              ?addr0; last first.
     rewrite !(coefD, coefZ, coefXn, coef_poly).
     rewrite j1L2n (divn_eq i (2 ^ n.+1)) -/l [(l * _ + _)%N]addnC.
     rewrite [(_ + 2 ^ n)%N]addnC addnA !eqn_add2r -/j -/j1.
@@ -273,11 +274,11 @@ rewrite coef_sum (bigD1 (Ordinal lL2m)) //= [X in _ + X]big1 ?addr0.
 move=> i1 /eqP/val_eqP/= Hi1.
 rewrite coef_sum big1 // => i2 _.
 rewrite !(coefD, coefZ, coefXn, coef_poly).
-rewrite (_ : _ == _ = false); last first.
+rewrite (_ : (_ == _) = false).
   apply/idP => /eqP iE; have /eqP[] := Hi1.
   rewrite /l iE divnDMl ?expn_gt0 // divn_small //.
   by rewrite (leq_trans (ltn_ord _)) // leq_exp2l.
-rewrite (_ : _ == _ = false) ?mulr0 ?addr0 //.
+rewrite (_ : (_ == _) = false) ?mulr0 ?addr0 //.
 apply/idP => /eqP iE; have /eqP[] := Hi1.
 rewrite addnC addnA in iE.
 rewrite /l iE divnDMl ?expn_gt0 // divn_small //.
@@ -296,7 +297,7 @@ case: leqP => [mnLi|iLmn].
   rewrite nth_default //.
   by apply: leq_trans (size_step _ _ _ _) _.
 rewrite stepE !coef_sum expnS mul2n -addnn big_split_ord /=.
-rewrite [X in _ + X = _]big1 ?addr0 => [|j _]; last first.
+rewrite [X in _ + X = _]big1 ?addr0 => [j _|].
   by rewrite coefMXn ifT // (leq_trans iLmn) // mulnDl -expnD addnS leq_addr.
 apply: eq_bigr => j _.
 congr (((_ * _) : {poly R}) `_ _).
@@ -317,8 +318,8 @@ Proof.
 move=> pLmn.
 apply/polyP=> i; rewrite coef_drop_poly.
 rewrite !stepE !coef_sum expnS mul2n -addnn big_split_ord /=.
-rewrite [X in X + _ = _]big1 ?add0r => [|j _]; last first.
-  rewrite coefMXn ifN; last first.
+rewrite [X in X + _ = _]big1 ?add0r => [j _|].
+  rewrite coefMXn ifN.
     rewrite -leqNgt (leq_trans _ (leq_addl _ _)) //.
     by rewrite -addnS expnD leq_mul2r // ltnW ?orbT.
   rewrite nth_default //.
@@ -331,8 +332,8 @@ rewrite [X in X + _ = _]big1 ?add0r => [|j _]; last first.
       by apply: leq_trans (ltn_ord _) _; rewrite leq_exp2l.
     by rewrite size_polyXn expnS mul2n -addnn ltn_add2r.
   rewrite leq_subRL (leq_trans _ (leq_addl _ _)) //.
-    by rewrite addnC -mulSn -addnS expnD leq_mul2r ltn_ord orbT.
-  by rewrite -addnS expnD leq_mul2r ltnW ?orbT // ltn_ord.
+    by rewrite -addnS expnD leq_mul2r ltnW ?orbT // ltn_ord.
+  by rewrite addnC -mulSn -addnS expnD leq_mul2r ltn_ord orbT.
 apply: eq_bigr => j _.
 rewrite !coefMXn addnC mulnDl -expnD addnS ltn_add2l.
 case: leqP => // jLi; rewrite subnDl.
@@ -376,7 +377,7 @@ have [tnLi|iLtn] := leqP (2 ^ n) i.
     by rewrite leq_half_double in iLn.
   rewrite !rdigitnE big_ord_recl /= subn0 muln1 /bump /= .
   rewrite {1}/digitn -{1}(subnK tnLi).
-  rewrite divnDr ?dvdnn // divnn expn_gt0 /= divn_small ?add1n; last first.
+  rewrite divnDr ?dvdnn // divnn expn_gt0 /= divn_small ?add1n.
     by rewrite ltn_subLR // addnn -mul2n -expnS.
   under eq_bigr do rewrite add1n; congr (_.+1).
   under eq_bigr do rewrite expnS mulnCA.
@@ -388,7 +389,7 @@ have [tnLi|iLtn] := leqP (2 ^ n) i.
   rewrite /digitn -{1}(subnK tnLi) -[X in (_ + 2 ^ X)%N](subnK (ltn_ord j)).
   rewrite expnD mulnC divnDMl ?expn_gt0 //.
   by rewrite -modnDm // expnS modnMr addn0 modn_mod.
-rewrite addr0 ifT; last by rewrite (leq_trans iLtn) // leq_exp2l.
+rewrite addr0 ifT; first by rewrite (leq_trans iLtn) // leq_exp2l.
 suff Hf : (rdigitn 2 n.+1 i) = (rdigitn 2 n i).*2.
   case: leqP => [iLn|nLi]; last by rewrite Hf.
   suff/leq_sizeP-> : (size p <= rdigitn 2 n.+1 i)%N by [].
@@ -443,10 +444,10 @@ have -> : drop_poly (2 ^ n) (reverse_poly n.+1 p) =
   by case: leqP => // nLn; rewrite nth_default.
 rewrite reverse_polyS poly_def.
 under eq_bigr do rewrite coefD coefMXn ltnNge leq_addl /= addnK scalerDl.
-rewrite big_split /= big1 ?add0r => [|i _]; last first.
+rewrite big_split /= big1 ?add0r => [i _|].
   suff /leq_sizeP-> : (size (reverse_poly n (even_poly p)) <= i + 2 ^ n)%N.
-  - by rewrite scale0r.
   - by [].
+  - by rewrite scale0r.
   by apply: leq_trans (size_reverse_poly _ _) (leq_addl _ _).
 rewrite -poly_def.
 have -> : \poly_(i < 2 ^ n) (reverse_poly n (odd_poly p))`_i = 
@@ -532,27 +533,27 @@ rewrite coef_poly coef_sum.
 have [mnLi|iLmn] := leqP.
   rewrite big1 // => j _; rewrite coef_sum /=.
   rewrite big1 // => k _; rewrite !coef_poly !(coefD, coefZ, coefXn).
-  rewrite !gtn_eqF ?mulr0 ?addr0 // (leq_trans _ mnLi) //.
+  rewrite !gtn_eqF ?mulr0 ?addr0 // (leq_trans _ mnLi) //; last first.
     by apply: bound_step.
   apply: leq_trans (bound_step (ltn_ord j) (ltn_ord k)).
   by rewrite ltnS leq_addr.
 set l := (i %/ 2 ^ n.+1)%N.
 have l_ltn : (l < 2 ^ m)%N.
   by rewrite ltn_divLR ?expn_gt0 // -expnD addnS.
-rewrite (bigD1 (Ordinal l_ltn)) //= [X in _ = _ + X]big1; last first.
+rewrite (bigD1 (Ordinal l_ltn)) //= [X in _ = _ + X]big1.
   move=> i1 /eqP/val_eqP /= i1Dl.
   rewrite coef_sum big1 // => i2 _.
   rewrite coefD !coefZ !coefXn.
   case: (ltngtP i1 l) i1Dl => // i1Dl _.
     rewrite leq_divRL ?expn_gt0 // in i1Dl.
-    rewrite !gtn_eqF ?mulr0 ?addr0 //; apply: leq_trans i1Dl.
+    rewrite !gtn_eqF ?mulr0 ?addr0 //; apply: leq_trans i1Dl; last first.
       by rewrite addnAC mulSn -!addSn leq_add // expnS mul2n -addnn leq_add2r.
     rewrite mulSn -!addSn leq_add // (leq_trans (ltn_ord _)) //.
     by rewrite expnS mul2n -addnn leq_addr.
   rewrite ltn_divLR ?expn_gt0 // in i1Dl.
   rewrite !ltn_eqF ?mulr0 ?addr0 //; apply: leq_trans i1Dl _.
-    by rewrite addnAC leq_addl.
-  by rewrite leq_addl.
+    by rewrite leq_addl.
+  by rewrite addnAC leq_addl.
 rewrite addr0.
 have F : (i %% 2 ^ n.+1 + l * 2 ^ n.+1 = i)%N by rewrite addnC -divn_eq.
 rewrite coef_sum.
@@ -562,22 +563,22 @@ case: leqP => H.
     by rewrite ltn_subLR // addnn -mul2n -expnS ltn_pmod ?expn_gt0.
   have F2 : ((i %% 2 ^ n.+1) %% 2 ^ n = i %% 2 ^ n.+1 - 2 ^ n)%N.
     by rewrite -[in LHS](subnK H) modnDr modn_small.
-  rewrite (bigD1 (Ordinal F1)) //= ?big1.
+  rewrite (bigD1 (Ordinal F1)) //= ?big1; last first.
     rewrite addr0 coefD !coefZ !coefXn.
-    rewrite addnBAC // F subnK // eqxx mulr1 gtn_eqF; last first.
+    rewrite addnBAC // F subnK // eqxx mulr1 gtn_eqF.
       by rewrite ltn_subLR // (ltn_add2r _ 0) expn_gt0.
     rewrite mulr0 add0r !coef_poly F1.
     by rewrite addnBAC // F subnK // eqxx mulr1 gtn_eqF.
   move=> i1 /eqP/val_eqP/= Hi1.
   rewrite !coef_poly ltn_ord coefD !coefZ !coefXn.
-  rewrite -F addnAC !eqn_add2r gtn_eqF ?mulr0 ?add0r; last first.
+  rewrite -F addnAC !eqn_add2r gtn_eqF ?mulr0 ?add0r.
     by apply: leq_trans H.
   by rewrite -(subnK H) eqn_add2r eq_sym (negPf Hi1) mulr0.
-rewrite (bigD1 (Ordinal H)) //= ?big1.
+rewrite (bigD1 (Ordinal H)) //= ?big1; last first.
   rewrite addr0 coefD !coefZ !coefXn F.
   rewrite eqxx mulr1 ltn_eqF ?mulr0 ?addr0 // ?(ltn_add2l _ 0) ?expn_gt0 //.
-    by rewrite !coef_poly F H.
-  by rewrite addnC (ltn_add2r _ 0) expn_gt0.
+    by rewrite addnC (ltn_add2r _ 0) expn_gt0.
+  by rewrite !coef_poly F H.
 move=> i1 /eqP/val_eqP/= Hi1.
 rewrite !coef_poly ltn_ord coefD !coefZ !coefXn.
 rewrite -F eqn_add2r eq_sym (negPf Hi1) mulr0 add0r.
@@ -654,7 +655,7 @@ under [X in _ * X = _]eq_bigr => j H do
           -!exprM mulnC -mulrA -exprMn ?(divff, expr1n, mulr1, addr0) //.
 rewrite big_split /=.
 rewrite sumr_const card_ord mulrDr.
-rewrite -[X in _ * X + _ = _]mulr_natl mulrA mulVf ?mul1r; last first.
+rewrite -[X in _ * X + _ = _]mulr_natl mulrA mulVf ?mul1r.
   by rewrite natrX expf_eq0 (negPf char2) andbF.
 rewrite exchange_big /= big1 ?(mulr0, addr0) //= => k /eqP /val_eqP /= kDi.
 under [LHS] eq_bigr do 

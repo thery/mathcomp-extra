@@ -1,5 +1,5 @@
-From mathcomp Require Import all_boot.
-From mathcomp Require Import all_algebra.
+From mathcomp Require Import boot.
+From mathcomp Require Import algebra.
 
 (******************************************************************************)
 (*                                                                            *)
@@ -32,7 +32,7 @@ Proof. by apply: ltn_pmod. Qed.
 Lemma digitnE b n m : n < b ^ m -> n = \sum_(i < m) digitn b n i * b ^ i.
 Proof.
 elim: m n => [[]//=|m IH n nLb]; first by rewrite big_ord0.
-rewrite {1}(divn_eq n b) [n %/ b]IH; last first.
+rewrite {1}(divn_eq n b) [n %/ b]IH.
   rewrite (divn_eq n b) in nLb.
   have := leq_ltn_trans (leq_addr _ _) nLb.
   by rewrite expnS mulnC ltn_mul2l => /andP[].
@@ -74,7 +74,7 @@ have  -> : s = b * \sum_(i < k)  (f i.+1) * b ^ i.
   by rewrite -[bump 0 j]/j.+1 expnS mulnCA.
 case: i iLk => [_|i iLk].
   by rewrite digitn0 addnC mulnC modnMDl modn_small // Hf.
-rewrite addnC digitnMD; last by apply: Hf.
+rewrite addnC digitnMD; first by apply: Hf.
 apply: (IH (fun i => f i.+1)) => // j jLk.
 by apply: Hf.
 Qed.
@@ -86,8 +86,8 @@ case: k i f => [[]//|k i f Hf].
 pose f1 i := f (inord i).
 have <- : f1 i = f i by rewrite /f1 inord_val.
 have <-// := @digitn_sum b k.+1 f1.
-  by congr digitn; apply: eq_bigr => j _; rewrite /f1 inord_val.
-by move=> j Hj; rewrite /f1 Hf.
+  by move=> j Hj; rewrite /f1 Hf.
+by congr digitn; apply: eq_bigr => j _; rewrite /f1 inord_val.
 Qed.
 
 Lemma digitn_sumII b k (f : 'I_k -> 'I_b) (i : 'I_k) :
@@ -181,9 +181,9 @@ rewrite /= prednK ?leqnn ?andbT ?expn_gt0 1?ltnW //.
 have F : 2 * b ^ n.+1 <= b ^ n.+2.
   by rewrite [_ ^ _.+2]expnS leq_mul2r b_gt1 orbT.
 rewrite -ltnS prednK (leq_trans (_ : _ < 2 * b ^ n.+1)) //.
-  rewrite mul2n -addnn -addn1 addSnnS leq_add2l //.
-  by rewrite -(exp1n n.+1) ltn_exp2r.
-by rewrite muln_gt0 expn_gt0 /= ltnW.
+  by rewrite muln_gt0 expn_gt0 /= ltnW.
+rewrite mul2n -addnn -addn1 addSnnS leq_add2l //.
+by rewrite -(exp1n n.+1) ltn_exp2r.
 Qed.
 
 Lemma predX_sum b n : (b ^ n).-1 = \sum_(i < n) b.-1 * b ^ i.
@@ -267,7 +267,7 @@ have b_gt0 : 0 < b by apply: ltnW.
 have n_pos : 0 < n by case: (n) nD0.
 have : b ^ (ndigits b n).-1 <= n by apply: ndigits_leq.
 rewrite leqNgt => /negP[].
-rewrite -[X in _ < X]prednK; last by rewrite expn_gt0 ltnW.
+rewrite -[X in _ < X]prednK; first by rewrite expn_gt0 ltnW.
 rewrite ltnS predX_sum  [X in X <= _](digitnE_ndigits _ b_gt1).
 rewrite -[in X in X <= _](prednK (ndigits_gt0 _ _)) big_ord_recr /=.
 rewrite -[trunc_log _ _]/(ndigits b n).-1 dE0 mul0n addn0.
@@ -321,9 +321,9 @@ rewrite {1}rdigitnE [RHS](digitnE mLbn).
 apply: eq_bigr => /= i _; congr (_ * _).
 have n_pos : 0 < n by case: (n) i => // [] [].
 rewrite rdigitnE (@digitn_sum _ _ (fun i => digitn b m (n.-1 - i))).
-- by rewrite subKn // -ltnS prednK.
 - by rewrite -subSn ?prednK ?leq_subr // -ltnS prednK.
-by move=> j jLn; apply: ltn_digitn.
+- by move=> j jLn; apply: ltn_digitn.
+by rewrite subKn // -ltnS prednK.
 Qed.
 
 Lemma ltn_rdigitn b n m : 0 < b -> rdigitn b n m < b ^ n.
@@ -384,9 +384,9 @@ have -> : ('C(m, n) %% p)%N = ((1 + 'X) ^+ m : {poly 'F_p})`_n.
   have nLm1 : (n < m.+1)%N by apply: leq_trans nLm.
   rewrite exprDn coef_sum.
   under eq_bigr do rewrite expr1n mul1r coefMn coefXn.
-  rewrite (bigD1 (Ordinal nLm1)) //= eqxx mulr1n big1 => [|i /eqP/val_eqP/=].
+  rewrite (bigD1 (Ordinal nLm1)) //= eqxx mulr1n big1 => [i /eqP/val_eqP/=|].
+    by rewrite eq_sym => /negPf->; rewrite mulr0n // mul0rn.
     by rewrite [X in (_ = _ %% X)%N]Fp_cast // addn0 val_Fp_nat // modn_mod.
-  by rewrite eq_sym => /negPf->; rewrite mulr0n // mul0rn.
 rewrite {1}(digitnE mLp) expr_sum.
 under eq_bigr do rewrite mulnC exprM Fp_exprnDn // expr1n exprDn.
 have H i : 
@@ -405,8 +405,8 @@ under eq_bigr do rewrite prodrMn -expr_sum coefMn coefXn.
 pose f : {ffun 'I_k -> 'I_p} := 
   [ffun i : 'I_k =>  Ordinal (ltn_digitn n i (prime_gt0 Pp))].
 rewrite (bigD1 f) //= [X in (_ %% X)%N]Fp_cast //=.
-rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [| i iDf].
-  rewrite (_ : _ == _) ?mulr1n.
+rewrite [in X in ((_ + X) = _ %[mod _])%N]big1 ?addn0 => [i iDf|]; last first.
+  rewrite (_ : _ == _) ?mulr1n; last first.
     under eq_bigr do rewrite ffunE /=.
     by rewrite val_Fp_nat // modn_mod.
   apply/eqP; rewrite {1}[n](digitnE nLp); apply: eq_bigr => /= i _.

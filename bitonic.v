@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot order perm algebra.zmodp.
+From mathcomp Require Import boot order perm algebra.zmodp.
 From mathcomp Require Import zify.
 Require Import more_tuple nsort.
 
@@ -66,7 +66,7 @@ Lemma bitonic_catr (s1 s2 : seq A) :
   sorted >=%O s1 -> sorted <=%O s2 -> (s1 ++ s2) \is bitonic.
 Proof.
 move=> s1S s2S.
-apply/existsP; exists (inord (size s1)); rewrite inordK; last first.
+apply/existsP; exists (inord (size s1)); rewrite inordK.
   by rewrite ltnS size_cat leq_addr.
 apply/existsP; rewrite size_cat /=.
 have sLs : size s2 < (size s1 + size s2).+1 by rewrite ltnS leq_addl.
@@ -131,7 +131,7 @@ apply: eq_from_tnth => i /=.
 rewrite /half_cleaner /cfun /=.
 rewrite !tnth_map /= !tnth_ord_tuple !ffunE.
 case: splitP => /= [j iE|k iE]; first by rewrite iE leq_addl; case: b.
-rewrite ifN; first by case: b.
+rewrite ifN; last by case: b.
 by rewrite -ltnNge (leq_trans (ltn_ord _) _) // iE leq_addr.
 Qed.
 
@@ -189,16 +189,16 @@ have [i1j1k1j2Lk2|k2Li1j1k1j2] := leqP (i1 - j1 - (k1 + j2)) k2.
   have {1}-> : i1 = size (nseq j1 false ++ nseq (j2 + k1) true ++
                             nseq (i1 - j1 - (j2 + k1)) false).
     rewrite !size_cat !size_nseq [j2 + k1 + _]addnC subnK 1?ltnW //.
-      by rewrite [j1 + _]addnC subnK // ltnW.
-    by rewrite addnC.
+      by rewrite addnC.
+    by rewrite [j1 + _]addnC subnK // ltnW.
   rewrite [k1 + _]addnC !catA -catA  rot_size_cat.
   exists (false, k2 - (i1 - j1 - (j2 + k1)) + j1, 
             j2 + k1, (i1 - j1 - (j2 + k1))).
   by rewrite !nseqD !catA.
-rewrite rot_oversize.
-by exists (false, j1, k1 + j2, k2); rewrite !catA.
+rewrite rot_oversize; last first.
+  by exists (false, j1, k1 + j2, k2); rewrite !catA.
 rewrite !size_cat !size_nseq.
-rewrite -leq_subRL; last by apply: ltnW.
+rewrite -leq_subRL; first by apply: ltnW.
 by rewrite -leq_subRL ltnW.
 Qed.
 
@@ -489,7 +489,7 @@ have sd : size (tdrop t) = m.
   by rewrite tdropE size_drop size_tuple addnK.
 pose k : 'I_(m + m) := lshift _ i; pose a := tnth t k.
 rewrite !(tnth_nth a) !ttakeE !nth_take //=.
-rewrite !(nth_map k) //; last first.
+rewrite !(nth_map k) //.
 - by rewrite fintype.size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
 - by rewrite fintype.size_enum_ord (leq_trans (ltn_ord _) (leq_addr _ _)).
 - by rewrite -fintype.enumT fintype.size_enum_ord (leq_trans (ltn_ord _)
@@ -500,8 +500,8 @@ case: splitP => [j kE|j kE]; last first.
   by have := ltn_ord i; rewrite [i : nat]kE ltnNge leq_addr.
 congr min.
   by rewrite !(tnth_nth a) nth_cat /= st ltn_ord ttakeE nth_take.
-rewrite !(tnth_nth a) nth_cat /= st ifN; last by rewrite -leqNgt leq_addr.
-rewrite nth_rev; last by rewrite sd addnC addnK.
+rewrite !(tnth_nth a) nth_cat /= st ifN; first by rewrite -leqNgt leq_addr.
+rewrite nth_rev; first by rewrite sd addnC addnK.
 rewrite sd tdropE nth_drop //.
 by congr nth; lia.
 Qed.
@@ -519,12 +519,12 @@ have st : size (ttake t) = m.
 have sd : size (tdrop t) = m.
   by rewrite tdropE size_drop size_tuple addnK.
 pose k : 'I_(m + m) := rshift _ i; pose a := tnth t k.
-rewrite !(tnth_nth a) nth_rev; last first.
+rewrite !(tnth_nth a) nth_rev.
   by rewrite tdropE size_drop size_tuple addnK.
-rewrite !tdropE !nth_drop !(nth_map k) //; last first.
+rewrite !tdropE !nth_drop !(nth_map k) //.
 - by rewrite size_tuple ltn_add2l.
-- by rewrite -fintype.enumT fintype.size_enum_ord ltn_add2l.
 - by rewrite size_drop !size_tuple; have := ltn_ord i; lia.
+- by rewrite -fintype.enumT fintype.size_enum_ord ltn_add2l.
 - rewrite size_drop !size_tuple -fintype.enumT fintype.size_enum_ord.
   by have := ltn_ord i; lia.
 have -> : m + i = k :> nat by [].
@@ -538,7 +538,7 @@ case: splitP => /= [l lE | l lE]; first by have := ltn_ord l; lia.
 rewrite maxC.
 congr max.
   rewrite !(tnth_nth a) nth_cat /= st lE ltnNge leq_addr /=. 
-  rewrite nth_rev; last by rewrite sd; have := ltn_ord i; lia.
+  rewrite nth_rev; first by rewrite sd; have := ltn_ord i; lia.
   rewrite tdropE nth_drop // size_drop size_tuple addnK.
   congr nth.
   have : m + i = m + j by rewrite -kE.
