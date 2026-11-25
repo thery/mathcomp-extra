@@ -87,6 +87,8 @@ Some extra material for mathcomp
 
   [Hermite's identity](./hermite.v)
 
+  [Definition of disarium numbers and how many there are](./disarium.v)
+
 A note about sorting network is available [here](https://hal.inria.fr/hal-03585618).
 
 A note about addition chain is available [here](https://hal.science/hal-04971933).
